@@ -490,7 +490,13 @@ async function main(): Promise<void> {
 
   if (!existsSync(sourceRoot)) {
     if (args.nonInteractive) {
-      throw new Error(`Source root not found: ${sourceRoot}`);
+      console.log(
+        `SAP source root not found (${sourceRoot}); skipping runtime staging.`,
+      );
+      console.log(
+        "Run bootstrap manually with SAP archives present to enable JCo/SNC support.",
+      );
+      return;
     }
     const entered = await promptValue(
       "Enter source folder with SAP archives",
