@@ -6,9 +6,7 @@ Claude Code-specific configuration only:
 
 ## Environment
 
-```bash
-export CS_ACCESS_TOKEN="<PAT from https://codescene.io/users/me/pat>"
-```
+Set the `CS_ACCESS_TOKEN` env var to a CodeScene PAT from <https://codescene.io/users/me/pat> (the org secret is already configured for CI; this is for local `cs` CLI runs). See [AGENTS.md](./AGENTS.md) and [`.agents/skills/codescene/SKILL.md`](.agents/skills/codescene/SKILL.md) for details.
 
 ## Pre-Verification Checklist
 

@@ -7,7 +7,6 @@ import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.List;
 import java.util.Locale;
 
@@ -35,7 +34,22 @@ final class McpLauncherInvoker {
     /** Bundles everything needed to build a process argv for either the
      *  native binary or the Bun-spawned dev script. {@code prefix} is the
      *  optional binary name to invoke through (e.g. {@code "bun"}). */
-    private record McpLaunchRequest(Path executable, String subcommand, String[] extraArgs, String prefix) {}
+    private record McpLaunchRequest(
+            Path executable,
+            String subcommand,
+            List<String> extraArgs,
+            String prefix) {}
+
+    private static McpLaunchRequest buildRequest(
+            Path executable, String subcommand, String[] extraArgs, String prefix) {
+        return new McpLaunchRequest(
+                executable,
+                subcommand,
+                extraArgs == null || extraArgs.length == 0
+                        ? List.of()
+                        : List.of(extraArgs),
+                prefix);
+    }
 
     private enum McpLaunchKind { NATIVE, DEV_CLONE }
 
@@ -70,13 +84,13 @@ final class McpLauncherInvoker {
 
     private static int spawnDirect(Path binary, String subcommand, String[] extraArgs) {
         return runAndWait(
-            new ProcessBuilder(buildArgv(new McpLaunchRequest(binary, subcommand, extraArgs, null))),
+            new ProcessBuilder(buildArgv(buildRequest(binary, subcommand, extraArgs, null))),
             "openadt-mcp");
     }
 
     private static int spawnBun(Path script, String subcommand, String[] extraArgs) {
         ProcessBuilder pb = new ProcessBuilder(
-                buildArgv(new McpLaunchRequest(script, subcommand, extraArgs, resolveBunExecutable())));
+                buildArgv(buildRequest(script, subcommand, extraArgs, resolveBunExecutable())));
         applyRepoEnv(pb, script);
         return runAndWait(pb, "MCP launcher");
     }
@@ -102,8 +116,8 @@ final class McpLauncherInvoker {
         }
         cmd.add(req.executable().toString());
         cmd.add(req.subcommand());
-        if (req.extraArgs() != null && req.extraArgs().length > 0) {
-            cmd.addAll(Arrays.asList(req.extraArgs()));
+        if (!req.extraArgs().isEmpty()) {
+            cmd.addAll(req.extraArgs());
         }
         return cmd;
     }
