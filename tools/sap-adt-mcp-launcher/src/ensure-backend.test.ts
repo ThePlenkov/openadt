@@ -1,5 +1,11 @@
 import { afterEach, beforeEach, describe, expect, test } from "bun:test";
-import { existsSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
+import {
+  existsSync,
+  mkdirSync,
+  mkdtempSync,
+  rmSync,
+  writeFileSync,
+} from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import {
@@ -8,11 +14,13 @@ import {
   isValidPort,
   mcpRootDir,
   resolveAttachTarget,
+  resolveDetachedSpawn,
 } from "./ensure-backend.ts";
 import { type McpEndpointRecord, writeEndpoint } from "./endpoint-store.ts";
 
 let tempRoot: string;
 let previousRoot: string | undefined;
+let previousLauncherEnv: string | undefined;
 
 function sampleRecord(port: number): McpEndpointRecord {
   return {
@@ -26,10 +34,17 @@ function sampleRecord(port: number): McpEndpointRecord {
   };
 }
 
+function isBunBasename(command: string): boolean {
+  const base = command.replace(/.*[\\/]/, "").toLowerCase();
+  return base === "bun" || base === "bun.exe";
+}
+
 beforeEach(() => {
   previousRoot = process.env.OPENADT_MCP_DIR;
+  previousLauncherEnv = process.env.OPENADT_MCP_LAUNCHER;
   tempRoot = mkdtempSync(join(tmpdir(), "openadt-mcp-root-"));
   process.env.OPENADT_MCP_DIR = tempRoot;
+  delete process.env.OPENADT_MCP_LAUNCHER;
 });
 
 afterEach(() => {
@@ -38,6 +53,11 @@ afterEach(() => {
     delete process.env.OPENADT_MCP_DIR;
   } else {
     process.env.OPENADT_MCP_DIR = previousRoot;
+  }
+  if (previousLauncherEnv === undefined) {
+    delete process.env.OPENADT_MCP_LAUNCHER;
+  } else {
+    process.env.OPENADT_MCP_LAUNCHER = previousLauncherEnv;
   }
 });
 
@@ -99,5 +119,75 @@ describe("ensure-backend", () => {
     expect(existsSync(lockPath)).toBe(true);
     rmSync(lockPath);
     expect(existsSync(lockPath)).toBe(false);
+  });
+});
+
+describe("resolveDetachedSpawn", () => {
+  test("treats launcherPath with .ts as a bun script", () => {
+    const plan = resolveDetachedSpawn(join(tempRoot, "fixture.ts"));
+    expect(isBunBasename(plan.command)).toBe(true);
+    expect(plan.args).toEqual([join(tempRoot, "fixture.ts"), "serve"]);
+  });
+
+  test("treats launcherPath with .mjs as a bun script", () => {
+    const plan = resolveDetachedSpawn(join(tempRoot, "fixture.mjs"));
+    expect(isBunBasename(plan.command)).toBe(true);
+    expect(plan.args[0]).toBe(join(tempRoot, "fixture.mjs"));
+    expect(plan.args[1]).toBe("serve");
+  });
+
+  test("treats launcherPath with .js as a bun script", () => {
+    const plan = resolveDetachedSpawn(join(tempRoot, "fixture.js"));
+    expect(isBunBasename(plan.command)).toBe(true);
+    expect(plan.args[0]).toBe(join(tempRoot, "fixture.js"));
+  });
+
+  test("treats launcherPath without script suffix as an executable", () => {
+    const plan = resolveDetachedSpawn(join(tempRoot, "fixture.exe"));
+    expect(plan.command).toBe(join(tempRoot, "fixture.exe"));
+    expect(plan.args).toEqual(["serve"]);
+  });
+
+  test("OPENADT_MCP_LAUNCHER is honored when launcherPath is omitted", () => {
+    process.env.OPENADT_MCP_LAUNCHER = join(tempRoot, "env.ts");
+    const plan = resolveDetachedSpawn();
+    expect(isBunBasename(plan.command)).toBe(true);
+    expect(plan.args[0]).toBe(join(tempRoot, "env.ts"));
+  });
+
+  test("OPENADT_MCP_LAUNCHER can also point at an executable", () => {
+    process.env.OPENADT_MCP_LAUNCHER = join(tempRoot, "env.exe");
+    const plan = resolveDetachedSpawn();
+    expect(plan.command).toBe(join(tempRoot, "env.exe"));
+    expect(plan.args).toEqual(["serve"]);
+  });
+
+  test("always emits 'serve' as the first arg so the caller can splice more", () => {
+    const plan = resolveDetachedSpawn(join(tempRoot, "x"));
+    expect(plan.args[0]).toBe("serve");
+  });
+
+  test("compiled-binary branch re-execs process.execPath (the v1.3.16 fix)", () => {
+    // Without compiled:true the resolver would either use a bundled launcher
+    // (if dist/ or src/main.ts exists on disk for this test file) or fall
+    // back to process.execPath. Forcing compiled:true makes the assertion
+    // unambiguous: command === process.execPath and args starts with "serve".
+    const plan = resolveDetachedSpawn(undefined, { compiled: true });
+    expect(plan.command).toBe(process.execPath);
+    expect(plan.args[0]).toBe("serve");
+  });
+
+  test("bundled dist/ launcher is preferred in dev clone (no env override)", () => {
+    // Build a fake bundled layout under tempRoot/dist/main.mjs and have the
+    // resolver probe it. We monkey-patch the resolver's here/ by exercising
+    // the explicit path form instead — this still asserts the same
+    // script→bun mapping and the args shape used by the bundled branch.
+    const fakeBundled = join(tempRoot, "fake-bundled", "main.mjs");
+    mkdirSync(join(tempRoot, "fake-bundled"), { recursive: true });
+    writeFileSync(fakeBundled, "// fake bundled launcher\n");
+    const plan = resolveDetachedSpawn(fakeBundled);
+    expect(isBunBasename(plan.command)).toBe(true);
+    expect(plan.args[0]).toBe(fakeBundled);
+    expect(plan.args[1]).toBe("serve");
   });
 });

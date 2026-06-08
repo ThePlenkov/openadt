@@ -15,10 +15,10 @@ import {
 } from "node:fs";
 import { spawn, type ChildProcess } from "node:child_process";
 import { homedir } from "node:os";
-import { dirname, join, resolve } from "node:path";
+import { dirname, extname, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 
-import { sleep } from "./process.ts";
+import { killProcessTree, sleep } from "./process.ts";
 import {
   endpointFilePath,
   findHealthyEndpoint,
@@ -27,6 +27,84 @@ import {
 import { DEFAULT_MCP_PORT } from "./types.ts";
 import { buildAdtLscSpawnRuntime } from "./runtime-env.ts";
 import { resolveBunExecutable } from "./resolve-bun.ts";
+
+/**
+ * Plan returned by {@link resolveDetachedSpawn}.
+ *
+ * `args` starts with `"serve"` when the chosen command is a direct executable
+ * (compiled binary, env-override executable), and with the script path
+ * followed by `"serve"` when the launcher is run via `bun <script>`:
+ *
+ *   - `{ command: process.execPath, args: ["serve", ...] }`  — packaged binary
+ *   - `{ command: "bun", args: ["/abs/main.ts", "serve", ...] }`  — dev/dist
+ */
+export type DetachedSpawnPlan = {
+  command: string;
+  args: string[];
+};
+
+/** True when the current process is a compiled Bun binary (e.g. `openadt-mcp.exe`). */
+function isCompiledBinary(): boolean {
+  // Bun.isCompiled is only present at runtime in compiled builds. Treat its
+  // absence as "not compiled" so the dev path is the default.
+  const flag = (globalThis as { Bun?: { isCompiled?: boolean } }).Bun
+    ?.isCompiled;
+  return flag === true;
+}
+
+/** True when `path` looks like a Bun script we should run via `bun <path>`. */
+function isBunScriptPath(path: string): boolean {
+  const ext = extname(path).toLowerCase();
+  return ext === ".ts" || ext === ".mjs" || ext === ".js";
+}
+
+/** Treat the parent as the dist/ or src/ launcher if its script lives on disk. */
+function resolveBundleLauncher(): string | undefined {
+  const distMjs = resolve(here, "..", "dist", "main.mjs");
+  if (existsSync(distMjs)) return distMjs;
+  const distJs = resolve(here, "..", "dist", "main.js");
+  if (existsSync(distJs)) return distJs;
+  const mainTs = resolve(here, "main.ts");
+  if (existsSync(mainTs)) return mainTs;
+  return undefined;
+}
+
+/**
+ * Pick the spawn command + args for the detached HTTP daemon.
+ *
+ * Resolution order (see `specs/mcp-shared-backend.md` § Launcher resolution):
+ *  1. `launcherPath` (test / `OPENADT_MCP_LAUNCHER`): `.ts|.mjs|.js` → `bun`+path;
+ *     otherwise treat as executable.
+ *  2. Compiled Bun binary (`Bun.isCompiled === true`, or `compiled` test flag)
+ *     → `process.execPath` + serve.
+ *  3. `dist/main.{mjs,js}` or `src/main.ts` exists → `bun` + script + serve.
+ *  4. Fallback (packaged binary without `dist/` or `src/` on disk) →
+ *     `process.execPath` + serve.
+ *
+ * `options.compiled` is a test seam that overrides the `Bun.isCompiled` check
+ * so unit tests can exercise the packaged-binary branch without depending on
+ * the host's runtime state.
+ */
+export function resolveDetachedSpawn(
+  launcherPath?: string,
+  options: { compiled?: boolean } = {},
+): DetachedSpawnPlan {
+  const explicit = launcherPath ?? process.env.OPENADT_MCP_LAUNCHER;
+  if (explicit && explicit.length > 0) {
+    if (isBunScriptPath(explicit)) {
+      return { command: resolveBunExecutable(), args: [explicit, "serve"] };
+    }
+    return { command: explicit, args: ["serve"] };
+  }
+  if (options.compiled === true || isCompiledBinary()) {
+    return { command: process.execPath, args: ["serve"] };
+  }
+  const bundled = resolveBundleLauncher();
+  if (bundled) {
+    return { command: resolveBunExecutable(), args: [bundled, "serve"] };
+  }
+  return { command: process.execPath, args: ["serve"] };
+}
 
 const PORT_MIN = 1024;
 const PORT_MAX = 65535;
@@ -221,17 +299,16 @@ function spawnDetachedServeInternal(request: {
   serveArgs: string[];
   options: { launcherPath?: string; extraEnv?: NodeJS.ProcessEnv };
 }): ChildProcess {
-  const launcher = request.options.launcherPath ?? resolveDefaultLauncherPath();
+  const plan = resolveDetachedSpawn(request.options.launcherPath);
   const runtime = buildAdtLscSpawnRuntime();
   const args = [
-    launcher,
-    "serve",
+    ...plan.args,
     "--port",
     String(request.port),
     "--foreground",
     ...request.serveArgs,
   ];
-  const child = spawn(resolveBunExecutable(), args, {
+  const child = spawn(plan.command, args, {
     cwd: process.cwd(),
     stdio: "ignore",
     env: {
@@ -243,16 +320,6 @@ function spawnDetachedServeInternal(request: {
   });
   child.unref();
   return child;
-}
-
-function resolveDefaultLauncherPath(): string {
-  // Packaged/release builds ship `dist/main.{mjs,js}` — prefer them when present.
-  // Fall back to `src/main.ts` for dev clones (`bun run ...` from a checkout).
-  const distMjs = resolve(here, "..", "dist", "main.mjs");
-  if (existsSync(distMjs)) return distMjs;
-  const distJs = resolve(here, "..", "dist", "main.js");
-  if (existsSync(distJs)) return distJs;
-  return resolve(here, "main.ts");
 }
 
 /**
@@ -399,23 +466,51 @@ async function spawnAndAwaitHealthy(input: {
     launcherPath: input.launcherPath,
   });
   if (!child.pid) {
-    const err = new Error(`Failed to spawn MCP daemon on port ${port}`);
-    (err as NodeJS.ErrnoException).code = "OPENADT_MCP_SPAWN_FAILED";
+    throw daemonError({ port, kind: "spawn-failed" });
+  }
+  try {
+    const healthy = await waitForHealthyRecord({
+      port,
+      timeoutMs: input.timeoutMs,
+    });
+    if (!healthy) {
+      throw daemonError({ port, timeoutMs: input.timeoutMs, kind: "timeout" });
+    }
+    // Detached daemon may have been reaped; trust the store record.
+    return attachToRecord(healthy);
+  } catch (err) {
+    reapChildOnError(child);
     throw err;
   }
-  const healthy = await waitForHealthyRecord({
-    port,
-    timeoutMs: input.timeoutMs,
-  });
-  if (!healthy) {
-    const err = new Error(
-      `MCP daemon on port ${port} did not become healthy within ${input.timeoutMs}ms`,
-    );
-    (err as NodeJS.ErrnoException).code = "OPENADT_MCP_TIMEOUT";
-    throw err;
+}
+
+type DaemonErrorKind = "spawn-failed" | "timeout";
+
+function daemonError(request: {
+  port: number;
+  timeoutMs?: number;
+  kind: DaemonErrorKind;
+}): Error {
+  const message =
+    request.kind === "spawn-failed"
+      ? `Failed to spawn MCP daemon on port ${request.port}`
+      : `MCP daemon on port ${request.port} did not become healthy within ${request.timeoutMs}ms`;
+  const code =
+    request.kind === "spawn-failed"
+      ? "OPENADT_MCP_SPAWN_FAILED"
+      : "OPENADT_MCP_TIMEOUT";
+  const err = new Error(message);
+  (err as NodeJS.ErrnoException).code = code;
+  return err;
+}
+
+function reapChildOnError(child: ChildProcess): void {
+  // Don't leave a zombie detached daemon holding the port without an
+  // endpoint record. The daemon's own stdio is `ignore`, so killing the
+  // parent bun process is enough.
+  if (child.exitCode === null && child.signalCode === null) {
+    killProcessTree(child);
   }
-  // Detached daemon may have been reaped; trust the store record.
-  return attachToRecord(healthy);
 }
 
 /**

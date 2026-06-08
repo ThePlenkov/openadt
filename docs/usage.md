@@ -441,6 +441,41 @@ openadt mcp print-config --port 2236  # print agent-ready HTTP client config
 | `adt discover` ClassNotFoundError | SDK runtime not built                | `openadt config build`                                            |
 | Discovery empty                   | Not logged on                        | `openadt auth login DEV` first                                    |
 
+### MCP troubleshooting
+
+**MCP Inspector shows a reconnect loop on `openadt-mcp serve --stdio`** — the cold-start shared backend was unable to spawn in 1.3.16. Upgrade to **`openadt-mcp ≥ 1.3.17`** (the fix re-execs the binary via `process.execPath` instead of looking for `bun main.ts` on disk). Workarounds for the broken release:
+
+```json
+"args": ["serve", "--stdio", "--standalone"]
+```
+
+Stale lock/endpoint files after a crashed attempt:
+
+```powershell
+Stop-Process -Name openadt-mcp -Force -ErrorAction SilentlyContinue
+Remove-Item "$env:USERPROFILE\.openadt\mcp\ensure-*.lock" -Force -ErrorAction SilentlyContinue
+Remove-Item "$env:USERPROFILE\.openadt\mcp\endpoints\*.json" -Force -ErrorAction SilentlyContinue
+```
+
+**Amazon Q** often can't spawn the binary via the GUI's `PATH`; point the config at an absolute path to `openadt-mcp.exe`, and add `--standalone` (Amazon Q has its own per-session model and is usually fine with the monolithic path):
+
+```json
+{
+  "mcpServers": {
+    "sap-adt": {
+      "command": "C:\\Users\\you\\scoop\\apps\\openadt-mcp\\current\\openadt-mcp.exe",
+      "args": ["serve", "--stdio", "--standalone"]
+    }
+  }
+}
+```
+
+**Tools disappear after "remove `--standalone`"** — you attached to a _stale_ shared endpoint on `2236` whose `adt-lsc` already exited. Stop it explicitly before re-attaching:
+
+```bash
+openadt mcp stop --port 2236   # or: openadt-mcp stop --port 2236
+```
+
 <a id="security"></a>
 
 ## Security
