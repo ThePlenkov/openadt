@@ -452,9 +452,7 @@ async function spawnAndAwaitHealthy(input: {
     launcherPath: input.launcherPath,
   });
   if (!child.pid) {
-    const err = new Error(`Failed to spawn MCP daemon on port ${port}`);
-    (err as NodeJS.ErrnoException).code = "OPENADT_MCP_SPAWN_FAILED";
-    throw err;
+    throw daemonError({ port, kind: "spawn-failed" });
   }
   try {
     const healthy = await waitForHealthyRecord({
@@ -462,22 +460,42 @@ async function spawnAndAwaitHealthy(input: {
       timeoutMs: input.timeoutMs,
     });
     if (!healthy) {
-      const err = new Error(
-        `MCP daemon on port ${port} did not become healthy within ${input.timeoutMs}ms`,
-      );
-      (err as NodeJS.ErrnoException).code = "OPENADT_MCP_TIMEOUT";
-      throw err;
+      throw daemonError({ port, timeoutMs: input.timeoutMs, kind: "timeout" });
     }
     // Detached daemon may have been reaped; trust the store record.
     return attachToRecord(healthy);
   } catch (err) {
-    // Don't leave a zombie detached daemon holding the port without an
-    // endpoint record. The daemon's own stdio is `ignore`, so killing the
-    // parent bun process is enough.
-    if (child.exitCode === null && child.signalCode === null) {
-      killProcessTree(child);
-    }
+    reapChildOnError(child);
     throw err;
+  }
+}
+
+type DaemonErrorKind = "spawn-failed" | "timeout";
+
+function daemonError(request: {
+  port: number;
+  timeoutMs?: number;
+  kind: DaemonErrorKind;
+}): Error {
+  const message =
+    request.kind === "spawn-failed"
+      ? `Failed to spawn MCP daemon on port ${request.port}`
+      : `MCP daemon on port ${request.port} did not become healthy within ${request.timeoutMs}ms`;
+  const code =
+    request.kind === "spawn-failed"
+      ? "OPENADT_MCP_SPAWN_FAILED"
+      : "OPENADT_MCP_TIMEOUT";
+  const err = new Error(message);
+  (err as NodeJS.ErrnoException).code = code;
+  return err;
+}
+
+function reapChildOnError(child: ChildProcess): void {
+  // Don't leave a zombie detached daemon holding the port without an
+  // endpoint record. The daemon's own stdio is `ignore`, so killing the
+  // parent bun process is enough.
+  if (child.exitCode === null && child.signalCode === null) {
+    killProcessTree(child);
   }
 }
 
