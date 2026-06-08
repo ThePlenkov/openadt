@@ -128,6 +128,9 @@ only judges; the scripts do the fetch/join/CSV work in two tool calls. Full
 contract: [RATING_FLOW.md](../../../scripts/act/RATING_FLOW.md).
 
 ```bash
+# prepare scratch dir once
+mkdir -p /tmp/agent_$$
+
 # 1. one call — dump every finding with full metadata
 bun scripts/act/extract-findings.ts OWNER REPO PR > /tmp/agent_$$/findings.jsonl
 # 2. read findings, write /tmp/agent_$$/scores.tsv  (finding_id<TAB>0-5<TAB>why)

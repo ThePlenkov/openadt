@@ -94,7 +94,8 @@ function ensureGhAuth(): void {
 
 function parseArgs(argv: string[]): PrArgs {
   const [owner, repo, pr] = argv;
-  if (!owner || !repo || !pr) {
+  const missing = [owner, repo, pr].some((v) => !v);
+  if (missing) {
     console.error("Usage: extract-findings.ts OWNER REPO PR_NUMBER");
     process.exit(2);
   }
@@ -137,11 +138,15 @@ function getCommitInfo(a: PrArgs): CommitInfo {
 function fetchCheckRuns(opts: { a: PrArgs; sha: string }): CheckRun[] {
   const raw = gh([
     "api",
+    "--paginate",
     `repos/${opts.a.owner}/${opts.a.repo}/commits/${opts.sha}/check-runs`,
     "--jq",
-    ".check_runs",
+    ".check_runs[]",
   ]);
-  return JSON.parse(raw) as CheckRun[];
+  return raw
+    .split("\n")
+    .filter((line) => line.trim() !== "")
+    .map((line) => JSON.parse(line) as CheckRun);
 }
 
 function fetchAnnotations(opts: { a: PrArgs; run: CheckRun }): Annotation[] {
@@ -153,8 +158,13 @@ function fetchAnnotations(opts: { a: PrArgs; run: CheckRun }): Annotation[] {
       "api",
       "--paginate",
       `repos/${opts.a.owner}/${opts.a.repo}/check-runs/${opts.run.id}/annotations`,
+      "--jq",
+      ".[]",
     ]);
-    return JSON.parse(raw) as Annotation[];
+    return raw
+      .split("\n")
+      .filter((line) => line.trim() !== "")
+      .map((line) => JSON.parse(line) as Annotation);
   } catch {
     return [];
   }
@@ -233,8 +243,13 @@ function reviewFindings(opts: { a: PrArgs; commit: CommitInfo }): Finding[] {
     "api",
     "--paginate",
     `repos/${opts.a.owner}/${opts.a.repo}/pulls/${opts.a.pr}/comments`,
+    "--jq",
+    ".[]",
   ]);
-  const comments = JSON.parse(raw) as ReviewComment[];
+  const comments = raw
+    .split("\n")
+    .filter((line) => line.trim() !== "")
+    .map((line) => JSON.parse(line) as ReviewComment);
   return comments
     .filter(isTopLevel)
     .map((comment) => reviewToFinding({ comment, commit: opts.commit }));
