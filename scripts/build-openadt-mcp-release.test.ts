@@ -2,6 +2,7 @@ import { describe, expect, test } from "bun:test";
 import {
   parsePlatform,
   PLATFORM_BUILD_TARGETS,
+  readArg,
 } from "./build-openadt-mcp-release.ts";
 
 describe("parsePlatform", () => {
@@ -20,5 +21,27 @@ describe("parsePlatform", () => {
     expect(() => parsePlatform("linux-arm64")).toThrow();
     expect(() => parsePlatform("")).toThrow();
     expect(() => parsePlatform(undefined)).toThrow();
+  });
+});
+
+describe("readArg", () => {
+  test("preserves '=' in values (paths may contain '=')", () => {
+    const original = [...process.argv];
+    try {
+      process.argv = [...original, "--out=/tmp/openadt=ci"];
+      expect(readArg("--out")).toBe("/tmp/openadt=ci");
+    } finally {
+      process.argv = original;
+    }
+  });
+
+  test("returns undefined when the flag is missing", () => {
+    const original = [...process.argv];
+    try {
+      process.argv = original;
+      expect(readArg("--platform")).toBeUndefined();
+    } finally {
+      process.argv = original;
+    }
   });
 });

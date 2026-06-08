@@ -74,14 +74,16 @@ function spawnOrThrow(cmd: string, args: string[]): void {
   }
 }
 
+export function readArg(name: "--platform" | "--out"): string | undefined {
+  const prefix = `${name}=`;
+  const found = process.argv.find((a) => a.startsWith(prefix));
+  return found?.slice(prefix.length);
+}
+
 function main(): void {
   const root = resolve(import.meta.dir, "..");
-  const platformArg = process.argv
-    .find((a) => a.startsWith("--platform="))
-    ?.split("=")[1];
-  const outArg = process.argv
-    .find((a) => a.startsWith("--out="))
-    ?.split("=")[1];
+  const platformArg = readArg("--platform");
+  const outArg = readArg("--out");
   const target = parsePlatform(platformArg);
   const platform = target.platform;
   const version = readVersion(root);

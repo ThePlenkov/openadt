@@ -21,7 +21,7 @@ export function compileMcpBinary(req: CompileRequest): void {
       `--platform=${req.platform}`,
       `--out=${req.stageDir}`,
     ],
-    { stdio: "inherit" },
+    { stdio: "inherit", cwd: req.root },
   );
   if (build.error) {
     throw new Error(
