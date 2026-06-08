@@ -22,9 +22,10 @@ final class McpLauncherInvoker {
                     Or set OPENADT_REPO to your git clone (and have Bun on PATH).""");
             return 1;
         }
+        McpLaunchRequest req = McpLaunchRequest.of(plan.executable(), subcommand, extraArgs, null);
         return plan.kind() == McpLaunchKind.NATIVE
-                ? spawnDirect(plan.executable(), subcommand, extraArgs)
-                : spawnBun(plan.executable(), subcommand, extraArgs);
+                ? dispatchDirect(req)
+                : dispatchBun(req);
     }
 
     static Path resolveOpenAdtMcpBinary() {
@@ -47,40 +48,19 @@ final class McpLauncherInvoker {
         return null;
     }
 
-    private static int spawnDirect(Path binary, String subcommand, String[] extraArgs) {
-        return runAndWait(
-            new ProcessBuilder(buildArgv(toRequest(binary, subcommand, extraArgs, null))),
-            "openadt-mcp");
+    private static int dispatchDirect(McpLaunchRequest req) {
+        return ProcessSpawner.runAndWait(new ProcessBuilder(buildArgv(req)), "openadt-mcp");
     }
 
-    private static int spawnBun(Path script, String subcommand, String[] extraArgs) {
+    private static int dispatchBun(McpLaunchRequest req) {
         ProcessBuilder pb = new ProcessBuilder(
-                buildArgv(toRequest(script, subcommand, extraArgs, BinaryLocator.resolveBunExecutable())));
-        LauncherLocator.applyRepoEnv(pb, script);
-        return runAndWait(pb, "MCP launcher");
-    }
-
-    private static McpLaunchRequest toRequest(
-            Path executable, String subcommand, String[] extraArgs, String prefix) {
-        return new McpLaunchRequest(
-                executable,
-                subcommand,
-                extraArgs == null || extraArgs.length == 0 ? List.of() : List.of(extraArgs),
-                prefix);
-    }
-
-    private static int runAndWait(ProcessBuilder pb, String errorLabel) {
-        pb.inheritIO();
-        try {
-            return pb.start().waitFor();
-        } catch (InterruptedException e) {
-            Thread.currentThread().interrupt();
-            CliLog.error("Failed to run " + errorLabel + ": " + e.getMessage());
-            return 1;
-        } catch (IOException e) {
-            CliLog.error("Failed to run " + errorLabel + ": " + e.getMessage());
-            return 1;
-        }
+                buildArgv(McpLaunchRequest.of(
+                        req.executable(),
+                        req.subcommand(),
+                        req.extraArgs().toArray(new String[0]),
+                        BinaryLocator.resolveBunExecutable())));
+        LauncherLocator.applyRepoEnv(pb, req.executable());
+        return ProcessSpawner.runAndWait(pb, "MCP launcher");
     }
 
     private static List<String> buildArgv(McpLaunchRequest req) {
@@ -107,7 +87,16 @@ final class McpLauncherInvoker {
             Path executable,
             String subcommand,
             List<String> extraArgs,
-            String prefix) {}
+            String prefix) {
+        static McpLaunchRequest of(
+                Path executable, String subcommand, String[] extraArgs, String prefix) {
+            return new McpLaunchRequest(
+                    executable,
+                    subcommand,
+                    extraArgs == null || extraArgs.length == 0 ? List.of() : List.of(extraArgs),
+                    prefix);
+        }
+    }
 
     private enum McpLaunchKind { NATIVE, DEV_CLONE }
 }
