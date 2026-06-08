@@ -13,7 +13,7 @@ Set the `CS_ACCESS_TOKEN` env var to a CodeScene PAT from <https://codescene.io/
 Before pushing, run the same verify block as documented in [AGENTS.md](./AGENTS.md#verify-before-pr):
 
 ```bash
-bunx eslint scripts/ .agents/skills/ --max-warnings 0
+bunx eslint scripts/ .agents/skills/ --max-warnings 0 --no-error-on-unmatched-pattern
 bun scripts/verify-spec-sync.ts
 bun scripts/verify-package-docs.ts
 ./mvnw -q verify -Pdistribution

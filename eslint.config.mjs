@@ -62,14 +62,6 @@ export default tseslint.config(
       ],
     },
   },
-  // ── Tier 1 exceptions: known CC overflow on legacy scripts/ ────
-  // Tracked for follow-up refactor. Add new exceptions here only with justification.
-  {
-    files: ["scripts/nx-openadt.ts", "scripts/sdk-classpath.ts"],
-    rules: {
-      complexity: "off", // firstSubcommandIndex=12, buildSdkClasspathEntries=10
-    },
-  },
   // ── Tier 2: WARN everywhere else (advisory, non-blocking) ───────
   ...tseslint.configs.recommended.map((config) => ({
     ...config,
@@ -93,4 +85,14 @@ export default tseslint.config(
       ],
     },
   })),
+  // ── Tier 1 exceptions: known CC overflow on legacy scripts/ ────
+  // Placed LAST so it wins over the Tier 2 recommended spread above
+  // (flat config: the last matching block wins per-rule). Tracked for
+  // follow-up refactor; add new exceptions here only with justification.
+  {
+    files: ["scripts/nx-openadt.ts", "scripts/sdk-classpath.ts"],
+    rules: {
+      complexity: "off", // firstSubcommandIndex=12, buildSdkClasspathEntries=10
+    },
+  },
 );

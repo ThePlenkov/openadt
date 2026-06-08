@@ -91,13 +91,6 @@ type RunOptions = {
   root: string;
 };
 
-type RepoOptions = {
-  owner: string;
-  repo: string;
-  name: string;
-  octokit: Octokit;
-};
-
 type CreateLabelOptions = {
   repo: GitHubRepo;
   octokit: Octokit;
@@ -177,12 +170,6 @@ type DiffArgsOptions = {
 type SyncOneOptions = {
   run: RunOptions;
   relPath: string;
-};
-
-type FileArgOptions = {
-  args: CliArgs;
-  argv: string[];
-  root: string;
 };
 
 type SanitizeOptions = {
