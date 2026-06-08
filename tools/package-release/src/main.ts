@@ -10,6 +10,7 @@ import {
 } from "node:fs";
 import { dirname, join, resolve } from "node:path";
 import { spawnSync } from "node:child_process";
+import { packageMcpBinary, type FileChecksum } from "./mcp-package.ts";
 
 const root = resolve(import.meta.dir, "../../..");
 const cliDir = join(root, "apps/openadt-cli");
@@ -50,16 +51,16 @@ const stageDir = join(distDir, `openadt-${version}`);
 const zipName = `openadt-${version}.zip`;
 const zipPath = join(distDir, zipName);
 
-function sha256File(path: string): string {
+function sha256File(opts: FileChecksum): string {
   return createHash("sha256")
-    .update(readFileSync(path))
+    .update(readFileSync(opts.filePath))
     .digest("hex")
-    .toUpperCase();
+    .toLowerCase();
 }
 
-function buildWindowsExe(target: string): void {
+function buildWindowsExe(opts: BuildTarget): void {
   const launcherDir = join(root, "packaging/windows/launcher");
-  const go = spawnSync("go", ["build", "-o", target, "."], {
+  const go = spawnSync("go", ["build", "-o", opts.target, "."], {
     cwd: launcherDir,
     stdio: "pipe",
   });
@@ -81,7 +82,7 @@ function buildWindowsExe(target: string): void {
       "-c",
       "Release",
       "-o",
-      dirname(target),
+      dirname(opts.target),
       "/p:AssemblyName=openadt",
     ],
     { stdio: "inherit" },
@@ -93,29 +94,29 @@ function buildWindowsExe(target: string): void {
   }
 }
 
-function writeLaunchers(base: string): void {
-  mkdirSync(join(base, "bin"), { recursive: true });
+function writeLaunchers(opts: LaunchersOutput): void {
+  mkdirSync(join(opts.base, "bin"), { recursive: true });
 
   cpSync(
     join(root, "packaging/windows/openadt-launcher.ps1"),
-    join(base, "bin/openadt-launcher.ps1"),
+    join(opts.base, "bin/openadt-launcher.ps1"),
   );
   cpSync(
     join(root, "packaging/windows/prepare-openadt-runtime.ps1"),
-    join(base, "bin/prepare-openadt-runtime.ps1"),
+    join(opts.base, "bin/prepare-openadt-runtime.ps1"),
   );
   cpSync(
     join(root, "packaging/scoop/post-install.ps1"),
-    join(base, "bin/scoop-post-install.ps1"),
+    join(opts.base, "bin/scoop-post-install.ps1"),
   );
 
   writeFileSync(
-    join(base, "bin/openadt.cmd"),
+    join(opts.base, "bin/openadt.cmd"),
     `@echo off\r\nsetlocal EnableDelayedExpansion\r\nset "OPENADT_HOME=%~dp0.."\r\nset "OPENADT_ARG_COUNT=0"\r\n:openadt_args\r\nif "%~1"=="" goto openadt_run\r\nset "OPENADT_ARG_!OPENADT_ARG_COUNT!=%~1"\r\nset /a OPENADT_ARG_COUNT+=1\r\nshift\r\ngoto openadt_args\r\n:openadt_run\r\npowershell -NoProfile -ExecutionPolicy Bypass -File "%~dp0openadt-launcher.ps1"\r\nexit /b %ERRORLEVEL%\r\n`,
   );
 
   writeFileSync(
-    join(base, "bin/openadt.ps1"),
+    join(opts.base, "bin/openadt.ps1"),
     `param(
   [Parameter(ValueFromRemainingArguments = $true)]
   [string[]] $OpenAdtArgs
@@ -127,7 +128,7 @@ exit $LASTEXITCODE
   );
 
   writeFileSync(
-    join(base, "bin/openadt"),
+    join(opts.base, "bin/openadt"),
     `#!/usr/bin/env bash
 set -euo pipefail
 OPENADT_HOME="$(cd "$(dirname "$0")/.." && pwd)"
@@ -137,30 +138,13 @@ exec java -jar "$OPENADT_HOME/openadt.jar" "$@"
   );
 }
 
-function updateHomebrewSha256(sha256: string): void {
-  const formulaPath = join(root, "packaging/homebrew/openadt.rb");
-  let ruby = readFileSync(formulaPath, "utf8");
-  ruby = ruby.replace(/sha256 "[^"]+"/, `sha256 "${sha256.toLowerCase()}"`);
-  writeFileSync(formulaPath, ruby);
-  syncHomebrewTapFormula(formulaPath);
-}
+type BuildTarget = {
+  target: string;
+};
 
-function syncHomebrewTapFormula(formulaPath: string): void {
-  const tapPath = join(root, "Formula/openadt.rb");
-  mkdirSync(dirname(tapPath), { recursive: true });
-  cpSync(formulaPath, tapPath);
-}
-
-function updateScoopSha256(sha256: string): void {
-  const manifestPath = join(root, "packaging/scoop/openadt.json");
-  const manifest = JSON.parse(readFileSync(manifestPath, "utf8")) as {
-    architecture: { "64bit": { url: string; hash: string } };
-  };
-  manifest.architecture["64bit"].url =
-    `https://github.com/abapify/openadt/releases/download/v${version}/${zipName}`;
-  manifest.architecture["64bit"].hash = sha256.toLowerCase();
-  writeFileSync(manifestPath, `${JSON.stringify(manifest, null, 4)}\n`);
-}
+type LaunchersOutput = {
+  base: string;
+};
 
 rmSync(stageDir, { recursive: true, force: true });
 mkdirSync(stageDir, { recursive: true });
@@ -175,38 +159,12 @@ cpSync(jarPath, join(stageDir, "openadt.jar"));
 writeFileSync(join(stageDir, "VERSION"), `${version}\n`);
 cpSync(join(root, "LICENSE"), join(stageDir, "LICENSE"));
 
-const mcpLauncherSrc = join(root, "tools/sap-adt-mcp-launcher");
-const mcpLauncherDest = join(stageDir, "sap-adt-mcp-launcher");
-
-const buildMcp = spawnSync("bun", ["run", "build"], {
-  cwd: mcpLauncherSrc,
-  stdio: "pipe",
-});
-if (buildMcp.status !== 0 || buildMcp.error) {
-  const stderr = buildMcp.stderr?.toString().trim();
-  const stdout = buildMcp.stdout?.toString().trim();
-  const cause = buildMcp.error ? ` (${buildMcp.error.message})` : "";
-  const output = [stderr, stdout].filter(Boolean).join("\n");
-  throw new Error(
-    `Failed to build MCP launcher with tsdown${cause}${output ? `: ${output}` : ""}`,
-  );
-}
-
-mkdirSync(mcpLauncherDest, { recursive: true });
-cpSync(join(mcpLauncherSrc, "dist"), join(mcpLauncherDest, "dist"), {
-  recursive: true,
-});
-cpSync(
-  join(mcpLauncherSrc, "package.json"),
-  join(mcpLauncherDest, "package.json"),
-);
-cpSync(join(mcpLauncherSrc, "README.md"), join(mcpLauncherDest, "README.md"));
-writeLaunchers(stageDir);
+writeLaunchers({ base: stageDir });
 if (
   process.platform === "win32" ||
   process.env.OPENADT_PACKAGE_WIN_EXE === "1"
 ) {
-  buildWindowsExe(join(stageDir, "openadt.exe"));
+  buildWindowsExe({ target: join(stageDir, "openadt.exe") });
   for (const extra of [
     "openadt.pdb",
     "openadt.deps.json",
@@ -223,10 +181,38 @@ const zip = new AdmZip();
 zip.addLocalFolder(stageDir, `openadt-${version}`);
 zip.writeZip(zipPath);
 
-const sha256 = sha256File(zipPath);
+const sha256 = sha256File({ filePath: zipPath });
 writeFileSync(`${zipPath}.sha256`, `${sha256}  ${zipName}\n`);
 updateHomebrewSha256(sha256);
 updateScoopSha256(sha256);
 
 console.log(`Packaged ${zipPath}`);
 console.log(`SHA256 ${sha256}`);
+
+packageMcpBinary({ root, distDir, version, sha256File });
+
+function updateHomebrewSha256(sha256: string): void {
+  const formulaPath = join(root, "packaging/homebrew/openadt.rb");
+  let ruby = readFileSync(formulaPath, "utf8");
+  ruby = ruby.replace(/sha256 "[^"]+"/, `sha256 "${sha256.toLowerCase()}"`);
+  writeFileSync(formulaPath, ruby);
+  syncHomebrewTapFormula(formulaPath, "openadt");
+}
+
+function syncHomebrewTapFormula(formulaPath: string, product: string): void {
+  const tapPath = join(root, `Formula/${product}.rb`);
+  mkdirSync(dirname(tapPath), { recursive: true });
+  const buf = readFileSync(formulaPath);
+  writeFileSync(tapPath, buf);
+}
+
+function updateScoopSha256(sha256: string): void {
+  const manifestPath = join(root, "packaging/scoop/openadt.json");
+  const manifest = JSON.parse(readFileSync(manifestPath, "utf8")) as {
+    architecture: { "64bit": { url: string; hash: string } };
+  };
+  manifest.architecture["64bit"].url =
+    `https://github.com/abapify/openadt/releases/download/v${version}/${zipName}`;
+  manifest.architecture["64bit"].hash = sha256.toLowerCase();
+  writeFileSync(manifestPath, `${JSON.stringify(manifest, null, 4)}\n`);
+}
