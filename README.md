@@ -11,12 +11,12 @@
 [![CI](https://img.shields.io/github/actions/workflow/status/abapify/openadt/ci.yml?branch=main&label=CI)](https://github.com/abapify/openadt/actions/workflows/ci.yml)
 [![Platforms](https://img.shields.io/badge/platforms-Windows%20%7C%20Linux%20%7C%20macOS-blue)](#-install)
 [![Java](https://img.shields.io/badge/Java-17%2B-orange)](apps/ARCHITECTURE.md)
+[![CodeScene general](https://codescene.io/images/analyzed-by-codescene-badge.svg)](https://codescene.io/projects/80949)
 
 [![CodeScene Average Code Health](https://codescene.io/projects/80949/status-badges/average-code-health)](https://codescene.io/projects/80949)
 [![CodeScene Hotspot Code Health](https://codescene.io/projects/80949/status-badges/hotspot-code-health)](https://codescene.io/projects/80949)
 [![CodeScene Missed Goals](https://codescene.io/projects/80949/status-badges/missed-goals)](https://codescene.io/projects/80949)
 [![CodeScene System Mastery](https://codescene.io/projects/80949/status-badges/system-mastery)](https://codescene.io/projects/80949)
-[![CodeScene general](https://codescene.io/images/analyzed-by-codescene-badge.svg)](https://codescene.io/projects/80949)
 
 [Install](#-install) · [Quick start](#-quick-start) · [Use](#-use) · [MCP](#-mcp-for-ai-agents) · [Docs](docs/usage.md)
 
