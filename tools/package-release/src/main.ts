@@ -189,7 +189,7 @@ updateScoopSha256(sha256);
 console.log(`Packaged ${zipPath}`);
 console.log(`SHA256 ${sha256}`);
 
-packageMcpBinary(root, distDir, version, sha256File);
+packageMcpBinary({ root, distDir, version, sha256File });
 
 function updateHomebrewSha256(sha256: string): void {
   const formulaPath = join(root, "packaging/homebrew/openadt.rb");
