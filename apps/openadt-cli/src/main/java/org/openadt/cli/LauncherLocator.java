@@ -43,7 +43,12 @@ final class LauncherLocator {
     }
 
     private static Path findFromCwd() {
-        Path cwd = Path.of("").toAbsolutePath();
+        Path cwd;
+        try {
+            cwd = Path.of("").toAbsolutePath();
+        } catch (java.nio.file.InvalidPathException e) {
+            return null;
+        }
         for (int depth = 0; depth < CWD_WALK_MAX_DEPTH && cwd != null; depth++) {
             Path hit = findInRoot(cwd, false);
             if (hit != null) {
