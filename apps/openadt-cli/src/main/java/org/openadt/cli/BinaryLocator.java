@@ -52,19 +52,36 @@ final class BinaryLocator {
             if (dir.isBlank()) {
                 continue;
             }
-            for (String name : NATIVE_BINARY_NAMES) {
-                Path candidate;
-                try {
-                    candidate = Path.of(dir).resolve(name);
-                } catch (InvalidPathException ignored) {
-                    break;
-                }
-                if (Files.isRegularFile(candidate) && Files.isExecutable(candidate)) {
-                    return candidate.toAbsolutePath().normalize();
-                }
+            Path hit = firstExecutableInDir(dir);
+            if (hit != null) {
+                return hit;
             }
         }
         return null;
+    }
+
+    private static Path firstExecutableInDir(String dir) {
+        for (String name : NATIVE_BINARY_NAMES) {
+            Path candidate = resolveSafe(dir, name);
+            if (isExecutable(candidate)) {
+                return candidate.toAbsolutePath().normalize();
+            }
+        }
+        return null;
+    }
+
+    private static boolean isExecutable(Path candidate) {
+        return candidate != null
+                && Files.isRegularFile(candidate)
+                && Files.isExecutable(candidate);
+    }
+
+    private static Path resolveSafe(String dir, String name) {
+        try {
+            return Path.of(dir).resolve(name);
+        } catch (InvalidPathException ignored) {
+            return null;
+        }
     }
 
     static String resolveBunExecutable() {
