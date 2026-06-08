@@ -127,7 +127,7 @@ function packArchive(opts: ArchivePackingOptions): void {
     zip.writeZip(opts.archivePath);
     return;
   }
-  const distDir = dirname(dirname(opts.archivePath));
+  const distDir = dirname(opts.archivePath);
   const tar = spawnSync("tar", ["czf", opts.archivePath, opts.stageDirName], {
     cwd: distDir,
     stdio: "inherit",

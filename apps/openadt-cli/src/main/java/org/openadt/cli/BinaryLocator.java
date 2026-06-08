@@ -11,8 +11,12 @@ import java.util.Locale;
  *  dev-clone launcher main path. Extracted from {@link McpLauncherInvoker}
  *  to keep the caller focused on the dispatch path. */
 final class BinaryLocator {
-    private static final String[] NATIVE_BINARY_NAMES = {
+    private static final String[] NATIVE_BINARY_NAMES_WINDOWS = {
         "openadt-mcp.exe",
+        "openadt-mcp.cmd",
+        "openadt-mcp",
+    };
+    private static final String[] NATIVE_BINARY_NAMES_UNIX = {
         "openadt-mcp",
     };
 
@@ -61,13 +65,17 @@ final class BinaryLocator {
     }
 
     private static Path firstExecutableInDir(String dir) {
-        for (String name : NATIVE_BINARY_NAMES) {
+        for (String name : candidateBinaryNames()) {
             Path candidate = resolveSafe(dir, name);
             if (isExecutable(candidate)) {
                 return candidate.toAbsolutePath().normalize();
             }
         }
         return null;
+    }
+
+    private static String[] candidateBinaryNames() {
+        return isWindows() ? NATIVE_BINARY_NAMES_WINDOWS : NATIVE_BINARY_NAMES_UNIX;
     }
 
     private static boolean isExecutable(Path candidate) {

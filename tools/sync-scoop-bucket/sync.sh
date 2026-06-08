@@ -91,7 +91,8 @@ push_manifest_to_repo() {
     rm -rf "${work}"
   }
   trap cleanup RETURN
-  trap 'cleanup; trap - RETURN; return 1' INT TERM
+  # Signal trap: `return` is invalid outside a function context, so use `exit`.
+  trap 'cleanup; trap - RETURN INT TERM; exit 1' INT TERM
 
   if remote_exists "${repo_slug}" "${target_branch}" "${token}"; then
     git -c "${git_cfg}" clone --branch "${target_branch}" --depth 1 "${clone_url}" "${work}"
@@ -101,20 +102,23 @@ push_manifest_to_repo() {
     git -C "${work}" remote add origin "${clone_url}"
   fi
 
-  cp "${manifest}" "${work}/${product}.json"
-  cd "${work}"
-  git add "${product}.json"
+  # Mutable git block in a subshell so cwd change does not outlive cleanup.
+  (
+    cd "${work}"
+    cp "${manifest}" "${product}.json"
+    git add "${product}.json"
 
-  if git diff --cached --quiet; then
-    echo "${repo_slug}@${target_branch} already up to date (${product} ${version})."
-    return 0
-  fi
+    if git diff --cached --quiet; then
+      echo "${repo_slug}@${target_branch} already up to date (${product} ${version})."
+      exit 0
+    fi
 
-  git config user.name "${GIT_AUTHOR_NAME:-github-actions[bot]}"
-  git config user.email "${GIT_AUTHOR_EMAIL:-41898282+github-actions[bot]@users.noreply.github.com}"
-  git commit -m "chore(release): ${product} ${version}"
-  git -c "${git_cfg}" push "${clone_url}" "HEAD:${target_branch}" && \
-    echo "Updated ${repo_slug}@${target_branch} with ${product} ${version}"
+    git config user.name "${GIT_AUTHOR_NAME:-github-actions[bot]}"
+    git config user.email "${GIT_AUTHOR_EMAIL:-41898282+github-actions[bot]@users.noreply.github.com}"
+    git commit -m "chore(release): ${product} ${version}"
+    git -c "${git_cfg}" push "${clone_url}" "HEAD:${target_branch}" && \
+      echo "Updated ${repo_slug}@${target_branch} with ${product} ${version}"
+  )
 }
 
 sync_product() {

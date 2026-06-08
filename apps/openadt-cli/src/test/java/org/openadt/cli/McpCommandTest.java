@@ -38,7 +38,15 @@ class McpCommandTest {
         if (override != null && !override.isBlank()) {
             assertNotNull(binary);
             assertTrue(Files.isRegularFile(binary));
-            assertEquals(Path.of(override.trim()).toAbsolutePath().normalize(), binary);
+            // Mirror production: tolerate invalid path characters instead of
+            // surfacing InvalidPathException to the test runner.
+            Path expected;
+            try {
+                expected = Path.of(override.trim()).toAbsolutePath().normalize();
+            } catch (java.nio.file.InvalidPathException e) {
+                return;
+            }
+            assertEquals(expected, binary);
         } else if (binary != null) {
             assertTrue(Files.isRegularFile(binary));
         }

@@ -28,4 +28,15 @@ class OpenadtMcp < Formula
   test do
     assert_match "Usage:", shell_output("#{bin}/openadt-mcp 2>&1", 2)
   end
+
+  def caveats
+    <<~EOS
+      openadt-mcp is the MCP orchestrator around adt-lsc (SAP ADT for VS Code).
+      It has no Java dependency of its own; JDK 21 is only needed if adt-lsc
+      is configured to use an external runtime (e.g. SNC).
+
+      Install the SAP ADT for VS Code extension:
+        https://marketplace.visualstudio.com/items?itemName=SAPSE.adt-vscode
+    EOS
+  end
 end

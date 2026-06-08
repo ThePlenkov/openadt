@@ -91,7 +91,9 @@ push_formula_to_repo() {
     rm -rf "${work}"
   }
   trap cleanup RETURN
-  trap 'cleanup; trap - RETURN; return 1' INT TERM
+  # Signal trap: `return` is invalid outside a function context, so use `exit`
+  # with the function's return code carried through EXIT trap semantics.
+  trap 'cleanup; trap - RETURN INT TERM; exit 1' INT TERM
 
   if remote_exists "${repo_slug}" "${target_branch}" "${token}"; then
     git -c "${git_cfg}" clone --branch "${target_branch}" --depth 1 "${clone_url}" "${work}"
@@ -101,21 +103,25 @@ push_formula_to_repo() {
     git -C "${work}" remote add origin "${clone_url}"
   fi
 
-  mkdir -p "${work}/Formula"
-  cp "${formula}" "${work}/${formula_path}"
-  cd "${work}"
-  git add "${formula_path}"
+  # Run the mutable git block in a subshell so the cwd change does not
+  # outlive the workdir cleanup. RETURN trap still fires on subshell exit.
+  (
+    cd "${work}"
+    mkdir -p Formula
+    cp "${formula}" "${formula_path}"
+    git add "${formula_path}"
 
-  if git diff --cached --quiet; then
-    echo "${repo_slug}@${target_branch} already up to date (${product} ${version})."
-    return 0
-  fi
+    if git diff --cached --quiet; then
+      echo "${repo_slug}@${target_branch} already up to date (${product} ${version})."
+      exit 0
+    fi
 
-  git config user.name "${GIT_AUTHOR_NAME:-github-actions[bot]}"
-  git config user.email "${GIT_AUTHOR_EMAIL:-41898282+github-actions[bot]@users.noreply.github.com}"
-  git commit -m "chore(release): ${product} ${version}"
-  git -c "${git_cfg}" push "${clone_url}" "HEAD:${target_branch}" && \
-    echo "Updated ${repo_slug}@${target_branch} with ${product} ${version}"
+    git config user.name "${GIT_AUTHOR_NAME:-github-actions[bot]}"
+    git config user.email "${GIT_AUTHOR_EMAIL:-41898282+github-actions[bot]@users.noreply.github.com}"
+    git commit -m "chore(release): ${product} ${version}"
+    git -c "${git_cfg}" push "${clone_url}" "HEAD:${target_branch}" && \
+      echo "Updated ${repo_slug}@${target_branch} with ${product} ${version}"
+  )
 }
 
 token="$(tap_token || true)"

@@ -20,6 +20,16 @@ if (-not $jdks) {
     Write-Host "Java: $javaLine"
 }
 
+# adt-lsc is the SAP ADT for VS Code language server — openadt-mcp is the
+# MCP orchestrator around it. Surface its absence so users can install it.
+$adtLsc = Get-Command adt-lsc -ErrorAction SilentlyContinue
+if (-not $adtLsc) {
+    Write-Host ""
+    Write-Host "Note: 'adt-lsc' (SAP ADT for VS Code) not on PATH." -ForegroundColor Yellow
+    Write-Host "  openadt-mcp forwards SAP requests to adt-lsc; install it from" -ForegroundColor Yellow
+    Write-Host "  https://marketplace.visualstudio.com/items?itemName=SAPSE.adt-vscode" -ForegroundColor Yellow
+}
+
 Write-Host ""
 Write-Host "Next steps:" -ForegroundColor Cyan
 Write-Host "  openadt-mcp serve --port 2236"

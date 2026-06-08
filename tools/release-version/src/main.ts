@@ -257,7 +257,7 @@ function updateScoopMcp(version: string): void {
     version,
     url: (v) =>
       `https://github.com/abapify/openadt/releases/download/v${v}/openadt-mcp-${v}-win-x64.zip`,
-    extractDir: (v) => `openadt-mcp-${v}`,
+    extractDir: (v) => `openadt-mcp-${v}-win-x64`,
   });
 }
 
