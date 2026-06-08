@@ -8,11 +8,13 @@ import {
   isValidPort,
   mcpRootDir,
   resolveAttachTarget,
+  resolveDetachedSpawn,
 } from "./ensure-backend.ts";
 import { type McpEndpointRecord, writeEndpoint } from "./endpoint-store.ts";
 
 let tempRoot: string;
 let previousRoot: string | undefined;
+let previousLauncherEnv: string | undefined;
 
 function sampleRecord(port: number): McpEndpointRecord {
   return {
@@ -26,10 +28,17 @@ function sampleRecord(port: number): McpEndpointRecord {
   };
 }
 
+function isBunBasename(command: string): boolean {
+  const base = command.replace(/.*[\\/]/, "").toLowerCase();
+  return base === "bun" || base === "bun.exe";
+}
+
 beforeEach(() => {
   previousRoot = process.env.OPENADT_MCP_DIR;
+  previousLauncherEnv = process.env.OPENADT_MCP_LAUNCHER;
   tempRoot = mkdtempSync(join(tmpdir(), "openadt-mcp-root-"));
   process.env.OPENADT_MCP_DIR = tempRoot;
+  delete process.env.OPENADT_MCP_LAUNCHER;
 });
 
 afterEach(() => {
@@ -38,6 +47,11 @@ afterEach(() => {
     delete process.env.OPENADT_MCP_DIR;
   } else {
     process.env.OPENADT_MCP_DIR = previousRoot;
+  }
+  if (previousLauncherEnv === undefined) {
+    delete process.env.OPENADT_MCP_LAUNCHER;
+  } else {
+    process.env.OPENADT_MCP_LAUNCHER = previousLauncherEnv;
   }
 });
 
@@ -99,5 +113,51 @@ describe("ensure-backend", () => {
     expect(existsSync(lockPath)).toBe(true);
     rmSync(lockPath);
     expect(existsSync(lockPath)).toBe(false);
+  });
+});
+
+describe("resolveDetachedSpawn", () => {
+  test("treats launcherPath with .ts as a bun script", () => {
+    const plan = resolveDetachedSpawn(join(tempRoot, "fixture.ts"));
+    expect(isBunBasename(plan.command)).toBe(true);
+    expect(plan.args).toEqual([join(tempRoot, "fixture.ts"), "serve"]);
+  });
+
+  test("treats launcherPath with .mjs as a bun script", () => {
+    const plan = resolveDetachedSpawn(join(tempRoot, "fixture.mjs"));
+    expect(isBunBasename(plan.command)).toBe(true);
+    expect(plan.args[0]).toBe(join(tempRoot, "fixture.mjs"));
+    expect(plan.args[1]).toBe("serve");
+  });
+
+  test("treats launcherPath with .js as a bun script", () => {
+    const plan = resolveDetachedSpawn(join(tempRoot, "fixture.js"));
+    expect(isBunBasename(plan.command)).toBe(true);
+    expect(plan.args[0]).toBe(join(tempRoot, "fixture.js"));
+  });
+
+  test("treats launcherPath without script suffix as an executable", () => {
+    const plan = resolveDetachedSpawn(join(tempRoot, "fixture.exe"));
+    expect(plan.command).toBe(join(tempRoot, "fixture.exe"));
+    expect(plan.args).toEqual(["serve"]);
+  });
+
+  test("OPENADT_MCP_LAUNCHER is honored when launcherPath is omitted", () => {
+    process.env.OPENADT_MCP_LAUNCHER = join(tempRoot, "env.ts");
+    const plan = resolveDetachedSpawn();
+    expect(isBunBasename(plan.command)).toBe(true);
+    expect(plan.args[0]).toBe(join(tempRoot, "env.ts"));
+  });
+
+  test("OPENADT_MCP_LAUNCHER can also point at an executable", () => {
+    process.env.OPENADT_MCP_LAUNCHER = join(tempRoot, "env.exe");
+    const plan = resolveDetachedSpawn();
+    expect(plan.command).toBe(join(tempRoot, "env.exe"));
+    expect(plan.args).toEqual(["serve"]);
+  });
+
+  test("always emits 'serve' as the first arg so the caller can splice more", () => {
+    const plan = resolveDetachedSpawn(join(tempRoot, "x"));
+    expect(plan.args[0]).toBe("serve");
   });
 });

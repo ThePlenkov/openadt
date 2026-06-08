@@ -66,8 +66,45 @@ Three-way probe:
 
 ## Daemon spawn
 
+### Launcher resolution (`resolveDetachedSpawn`)
+
+`spawnDetachedServeInternal` calls `resolveDetachedSpawn(launcherPath?)` to
+pick the spawn command and argv for the detached HTTP daemon. The resolver
+returns `{ command, args }` where `args` always starts with `"serve"`.
+
+**Priority order** (first match wins):
+
+| #   | Condition (from `process.execPath`, `OPENADT_MCP_LAUNCHER`, or argv) | Result                                                                                            |
+| --- | -------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------- |
+| 1   | `OPENADT_MCP_LAUNCHER` set (test override)                           | See launcher-path table below                                                                     |
+| 2   | **Running as a compiled Bun binary** (`Bun.isCompiled === true`)     | `{ command: process.execPath, args: ["serve", "--port", …] }` (re-exec self — no Bun script path) |
+| 3   | `dist/main.mjs` or `dist/main.js` exists beside `src/`               | `bun <dist> serve --port …`                                                                       |
+| 4   | `src/main.ts` (or `here/main.ts`) exists (dev clone)                 | `bun <main.ts> serve --port …`                                                                    |
+| 5   | None of the above (packaged binary with `dist/` or `src/` missing)   | `process.execPath` + serve args (same as #2 — re-exec self)                                       |
+
+**Launcher-path override** (`OPENADT_MCP_LAUNCHER` or `options.launcherPath`):
+
+| Suffix of value            | Resolver emits                           |
+| -------------------------- | ---------------------------------------- |
+| `.ts`, `.mjs`, `.js`       | `bun <path> serve --port …`              |
+| anything else (executable) | `<path> serve --port …` (no Bun wrapper) |
+
+This is what makes the **Scoop-installed `openadt-mcp.exe`** work: the binary
+embeds the Bun runtime (no `bun` on `PATH`), so the resolver must re-exec
+`process.execPath` with the `serve` subcommand and **not** try to invoke
+`bun main.ts` from a non-existent on-disk script.
+
+The compiled-binary check (`Bun.isCompiled`) is preferred over disk probing
+because a packaged `openadt-mcp.exe` may run from any cwd (including one that
+happens to contain a stale `dist/` or `src/main.ts` from a checkout, or a
+user-space project). Disk probes (steps 3–4) are only safe in the
+**uncompiled** dev/clone path.
+
+### Spawn call
+
 ```typescript
-const child = spawn(launcher, ["serve", "--port", String(port), ...], {
+const { command, args } = resolveDetachedServePlan(options.launcherPath);
+const child = spawn(command, [...args, "--foreground", ...serveArgs], {
   detached: true,
   stdio: "ignore",
   cwd: process.cwd(),
@@ -77,6 +114,29 @@ const child = spawn(launcher, ["serve", "--port", String(port), ...], {
 // waiting for the daemon. `process.unref()` here would do nothing useful.
 child.unref();
 ```
+
+### Health-check timeout ⇒ kill child
+
+When the lock-held `spawnAndAwaitHealthy` block throws
+`OPENADT_MCP_TIMEOUT` (no healthy endpoint within `timeoutMs`), the spawned
+child is terminated before the error propagates. This prevents zombie
+detached processes that bind a TCP port and never register an endpoint.
+
+```typescript
+try {
+  const healthy = await waitForHealthyRecord({ port, timeoutMs });
+  if (!healthy) throw new OpenadtMcpTimeoutError(port, timeoutMs);
+  return attachToRecord(healthy);
+} catch (err) {
+  if (isOwnChild(child) && child.exitCode === null) {
+    killChildTree(child); // SIGTERM then SIGKILL after grace period
+  }
+  throw err;
+}
+```
+
+`child.kill()` is **not** enough on Windows; the launcher uses
+`taskkill /pid <pid> /T /F` to reap the whole tree.
 
 ---
 
