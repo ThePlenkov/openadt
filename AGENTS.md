@@ -92,7 +92,9 @@ These apply when orchestrating `/act` or any multi-step PR workflow. Inline with
 
 - **PR head discovery** — before any push, run `gh pr view N --json headRefName,baseRefName,headRefOid`. `gh pr checkout N` creates a local `pr-NN` branch tracking `origin/pr-NN`; that is **not** the PR's actual source branch. Push to `origin/<headRefName>` and verify `git rev-parse HEAD == gh pr view N --json headRefOid`.
 - **CI is the source of truth** — `bash scripts/ci-codescene-delta.sh <base> HEAD` locally is a smell-check. The gate is `gh pr checks N` on the current SHA. If a sibling agent claims "verify passed", re-run the gate on the **current** HEAD before declaring merge-ready.
+- **Leave the gate green — "pre-existing" is not an exemption.** If you run a verify command (eslint, tests, CodeScene, a documented verify block) and it comes back red, you own getting it green before merge-ready — even if your change did not cause the failure. Running it made it yours. Fix the root cause; if it is genuinely out of scope, fix it anyway when small, or stop and escalate with the evidence — never hand-wave it as "pre-existing" and move on.
 - **Batch independent reads in one turn** — multiple `read`/`glob`/`grep`; multiple `task` calls. Bound parallel fan-out to 3–5 subagents per turn.
+- **Script over steps** — a CLI/script call is **one tool call** at fixed context cost, however much it does internally; an agent step costs a tool call _plus_ output _plus_ reasoning, and compounds across the window. Push mechanical work (fetch, parse, join, format, dedupe) into a `scripts/` helper; invoke the model only for irreducible judgment, and never have it re-echo data a script already holds. If a review step burns more than a few tool calls doing what a helper could collapse, file a [backlog](.agents/skills/backlog/SKILL.md) item — not necessarily fixed in the same `/act` (this is the self-learning loop, enforced at P6).
 - **Subagent choice** — `explore` for read-only research; `general` for multi-step work with writes. Never spawn `general` for a read-only question. Pass file paths, not topics; specify return format.
 - **3-push limit** — after 3 pushes on the same branch per `/act` cycle, stop and report back.
 - **Scratch in `/tmp/agent_*/`** — never in the worktree root. The `nx format:write --uncommitted` pre-commit hook re-stages whatever sits there.
@@ -118,7 +120,7 @@ The CodeScene GitHub App runs "Delta Analysis" and "Code Health Review (main)" a
 
 ```bash
 # Strict gate on code-writing hot paths (0 errors, 0 warnings).
-bunx eslint scripts/ .agents/skills/ --max-warnings 0
+bunx eslint scripts/ .agents/skills/ --max-warnings 0 --no-error-on-unmatched-pattern
 # Advisory on the rest of the TS surface (errors fail, warnings are visible).
 bunx eslint .
 # CodeScene delta — use cs CLI directly (cloud-agent safe, no Docker).
@@ -168,7 +170,7 @@ its own PR or suppress the deltas in CodeScene's UI before opening.
 ## Verify (before PR)
 
 ```bash
-bunx eslint scripts/ .agents/skills/ --max-warnings 0
+bunx eslint scripts/ .agents/skills/ --max-warnings 0 --no-error-on-unmatched-pattern
 bun scripts/verify-spec-sync.ts
 bun scripts/verify-package-docs.ts
 ./mvnw -q verify -Pdistribution

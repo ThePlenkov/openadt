@@ -58,7 +58,7 @@ Do not start the resolve script until every open thread has a planned action and
 | **P2** | Nits, questions, style | **Fix or answer in thread** (not silent) |
 | **P3** | Inline suggestions | **Applied in code** or declined with reason **in thread** |
 | **P4** | Resolve pass | Only after P0–P3 for **all** open threads |
-| **P5** | Hygiene | Optional cleanup after the above |
+| **P5** | Rate findings (research) | Every check-run + review finding scored 0–5 in `review_scores.csv` ([RATING_FLOW.md](../../../scripts/act/RATING_FLOW.md)) |
 | **P6** | Evaluation | Retrospect, update durable knowledge, cycle check — **before** merge-ready |
 
 ### P0 — when CI is red, run linters locally first
@@ -120,7 +120,30 @@ bash .agents/skills/act/resolve-open-threads.sh --dry-run OWNER REPO NUMBER
 The script only clicks “Resolve conversation” in GitHub — it does **not** implement review fixes.  
 Resolve outdated threads too, but only after the underlying comment was handled on the branch.
 
-## Evaluation (P6 — after P4, before merge-ready)
+## Rate findings (P5 — research dataset)
+
+After P4, score every tool finding (check-run annotations + inline review
+comments) 0–5 so we can measure which review tools earn their slot. The agent
+only judges; the scripts do the fetch/join/CSV work in two tool calls. Full
+contract: [RATING_FLOW.md](../../../scripts/act/RATING_FLOW.md).
+
+```bash
+# prepare scratch dir once
+mkdir -p /tmp/agent_$$
+
+# 1. one call — dump every finding with full metadata
+bun scripts/act/extract-findings.ts OWNER REPO PR > /tmp/agent_$$/findings.jsonl
+# 2. read findings, write /tmp/agent_$$/scores.tsv  (finding_id<TAB>0-5<TAB>why)
+# 3. one call — join + upsert review_scores.csv (no GitHub writes)
+bun scripts/act/submit-scores.ts OWNER REPO PR --evaluator <model-id> \
+  --findings /tmp/agent_$$/findings.jsonl --scores /tmp/agent_$$/scores.tsv
+```
+
+Scoring is **CSV-only** — it posts no reactions or comments (those are P1–P4).
+Re-runs upsert on `(pr_url, finding_id, evaluator_id)`, so a second `/act` does
+not duplicate rows.
+
+## Evaluation (P6 — after P5, before merge-ready)
 
 Follow [EVALUATE.md](EVALUATE.md). Durable sinks: [REVIEW.md](../../../REVIEW.md).
 
@@ -175,6 +198,8 @@ ad-hoc `gh` calls. They collapse the typical 30+ tool calls per `/act` into ~10.
 | **Verify a CLI claim**       | `bun scripts/derive-cli-surface.ts --check "openadt X"`   | `grep` across `apps/**.java` + reads        |
 | **Post N thread replies**    | `bash scripts/act/reply-threads.sh --file /tmp/agent_*/replies.tsv` | N × `gh api graphql addPullRequestReview…` |
 | **Resolve open threads (P4)**| `bash .agents/skills/act/resolve-open-threads.sh OWNER REPO PR` | unchanged                             |
+| **Extract findings (P5)**    | `bun scripts/act/extract-findings.ts OWNER REPO PR`       | N × `gh api` check-runs/annotations/comments reads |
+| **Submit scores (P5)**       | `bun scripts/act/submit-scores.ts … --findings F --scores S` | per-finding parse + CSV writes (local, no API) |
 
 **Scratch artifacts (e.g. `replies.tsv`) MUST live outside the worktree** —
 use an absolute path under the cloud-agent pre-approved `/tmp/agent_*/`. The

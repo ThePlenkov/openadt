@@ -1,5 +1,11 @@
 import { describe, expect, test } from "bun:test";
-import { mkdtempSync, mkdirSync, rmSync, writeFileSync } from "node:fs";
+import {
+  mkdtempSync,
+  mkdirSync,
+  readFileSync,
+  rmSync,
+  writeFileSync,
+} from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import {
@@ -228,9 +234,5 @@ describe("resolveMode", () => {
 });
 
 function readFileSync0(p: string): string {
-  // tiny wrapper so we can import the symbol under a unique name in the file
-  // (kept inline to avoid an extra import in the test suite)
-  // eslint-disable-next-line @typescript-eslint/no-var-requires
-  const { readFileSync } = require("node:fs") as typeof import("node:fs");
   return readFileSync(p, "utf8");
 }

@@ -20,6 +20,10 @@ If **any** box is “yes”: write **what / root cause / prevention** and update
 - [ ] **Same rule 2+ times:** same Codacy/Semgrep/rule ID flagged again after a fix commit → verify fix is on **current HEAD** and suppression/answer is in the right sink; do **not** re-merge blindly.
 - [ ] **Empty /act loop:** this is the 2+ `/act` invocation on the same PR with **no new product commits** since last run → **stop** and report cycle; diagnose in retrospective.
 
+## 2a. Efficiency regression (required every /act)
+
+- [ ] **Scriptable cost:** did any step burn more than a few tool calls doing mechanical work (repeated `gh`/`grep`/`read` loops, hand-formatting, re-echoing data) that a `scripts/act/` helper could collapse into one call? → file a [backlog](../backlog/SKILL.md) item (`source:` = this PR). Not required to fix in this `/act`; this is the self-learning loop behind [AGENTS.md → Script over steps](../../../AGENTS.md).
+
 ## 3. Durable knowledge (optional unless retrospective triggered)
 
 - [ ] Workflow/process lesson → [SKILL.md](SKILL.md) (and `.agents/memory/experience/` if recurring)

@@ -1,0 +1,1 @@
+timestamp,pr_url,finding_id,tool_name,finding_type,finding_url,evaluator_id,master_rating,master_reasoning,finding_summary,detection_latency_ms,false_positive_link
