@@ -90,7 +90,8 @@ push_formula_to_repo() {
   cleanup() {
     rm -rf "${work}"
   }
-  trap cleanup EXIT
+  trap cleanup RETURN
+  trap 'cleanup; trap - RETURN; return 1' INT TERM
 
   if remote_exists "${repo_slug}" "${target_branch}" "${token}"; then
     git -c "${git_cfg}" clone --branch "${target_branch}" --depth 1 "${clone_url}" "${work}"
@@ -129,8 +130,8 @@ sync_product() {
   local formula="${root}/Formula/${product}.rb"
 
   if [[ ! -f "${formula}" ]]; then
-    echo "Skipping ${product}: missing ${formula}" >&2
-    return 0
+    echo "Error: requested product ${product} has no formula at ${formula}" >&2
+    return 1
   fi
 
   local version

@@ -46,7 +46,14 @@ mkdir -p "$dest"
 
 url="https://downloads.codescene.io/enterprise/cli/cs-${cs_os}-${cs_arch}-${version}.zip"
 echo "Downloading cs ${version} for ${cs_os}-${cs_arch} …" >&2
-curl -fsSL -o "$zip_file" "$url"
+# The versioned download endpoint requires `CS_ACCESS_TOKEN` in the
+# `Authorization` header; the "latest" redirect path may not, but we always
+# send the header when a token is configured to keep the versioned path working.
+curl_args=(-fsSL -o "$zip_file" "$url")
+if [[ -n "${CS_ACCESS_TOKEN:-}" && "${version}" != "latest" ]]; then
+  curl_args=(-fsSL -H "Authorization: Bearer ${CS_ACCESS_TOKEN}" -o "$zip_file" "$url")
+fi
+curl "${curl_args[@]}"
 
 unzip -qo "$zip_file" -d "$dest"
 rm -f "$zip_file"

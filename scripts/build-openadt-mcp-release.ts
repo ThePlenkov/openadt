@@ -26,20 +26,28 @@ import {
 import { join, resolve } from "node:path";
 import { spawnSync } from "node:child_process";
 
-const PLATFORMS = new Set([
-  "win-x64",
-  "linux-x64",
-  "darwin-arm64",
-  "darwin-x64",
-]);
+type BuildTarget = {
+  platform: string;
+  bunTarget: string;
+};
 
-export function parsePlatform(value: string | undefined): string {
+/** Mapping of openadt release platform ids to Bun compile --target values. */
+export const PLATFORM_BUILD_TARGETS: Record<string, BuildTarget> = {
+  "win-x64": { platform: "win-x64", bunTarget: "bun-windows-x64" },
+  "linux-x64": { platform: "linux-x64", bunTarget: "bun-linux-x64" },
+  "darwin-arm64": { platform: "darwin-arm64", bunTarget: "bun-darwin-arm64" },
+  "darwin-x64": { platform: "darwin-x64", bunTarget: "bun-darwin-x64" },
+};
+
+const PLATFORMS = new Set(Object.keys(PLATFORM_BUILD_TARGETS));
+
+export function parsePlatform(value: string | undefined): BuildTarget {
   if (!value || !PLATFORMS.has(value)) {
     throw new Error(
       `Unknown --platform=${value ?? ""}; expected one of: ${[...PLATFORMS].join(", ")}`,
     );
   }
-  return value;
+  return PLATFORM_BUILD_TARGETS[value]!;
 }
 
 function readVersion(root: string): string {
@@ -74,7 +82,8 @@ function main(): void {
   const outArg = process.argv
     .find((a) => a.startsWith("--out="))
     ?.split("=")[1];
-  const platform = parsePlatform(platformArg);
+  const target = parsePlatform(platformArg);
+  const platform = target.platform;
   const version = readVersion(root);
   const outDir =
     outArg ??
@@ -89,6 +98,7 @@ function main(): void {
     "build",
     "--compile",
     "--minify",
+    `--target=${target.bunTarget}`,
     entry,
     "--outfile",
     outfile,

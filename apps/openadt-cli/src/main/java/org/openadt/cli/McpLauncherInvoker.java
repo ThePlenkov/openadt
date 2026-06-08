@@ -32,11 +32,10 @@ final class McpLauncherInvoker {
      *  can take a single record instead of (Path, kind) primitives. */
     private record McpLaunchPlan(McpLaunchKind kind, Path executable) {}
 
-    /** Bundles command-line arguments for process invocation. */
-    private record CommandBuildRequest(Path executable, String subcommand, String[] extraArgs, String prefix) {}
-
-    /** Encapsulates the launch request parameters. */
-    private record McpLaunchRequest(Path executable, String subcommand, String[] extraArgs) {}
+    /** Bundles everything needed to build a process argv for either the
+     *  native binary or the Bun-spawned dev script. {@code prefix} is the
+     *  optional binary name to invoke through (e.g. {@code "bun"}). */
+    private record McpLaunchRequest(Path executable, String subcommand, String[] extraArgs, String prefix) {}
 
     private enum McpLaunchKind { NATIVE, DEV_CLONE }
 
@@ -70,16 +69,14 @@ final class McpLauncherInvoker {
     }
 
     private static int spawnDirect(Path binary, String subcommand, String[] extraArgs) {
-        McpLaunchRequest req = new McpLaunchRequest(binary, subcommand, extraArgs);
         return runAndWait(
-            new ProcessBuilder(buildArgv(new CommandBuildRequest(req.executable(), req.subcommand(), req.extraArgs(), null))),
+            new ProcessBuilder(buildArgv(new McpLaunchRequest(binary, subcommand, extraArgs, null))),
             "openadt-mcp");
     }
 
     private static int spawnBun(Path script, String subcommand, String[] extraArgs) {
-        McpLaunchRequest req = new McpLaunchRequest(script, subcommand, extraArgs);
         ProcessBuilder pb = new ProcessBuilder(
-                buildArgv(new CommandBuildRequest(req.executable(), req.subcommand(), req.extraArgs(), resolveBunExecutable())));
+                buildArgv(new McpLaunchRequest(script, subcommand, extraArgs, resolveBunExecutable())));
         applyRepoEnv(pb, script);
         return runAndWait(pb, "MCP launcher");
     }
@@ -98,7 +95,7 @@ final class McpLauncherInvoker {
         }
     }
 
-    private static List<String> buildArgv(CommandBuildRequest req) {
+    private static List<String> buildArgv(McpLaunchRequest req) {
         List<String> cmd = new ArrayList<>();
         if (req.prefix() != null) {
             cmd.add(req.prefix());
@@ -124,8 +121,14 @@ final class McpLauncherInvoker {
         if (override == null || override.isBlank()) {
             return null;
         }
-        Path envHit = Path.of(override.trim());
-        if (Files.isRegularFile(envHit)) {
+        Path envHit;
+        try {
+            envHit = Path.of(override.trim());
+        } catch (java.nio.file.InvalidPathException e) {
+            // Invalid OPENADT_MCP value (e.g. illegal chars on Windows) — fall back to PATH scan.
+            return null;
+        }
+        if (Files.isRegularFile(envHit) && Files.isExecutable(envHit)) {
             return envHit.toAbsolutePath().normalize();
         }
         return null;
@@ -150,8 +153,14 @@ final class McpLauncherInvoker {
 
     private static Path findBinaryInDir(String dir) {
         for (String name : NATIVE_BINARY_NAMES) {
-            Path candidate = Path.of(dir).resolve(name);
-            if (Files.isRegularFile(candidate)) {
+            Path candidate;
+            try {
+                candidate = Path.of(dir).resolve(name);
+            } catch (java.nio.file.InvalidPathException ignored) {
+                // PATH entries can legally contain platform-illegal chars; skip them.
+                continue;
+            }
+            if (Files.isRegularFile(candidate) && Files.isExecutable(candidate)) {
                 return candidate.toAbsolutePath().normalize();
             }
         }

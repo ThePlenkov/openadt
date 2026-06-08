@@ -90,7 +90,7 @@ jobs:
           - os: macos-latest
             platform: darwin-arm64
             ext: tar.gz
-          - os: macos-latest
+          - os: macos-13
             platform: darwin-x64
             ext: tar.gz
     runs-on: ${{ matrix.os }}
@@ -165,7 +165,11 @@ jobs:
           platform="${{ matrix.platform }}"
           ext="${{ matrix.ext }}"
           archive="packaging/dist/openadt-mcp-${version}-${platform}.${ext}"
-          sha256=$(sha256sum "${archive}" | awk '{print tolower($1)}')
+          if command -v sha256sum >/dev/null 2>&1; then
+            sha256=$(sha256sum "${archive}" | awk '{print tolower($1)}')
+          else
+            sha256=$(shasum -a 256 "${archive}" | awk '{print tolower($1)}')
+          fi
           echo "${sha256}  $(basename "${archive}")" > "${archive}.sha256"
           echo "SHA256 (${platform}): ${sha256}"
 

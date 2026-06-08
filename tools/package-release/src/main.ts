@@ -54,7 +54,7 @@ function sha256File(opts: FileChecksum): string {
   return createHash("sha256")
     .update(readFileSync(opts.filePath))
     .digest("hex")
-    .toUpperCase();
+    .toLowerCase();
 }
 
 function buildWindowsExe(opts: BuildTarget): void {
@@ -143,22 +143,26 @@ const HOST_PLATFORM_MAP: Record<string, Record<string, string>> = {
   darwin: { arm64: "darwin-arm64", x64: "darwin-x64" },
 };
 
-function currentMatrixPlatform(): string {
+function tryCurrentMatrixPlatform(): string | null {
   if (process.env.OPENADT_MATRIX_PLATFORM) {
     return process.env.OPENADT_MATRIX_PLATFORM;
   }
   const platform = HOST_PLATFORM_MAP[process.platform];
-  const match = platform?.[process.arch];
-  if (match) {
-    return match;
-  }
-  throw new Error(
-    `Unsupported host platform ${process.platform}/${process.arch} for openadt-mcp packaging`,
-  );
+  return platform?.[process.arch] ?? null;
 }
 
 function packageMcpBinary(version: string): void {
-  const platform = currentMatrixPlatform();
+  const platform = tryCurrentMatrixPlatform();
+  if (!platform) {
+    // openadt-mcp does not ship for this host architecture. Skip with a warning
+    // so the core `openadt` ZIP packaging still completes (this is the common
+    // path for local dev on e.g. linux-arm64).
+    console.warn(
+      `Skipping openadt-mcp packaging: unsupported host ${process.platform}/${process.arch}. ` +
+        `Set OPENADT_MATRIX_PLATFORM to override.`,
+    );
+    return;
+  }
   const archive = buildMcpArchive(platform, version);
   const ctx: McpBuildContext = { platform, version, archive };
   patchMcpManifests(ctx);
@@ -204,6 +208,7 @@ function buildMcpArchive(platform: string, version: string): McpArchive {
   const archiveName = `${stageDirName}.${ext}`;
   const archivePath = join(distDir, archiveName);
 
+  rmSync(stageDir, { recursive: true, force: true });
   compileMcpBinary(stageDir, platform);
   packArchive({ stageDir, stageDirName, archivePath, ext });
 
