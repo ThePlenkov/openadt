@@ -210,16 +210,15 @@ export function resolveDetachedSpawn(launcherPath?: string): {
 };
 ```
 
-**Resolution order:**
+**Resolution order** (implemented as `resolveDetachedSpawn(launcherPath?, { compiled? })`):
 
 1. If `launcherPath` provided (tests / `OPENADT_MCP_LAUNCHER`):
-
-- `.ts` / `.mjs` / `.js` → `bun` + script path + serve args
-- else → treat as executable, serve args only
-
-2. Else if `dist/main.mjs` or `dist/main.js` exists → `bun` + dist entry
-3. Else if `src/main.ts` (or `here/main.ts`) exists → `bun` + main.ts (dev clone)
-4. Else → `**process.execPath`\*\* + serve args only (packaged binary)
+   - `.ts` / `.mjs` / `.js` → `bun` + script path + serve args
+   - else → treat as executable, serve args only
+2. Else if `Bun.isCompiled === true` (or the test seam `options.compiled === true`) → **`process.execPath`** + serve args only (packaged binary path; checked **before** disk probes so a stray cwd `dist/` or `src/main.ts` cannot trick the binary into invoking a missing `bun`).
+3. Else if `dist/main.mjs` or `dist/main.js` exists → `bun` + dist entry
+4. Else if `src/main.ts` (or `here/main.ts`) exists → `bun` + main.ts (dev clone)
+5. Else → `process.execPath` + serve args only (packaged binary without on-disk scripts — same as #2)
 
 Refactor `spawnDetachedServeInternal` to use this resolver instead of hard-coded `resolveBunExecutable()` + script path.
 

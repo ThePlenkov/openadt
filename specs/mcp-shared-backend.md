@@ -68,9 +68,11 @@ Three-way probe:
 
 ### Launcher resolution (`resolveDetachedSpawn`)
 
-`spawnDetachedServeInternal` calls `resolveDetachedSpawn(launcherPath?)` to
+`spawnDetachedServeInternal` calls `resolveDetachedSpawn(launcherPath?, { compiled? })` to
 pick the spawn command and argv for the detached HTTP daemon. The resolver
-returns `{ command, args }` where `args` always starts with `"serve"`.
+returns `{ command, args }` where `args` always includes the `"serve"` subcommand
+(`["serve", ...]` for executable launches; `[scriptPath, "serve", ...]` for
+`bun <script>` launches).
 
 **Priority order** (first match wins):
 
@@ -103,7 +105,7 @@ user-space project). Disk probes (steps 3–4) are only safe in the
 ### Spawn call
 
 ```typescript
-const { command, args } = resolveDetachedServePlan(options.launcherPath);
+const { command, args } = resolveDetachedSpawn(options.launcherPath);
 const child = spawn(command, [...args, "--foreground", ...serveArgs], {
   detached: true,
   stdio: "ignore",
