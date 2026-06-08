@@ -454,6 +454,7 @@ Stale lock/endpoint files after a crashed attempt:
 ```powershell
 Stop-Process -Name openadt-mcp -Force -ErrorAction SilentlyContinue
 Remove-Item "$env:USERPROFILE\.openadt\mcp\ensure-*.lock" -Force -ErrorAction SilentlyContinue
+Remove-Item "$env:USERPROFILE\.openadt\mcp\endpoints\*.json" -Force -ErrorAction SilentlyContinue
 ```
 
 **Amazon Q** often can't spawn the binary via the GUI's `PATH`; point the config at an absolute path to `openadt-mcp.exe`, and add `--standalone` (Amazon Q has its own per-session model and is usually fine with the monolithic path):

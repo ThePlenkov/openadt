@@ -29,8 +29,14 @@ import { buildAdtLscSpawnRuntime } from "./runtime-env.ts";
 import { resolveBunExecutable } from "./resolve-bun.ts";
 
 /**
- * Plan returned by {@link resolveDetachedSpawn}. `args` always begins with
- * `"serve"` so the caller can splice `serveArgs` / `--foreground` in.
+ * Plan returned by {@link resolveDetachedSpawn}.
+ *
+ * `args` starts with `"serve"` when the chosen command is a direct executable
+ * (compiled binary, env-override executable), and with the script path
+ * followed by `"serve"` when the launcher is run via `bun <script>`:
+ *
+ *   - `{ command: process.execPath, args: ["serve", ...] }`  — packaged binary
+ *   - `{ command: "bun", args: ["/abs/main.ts", "serve", ...] }`  — dev/dist
  */
 export type DetachedSpawnPlan = {
   command: string;
@@ -69,12 +75,20 @@ function resolveBundleLauncher(): string | undefined {
  * Resolution order (see `specs/mcp-shared-backend.md` § Launcher resolution):
  *  1. `launcherPath` (test / `OPENADT_MCP_LAUNCHER`): `.ts|.mjs|.js` → `bun`+path;
  *     otherwise treat as executable.
- *  2. Compiled Bun binary (`Bun.isCompiled === true`) → `process.execPath` + serve.
+ *  2. Compiled Bun binary (`Bun.isCompiled === true`, or `compiled` test flag)
+ *     → `process.execPath` + serve.
  *  3. `dist/main.{mjs,js}` or `src/main.ts` exists → `bun` + script + serve.
  *  4. Fallback (packaged binary without `dist/` or `src/` on disk) →
  *     `process.execPath` + serve.
+ *
+ * `options.compiled` is a test seam that overrides the `Bun.isCompiled` check
+ * so unit tests can exercise the packaged-binary branch without depending on
+ * the host's runtime state.
  */
-export function resolveDetachedSpawn(launcherPath?: string): DetachedSpawnPlan {
+export function resolveDetachedSpawn(
+  launcherPath?: string,
+  options: { compiled?: boolean } = {},
+): DetachedSpawnPlan {
   const explicit = launcherPath ?? process.env.OPENADT_MCP_LAUNCHER;
   if (explicit && explicit.length > 0) {
     if (isBunScriptPath(explicit)) {
@@ -82,7 +96,7 @@ export function resolveDetachedSpawn(launcherPath?: string): DetachedSpawnPlan {
     }
     return { command: explicit, args: ["serve"] };
   }
-  if (isCompiledBinary()) {
+  if (options.compiled === true || isCompiledBinary()) {
     return { command: process.execPath, args: ["serve"] };
   }
   const bundled = resolveBundleLauncher();
