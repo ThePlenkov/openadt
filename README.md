@@ -11,6 +11,7 @@
 [![CI](https://img.shields.io/github/actions/workflow/status/abapify/openadt/ci.yml?branch=main&label=CI)](https://github.com/abapify/openadt/actions/workflows/ci.yml)
 [![Platforms](https://img.shields.io/badge/platforms-Windows%20%7C%20Linux%20%7C%20macOS-blue)](#-install)
 [![Java](https://img.shields.io/badge/Java-17%2B-orange)](apps/ARCHITECTURE.md)
+
 [![CodeScene Average Code Health](https://codescene.io/projects/80949/status-badges/average-code-health)](https://codescene.io/projects/80949)
 [![CodeScene Hotspot Code Health](https://codescene.io/projects/80949/status-badges/hotspot-code-health)](https://codescene.io/projects/80949)
 [![CodeScene Missed Goals](https://codescene.io/projects/80949/status-badges/missed-goals)](https://codescene.io/projects/80949)
