@@ -503,21 +503,38 @@ export function createStdioMcpBridge(): StdioMcpBridge {
         await writeMcpStdioMessage(encoder, rewritten);
       }
     };
+    const reconnectAndPost = async (): Promise<boolean> => {
+      if (!onEndpointFailure || !backend) return false;
+      let fresh: McpHttpEndpoint | undefined;
+      try {
+        fresh = await onEndpointFailure();
+      } catch (handlerErr) {
+        await handleForwardError(message, handlerErr);
+        return true;
+      }
+      if (!fresh) return false;
+      // Reset session: a fresh endpoint represents a new backend with its
+      // own session state. Reattaching the old `Mcp-Session-Id` would 4xx
+      // per the MCP HTTP spec and break subsequent requests.
+      const sameBackend =
+        backend.url === fresh.url && backend.token === fresh.token;
+      backend = fresh;
+      if (!sameBackend) {
+        chain.resetSessionId();
+      }
+      try {
+        await tryPost(fresh.withSessionId(chain.sessionId));
+      } catch (retryErr) {
+        await handleForwardError(message, retryErr);
+      }
+      return true;
+    };
     try {
       await tryPost(backend.withSessionId(chain.sessionId));
     } catch (err) {
       if (isNetworkError(err) && onEndpointFailure) {
-        const fresh = await onEndpointFailure();
-        if (fresh) {
-          backend = fresh;
-          try {
-            await tryPost(fresh.withSessionId(chain.sessionId));
-            return;
-          } catch (retryErr) {
-            await handleForwardError(message, retryErr);
-            return;
-          }
-        }
+        const handled = await reconnectAndPost();
+        if (handled) return;
       }
       await handleForwardError(message, err);
     }
@@ -760,6 +777,10 @@ class ForwardChain {
     if (value) {
       this.nextSessionId = value;
     }
+  }
+
+  resetSessionId(): void {
+    this.nextSessionId = undefined;
   }
 }
 

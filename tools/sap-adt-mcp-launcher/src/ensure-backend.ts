@@ -324,20 +324,23 @@ function spawnDetachedServeInternal(request: {
     /* non-critical: proceed without capture */
   }
 
-  const child = spawn(plan.command, args, {
-    cwd: process.cwd(),
-    stdio: ["ignore", "ignore", stderrFd],
-    env: {
-      ...runtime.env,
-      ...(request.options.extraEnv ?? {}),
-    },
-    detached: true,
-    windowsHide: true,
-  });
-
-  // Parent closes its copy; child has inherited the fd and can write independently.
-  if (typeof stderrFd === "number") {
-    closeSync(stderrFd);
+  let child: ChildProcess;
+  try {
+    child = spawn(plan.command, args, {
+      cwd: process.cwd(),
+      stdio: ["ignore", "ignore", stderrFd],
+      env: {
+        ...runtime.env,
+        ...(request.options.extraEnv ?? {}),
+      },
+      detached: true,
+      windowsHide: true,
+    });
+  } finally {
+    // Parent closes its copy; child has inherited the fd and can write independently.
+    if (typeof stderrFd === "number") {
+      closeSync(stderrFd);
+    }
   }
 
   child.unref();
