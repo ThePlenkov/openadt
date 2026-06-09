@@ -81,7 +81,7 @@ Do **not** harvest on: every `/act`, every CI run, generic push to `main`.
 - [x] ACT skill — debt mode section
 - [x] `REVIEW.md` merge-policy note
 - [ ] Tune `config.json` bot list on first real harvest
-- [x] Harvest → append-only `harvests/{timestamp}-pr-{N}-run-{id}.jsonl` + push to `main` (rebase retry; bot PR blocked by org `createPullRequest` policy)
+- [x] Harvest → append-only `harvests/{timestamp}-pr-{N}-run-{id}.jsonl` + push to `main` (rebase retry; no harvest bot PR)
 - [x] Status updates → `ledger.jsonl` overlays (`update-debt-status.ts`)
 
 ## Phase 2

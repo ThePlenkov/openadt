@@ -22,7 +22,7 @@ Queryable queue of **unresolved PR review threads** harvested **after merge** (o
 | `workflow_run` **CI** completed on `pull_request` | Same merged PR after PR CI finishes (late bot comments) |
 | `workflow_dispatch` | Filtered batch (see workflow inputs) |
 
-**CI:** each harvest adds **new files** under `harvests/` and pushes them to `main` (append-only unique filenames + rebase retry; no shared ledger merge conflicts). Org policy often blocks `GITHUB_TOKEN` from opening bot PRs — direct push is intentional.
+**CI:** each harvest adds **new files** under `harvests/` and **pushes them straight to `main`** (append-only unique filenames + rebase retry). No bot PR for harvest data — debt is fixed later via `/act debt` in a normal feature PR.
 
 Harvest does **not** run on every `/act`, every CI run, or every push to `main`.
 
