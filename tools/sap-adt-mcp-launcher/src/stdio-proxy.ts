@@ -503,61 +503,96 @@ export function createStdioMcpBridge(): StdioMcpBridge {
     return true;
   };
 
+  type RpcResult = {
+    instructions?: unknown;
+    prompts?: unknown;
+    tools?: unknown;
+  };
+  type RpcResponse = { id?: unknown; result?: RpcResult };
+  type RewritePlan = {
+    guidance: "initialize" | "prompts/list" | undefined;
+    readTools: boolean;
+    shorten: boolean;
+  };
+
+  const planRewrite = (
+    method: string | undefined,
+    injectMethod: string | undefined,
+    hasReadBackend: boolean,
+  ): RewritePlan | undefined => {
+    if (injectMethod === "initialize" || injectMethod === "prompts/list") {
+      return { guidance: injectMethod, readTools: false, shorten: false };
+    }
+    if (method === "tools/list") {
+      return {
+        guidance: undefined,
+        readTools: hasReadBackend && readEnabled(),
+        shorten: true,
+      };
+    }
+    return undefined;
+  };
+
+  const shortenToolNames = (
+    tools: Array<{ name?: unknown }>,
+    registry: { exportName: (n: string) => string },
+  ): Array<{ name?: unknown }> =>
+    tools.map((tool) => {
+      if (!tool || typeof tool !== "object") {
+        return tool;
+      }
+      const name = tool.name;
+      if (typeof name !== "string") {
+        return tool;
+      }
+      return { ...tool, name: registry.exportName(name) };
+    });
+
+  const applyGuidance = (result: RpcResult, plan: RewritePlan): void => {
+    if (plan.guidance === "initialize") {
+      result.instructions = augmentInstructions(
+        result.instructions as string | undefined,
+      );
+    } else if (plan.guidance === "prompts/list") {
+      const existing = Array.isArray(result.prompts) ? result.prompts : [];
+      result.prompts = [...existing, ...guidancePromptDefs()];
+    }
+  };
+
+  const applyReadTools = (result: RpcResult): void => {
+    if (!Array.isArray(result.tools)) return;
+    result.tools = [...result.tools, ...readToolDefs()];
+  };
+
+  const applyShorten = (result: RpcResult): void => {
+    if (!Array.isArray(result.tools)) return;
+    result.tools = shortenToolNames(
+      result.tools as Array<{ name?: unknown }>,
+      toolNames,
+    );
+  };
+
   const rewriteForwardedMessage = (
     msg: string,
     request: ParsedRpc | undefined,
     injectMethod: string | undefined,
     hasReadBackend: boolean,
   ): string => {
-    const method = request?.method;
-    const needsGuidance =
-      injectMethod === "initialize" || injectMethod === "prompts/list";
-    const needsReadTools =
-      hasReadBackend && readEnabled() && method === "tools/list";
-    const needsShorten = method === "tools/list";
-    if (!needsGuidance && !needsReadTools && !needsShorten) {
-      return msg;
-    }
-    let parsed: {
-      id?: unknown;
-      result?: { instructions?: unknown; prompts?: unknown; tools?: unknown };
-    };
+    const plan = planRewrite(request?.method, injectMethod, hasReadBackend);
+    if (!plan) return msg;
+    let parsed: RpcResponse;
     try {
-      parsed = JSON.parse(msg) as typeof parsed;
+      parsed = JSON.parse(msg) as RpcResponse;
     } catch {
       return msg;
     }
     if (parsed.id !== request?.id || !parsed.result) {
       return msg;
     }
-    const result = parsed.result as {
-      instructions?: unknown;
-      prompts?: unknown;
-      tools?: unknown;
-    };
-    if (needsGuidance && injectMethod === "initialize") {
-      result.instructions = augmentInstructions(
-        result.instructions as string | undefined,
-      );
-    } else if (needsGuidance && injectMethod === "prompts/list") {
-      const existing = Array.isArray(result.prompts) ? result.prompts : [];
-      result.prompts = [...existing, ...guidancePromptDefs()];
-    }
-    if (needsReadTools && Array.isArray(result.tools)) {
-      result.tools = [...result.tools, ...readToolDefs()];
-    }
-    if (needsShorten && Array.isArray(result.tools)) {
-      result.tools = (result.tools as Array<{ name?: unknown }>).map((tool) => {
-        if (!tool || typeof tool !== "object") {
-          return tool;
-        }
-        const name = (tool as { name?: unknown }).name;
-        if (typeof name !== "string") {
-          return tool;
-        }
-        return { ...tool, name: toolNames.exportName(name) };
-      });
-    }
+    const result = parsed.result as RpcResult;
+    applyGuidance(result, plan);
+    if (plan.readTools) applyReadTools(result);
+    if (plan.shorten) applyShorten(result);
     return JSON.stringify(parsed);
   };
 

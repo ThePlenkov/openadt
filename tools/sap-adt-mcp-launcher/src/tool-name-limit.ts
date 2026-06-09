@@ -17,15 +17,19 @@ export function maxMcpToolNameLenFromEnv(
   if (!raw) {
     return DEFAULT_MAX_MCP_TOOL_NAME_LEN;
   }
-  const parsed = Number.parseInt(raw, 10);
-  if (
-    !Number.isFinite(parsed) ||
-    parsed < 16 ||
-    parsed > MAX_MCP_TOOL_NAME_LEN_CEILING
-  ) {
-    return DEFAULT_MAX_MCP_TOOL_NAME_LEN;
+  return isAcceptableMaxToolNameLen(Number.parseInt(raw, 10))
+    ? Number.parseInt(raw, 10)
+    : DEFAULT_MAX_MCP_TOOL_NAME_LEN;
+}
+
+function isAcceptableMaxToolNameLen(parsed: number): boolean {
+  if (!Number.isFinite(parsed)) {
+    return false;
   }
-  return parsed;
+  if (parsed < 16) {
+    return false;
+  }
+  return parsed <= MAX_MCP_TOOL_NAME_LEN_CEILING;
 }
 
 /** Maps long SAP tool names to shorter aliases for agent backends with name limits. */
