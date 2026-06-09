@@ -19,6 +19,11 @@ import {
   readToolDefs,
   type ReadObjectBackend,
 } from "./read-object.ts";
+import {
+  maxMcpToolNameLenFromEnv,
+  rewriteToolsCallRequest,
+  ToolNameRegistry,
+} from "./tool-name-limit.ts";
 
 /** Parse MCP HTTP response body (JSON or SSE `data:` lines). */
 export function parseMcpHttpResponseBody({
@@ -156,42 +161,6 @@ function promptGetParams(params: Record<string, unknown>): {
   return { name, args };
 }
 
-/**
- * Inject launcher guidance into a backend response: append the workflow
- * cheat-sheet to `initialize.instructions`, and merge our prompts into
- * `prompts/list`. Returns the (possibly rewritten) message body. Untouched
- * for any other method, or when the response id does not match the request.
- */
-function injectGuidance(
-  msg: string,
-  reqId: ParsedRpc["id"],
-  method: string | undefined,
-): string {
-  if (!method || (method !== "initialize" && method !== "prompts/list")) {
-    return msg;
-  }
-  let parsed: { id?: unknown; result?: Record<string, unknown> };
-  try {
-    parsed = JSON.parse(msg);
-  } catch {
-    return msg;
-  }
-  if (parsed.id !== reqId || !parsed.result) {
-    return msg;
-  }
-  if (method === "initialize") {
-    parsed.result.instructions = augmentInstructions(
-      parsed.result.instructions as string | undefined,
-    );
-  } else {
-    const existing = Array.isArray(parsed.result.prompts)
-      ? parsed.result.prompts
-      : [];
-    parsed.result.prompts = [...existing, ...guidancePromptDefs()];
-  }
-  return JSON.stringify(parsed);
-}
-
 /** Extract `name` + `arguments` object from a tools/call request. */
 function toolCallParams(params: Record<string, unknown>): {
   name: string;
@@ -225,36 +194,6 @@ function isReadToolRequest(
     request?.method === "tools/call" &&
     request.id !== undefined
   );
-}
-
-/**
- * Merge our read tools into a backend `tools/list` response. No-op for any other
- * method, when read is disabled, when no read backend is wired, or when the
- * response id does not match the request.
- */
-function injectReadTools(
-  msg: string,
-  reqId: ParsedRpc["id"],
-  method: string | undefined,
-  hasBackend: boolean,
-): string {
-  if (!hasBackend || !readEnabled() || method !== "tools/list") {
-    return msg;
-  }
-  let parsed: { id?: unknown; result?: Record<string, unknown> };
-  try {
-    parsed = JSON.parse(msg);
-  } catch {
-    return msg;
-  }
-  if (parsed.id !== reqId || !parsed.result) {
-    return msg;
-  }
-  const existing = Array.isArray(parsed.result.tools)
-    ? parsed.result.tools
-    : [];
-  parsed.result.tools = [...existing, ...readToolDefs()];
-  return JSON.stringify(parsed);
 }
 
 /** Result of one HTTP POST to the MCP endpoint. */
@@ -346,6 +285,14 @@ export type StdioMcpBridge = {
    * forwarding to SAP. Call before run().
    */
   setReadBackend(backend: ReadObjectBackend | undefined): void;
+  /**
+   * Wire a reconnect handler. Called on network error during forwarding; should
+   * return a fresh McpHttpEndpoint to retry on, or undefined to fail the request.
+   * Call before run().
+   */
+  setEndpointFailureHandler(
+    fn: () => Promise<McpHttpEndpoint | undefined>,
+  ): void;
   /** Wait for HTTP MCP, flush queue, forward until stdin closes and forwards drain. */
   run(
     endpoint: McpHttpEndpoint,
@@ -357,6 +304,22 @@ export type StdioMcpBridge = {
   flush(): Promise<void>;
 };
 
+/** Return true for transient network failures that warrant a reconnect attempt. */
+function isNetworkError(err: unknown): boolean {
+  // AbortSignal timeout is not a network failure — the backend is alive but slow.
+  if (err instanceof DOMException) return false;
+  // fetch() throws TypeError for connection-level failures in Bun/Node.
+  if (err instanceof TypeError) return true;
+  const code = (err as NodeJS.ErrnoException | undefined)?.code;
+  return (
+    code === "ECONNREFUSED" ||
+    code === "ECONNRESET" ||
+    code === "ETIMEDOUT" ||
+    code === "ENOTFOUND" ||
+    code === "EPIPE"
+  );
+}
+
 /** Transparent stdio MCP bridge to local SAP ADT HTTP MCP. */
 export function createStdioMcpBridge(): StdioMcpBridge {
   const queue = new PendingBodyQueue(256);
@@ -364,6 +327,10 @@ export function createStdioMcpBridge(): StdioMcpBridge {
   const lifecycle = new BridgeLifecycle();
   let backend: McpHttpEndpoint | undefined;
   let readBackend: ReadObjectBackend | undefined;
+  let onEndpointFailure:
+    | (() => Promise<McpHttpEndpoint | undefined>)
+    | undefined;
+  const toolNames = new ToolNameRegistry(maxMcpToolNameLenFromEnv());
 
   const decoder = new McpStdioDecoder();
   const encoder = new McpStdioEncoder();
@@ -443,7 +410,10 @@ export function createStdioMcpBridge(): StdioMcpBridge {
     // Methods whose backend response we rewrite to inject guidance.
     const injectMethod = guidanceEnabled() ? request?.method : undefined;
 
-    chain.append(() => forwardToBackend(message, request, injectMethod));
+    const outbound = new McpStdioMessage(
+      rewriteToolsCallRequest({ body: message.body, registry: toolNames }),
+    );
+    chain.append(() => forwardToBackend(outbound, request, injectMethod));
   };
 
   const forwardToBackend = async (
@@ -454,30 +424,152 @@ export function createStdioMcpBridge(): StdioMcpBridge {
     if (!backend) {
       return;
     }
-    const endpoint = backend.withSessionId(chain.sessionId);
     try {
-      const result = await postMcpHttpMessage(endpoint, message);
-      chain.captureSessionId(result.sessionId);
-      if (result.messages.length === 0 && result.status >= 400) {
-        await replyError(
-          message,
-          new JsonRpcError(-32000, `MCP HTTP ${result.status}`),
-        );
-        return;
-      }
-      const hasReadBackend = readBackend !== undefined;
-      for (const msg of result.messages) {
-        const rewritten = rewriteForwardedMessage(
-          msg,
-          request,
-          injectMethod,
-          hasReadBackend,
-        );
-        await writeMcpStdioMessage(encoder, rewritten);
-      }
+      await tryPost(
+        message,
+        request,
+        injectMethod,
+        backend.withSessionId(chain.sessionId),
+      );
     } catch (err) {
+      if (isNetworkError(err) && onEndpointFailure) {
+        const handled = await reconnectAndPost(message, request, injectMethod);
+        if (handled) return;
+      }
       await handleForwardError(message, err);
     }
+  };
+
+  const tryPost = async (
+    message: McpStdioMessage,
+    request: ParsedRpc | undefined,
+    injectMethod: string | undefined,
+    ep: McpHttpEndpoint,
+  ): Promise<void> => {
+    const result = await postMcpHttpMessage(ep, message);
+    chain.captureSessionId(result.sessionId);
+    if (result.messages.length === 0 && result.status >= 400) {
+      await replyError(
+        message,
+        new JsonRpcError(-32000, `MCP HTTP ${result.status}`),
+      );
+      return;
+    }
+    const hasReadBackend = readBackend !== undefined;
+    for (const msg of result.messages) {
+      const rewritten = rewriteForwardedMessage(
+        msg,
+        request,
+        injectMethod,
+        hasReadBackend,
+      );
+      await writeMcpStdioMessage(encoder, rewritten);
+    }
+  };
+
+  const reconnectAndPost = async (
+    message: McpStdioMessage,
+    request: ParsedRpc | undefined,
+    injectMethod: string | undefined,
+  ): Promise<boolean> => {
+    if (!onEndpointFailure || !backend) return false;
+    let fresh: McpHttpEndpoint | undefined;
+    try {
+      fresh = await onEndpointFailure();
+    } catch (handlerErr) {
+      await handleForwardError(message, handlerErr);
+      return true;
+    }
+    if (!fresh) return false;
+    // Reset session: a fresh endpoint represents a new backend with its
+    // own session state. Reattaching the old `Mcp-Session-Id` would 4xx
+    // per the MCP HTTP spec and break subsequent requests.
+    const sameBackend =
+      backend.url === fresh.url && backend.token === fresh.token;
+    backend = fresh;
+    if (!sameBackend) {
+      chain.resetSessionId();
+    }
+    try {
+      await tryPost(
+        message,
+        request,
+        injectMethod,
+        fresh.withSessionId(chain.sessionId),
+      );
+    } catch (retryErr) {
+      await handleForwardError(message, retryErr);
+    }
+    return true;
+  };
+
+  type RpcResult = {
+    instructions?: unknown;
+    prompts?: unknown;
+    tools?: unknown;
+  };
+  type RpcResponse = { id?: unknown; result?: RpcResult };
+  type RewritePlan = {
+    guidance: "initialize" | "prompts/list" | undefined;
+    readTools: boolean;
+    shorten: boolean;
+  };
+
+  const planRewrite = (
+    method: string | undefined,
+    injectMethod: string | undefined,
+    hasReadBackend: boolean,
+  ): RewritePlan | undefined => {
+    if (injectMethod === "initialize" || injectMethod === "prompts/list") {
+      return { guidance: injectMethod, readTools: false, shorten: false };
+    }
+    if (method === "tools/list") {
+      return {
+        guidance: undefined,
+        readTools: hasReadBackend && readEnabled(),
+        shorten: true,
+      };
+    }
+    return undefined;
+  };
+
+  const shortenToolNames = (
+    tools: Array<{ name?: unknown }>,
+    registry: { exportName: (n: string) => string },
+  ): Array<{ name?: unknown }> =>
+    tools.map((tool) => {
+      if (!tool || typeof tool !== "object") {
+        return tool;
+      }
+      const name = tool.name;
+      if (typeof name !== "string") {
+        return tool;
+      }
+      return { ...tool, name: registry.exportName(name) };
+    });
+
+  const applyGuidance = (result: RpcResult, plan: RewritePlan): void => {
+    if (plan.guidance === "initialize") {
+      result.instructions = augmentInstructions(
+        result.instructions as string | undefined,
+      );
+    } else if (plan.guidance === "prompts/list") {
+      const existing = Array.isArray(result.prompts) ? result.prompts : [];
+      result.prompts = [...existing, ...guidancePromptDefs()];
+    }
+  };
+
+  const applyReadTools = (result: RpcResult): void => {
+    if (!Array.isArray(result.tools)) return;
+    result.tools = [...result.tools, ...readToolDefs()];
+  };
+
+  const applyShorten = (result: RpcResult): void => {
+    if (!Array.isArray(result.tools)) return;
+    result.tools = shortenToolNames(
+      result.tools as Array<{ name?: unknown }>,
+      toolNames,
+    );
   };
 
   const rewriteForwardedMessage = (
@@ -486,13 +578,22 @@ export function createStdioMcpBridge(): StdioMcpBridge {
     injectMethod: string | undefined,
     hasReadBackend: boolean,
   ): string => {
-    const withGuidance = injectGuidance(msg, request?.id, injectMethod);
-    return injectReadTools(
-      withGuidance,
-      request?.id,
-      request?.method,
-      hasReadBackend,
-    );
+    const plan = planRewrite(request?.method, injectMethod, hasReadBackend);
+    if (!plan) return msg;
+    let parsed: RpcResponse;
+    try {
+      parsed = JSON.parse(msg) as RpcResponse;
+    } catch {
+      return msg;
+    }
+    if (parsed.id !== request?.id || !parsed.result) {
+      return msg;
+    }
+    const result = parsed.result as RpcResult;
+    applyGuidance(result, plan);
+    if (plan.readTools) applyReadTools(result);
+    if (plan.shorten) applyShorten(result);
+    return JSON.stringify(parsed);
   };
 
   const enqueuePending = (message: McpStdioMessage): void => {
@@ -649,6 +750,9 @@ export function createStdioMcpBridge(): StdioMcpBridge {
     setReadBackend(b: ReadObjectBackend | undefined) {
       readBackend = b;
     },
+    setEndpointFailureHandler(fn: () => Promise<McpHttpEndpoint | undefined>) {
+      onEndpointFailure = fn;
+    },
     async run(
       endpoint: McpHttpEndpoint,
       options?: { waitTimeoutMs?: number; pollIntervalMs?: number },
@@ -714,6 +818,10 @@ class ForwardChain {
     if (value) {
       this.nextSessionId = value;
     }
+  }
+
+  resetSessionId(): void {
+    this.nextSessionId = undefined;
   }
 }
 

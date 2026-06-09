@@ -34,6 +34,8 @@ Do not reimplement ADT HTTP in the SDK path.
 
 **Spec (merge gate):** [specs/mcp.md](../../../specs/mcp.md) — section *Official SAP ADT MCP server interface* for LSP + HTTP contracts. SDD: spec before launcher changes ([AGENTS.md](../../../AGENTS.md)).
 
+**Agent config checklist:** repo MCP configs (`.mcp.json`, `.cursor/mcp.json`) must use server key **`sap-adt`** (short). Claude + AWS Bedrock limits prefixed tool names to **64 chars** (`mcp__<serverKey>__<toolName>`). Before adding or renaming an MCP server key, read [Agent backend tool name limits](../../../specs/mcp.md#agent-backend-tool-name-limits-claude--aws-bedrock).
+
 ## Verify
 
 ```bash

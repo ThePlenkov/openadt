@@ -17,9 +17,14 @@ on:
           - preminor
           - premajor
       prerelease_id:
-        description: Pre-release id (rc, beta, alpha) — only for prerelease/prepatch/preminor/premajor bumps
+        description: Pre-release id — only used with prerelease/prepatch/preminor/premajor bumps
         required: false
-        type: string
+        type: choice
+        default: rc
+        options:
+          - rc
+          - beta
+          - alpha
       draft:
         description: Create as draft release — assets are attached but release stays hidden until published
         required: false

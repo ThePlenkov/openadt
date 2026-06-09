@@ -142,17 +142,20 @@ One-time setup: install the [SAP ADT VS Code extension](https://marketplace.visu
 }
 ```
 
+**Claude Code** uses **`.mcp.json`** at the repo root (same JSON shape). Keep the server key short (`sap-adt`) — Claude + AWS Bedrock reject prefixed tool names longer than 64 characters. See [docs/usage.md — MCP troubleshooting](docs/usage.md#mcp-troubleshooting).
+
 ---
 
 ## 🩺 Troubleshooting
 
-| Problem                           | Fix                                                                       |
-| --------------------------------- | ------------------------------------------------------------------------- |
-| `JCo jar not configured`          | Run `openadt config bootstrap`; check `~/.openadt/local.openadt.toml`     |
-| `no sapjco3 in java.library.path` | Use the OS that owns the native lib (Windows = `sapjco3.dll`)             |
-| `GSS-API: No credentials` (SNC)   | Install Secure Login on Windows or set up `SECUDIR` on Linux              |
-| `Connection refused` on the proxy | Start `openadt proxy` first; check the `--listen` port                    |
-| Want more detail                  | `export OPENADT_VERBOSE=true` (PowerShell: `$env:OPENADT_VERBOSE="true"`) |
+| Problem                                            | Fix                                                                                                           |
+| -------------------------------------------------- | ------------------------------------------------------------------------------------------------------------- |
+| `JCo jar not configured`                           | Run `openadt config bootstrap`; check `~/.openadt/local.openadt.toml`                                         |
+| `no sapjco3 in java.library.path`                  | Use the OS that owns the native lib (Windows = `sapjco3.dll`)                                                 |
+| `GSS-API: No credentials` (SNC)                    | Install Secure Login on Windows or set up `SECUDIR` on Linux                                                  |
+| `Connection refused` on the proxy                  | Start `openadt proxy` first; check the `--listen` port                                                        |
+| Claude Code `ValidationException` (tool name ≤ 64) | Shorten MCP server key in `.mcp.json` to `sap-adt` — [MCP troubleshooting](docs/usage.md#mcp-troubleshooting) |
+| Want more detail                                   | `export OPENADT_VERBOSE=true` (PowerShell: `$env:OPENADT_VERBOSE="true"`)                                     |
 
 ---
 
