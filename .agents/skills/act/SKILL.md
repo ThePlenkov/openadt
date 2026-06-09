@@ -167,7 +167,8 @@ Say **merge-ready** only when:
 2. CI required checks **success on current HEAD**.
 3. `open_threads=0` from final `--dry-run`.
 4. Summary lists **what you changed per theme/file**, not only “resolved N threads”.
-5. **P6 passed** — no cycle signals (reopened threads, duplicate rule flags, empty `/act` loop); retrospective + sink update done if anything went wrong this session.
+5. **P5 done** — `review_scores.csv` upserted and committed on the PR branch. Delegate to a `general` subagent (not the orchestrator) to keep the main context cheap. Pass the `--evaluator` value as the subagent's model name (e.g. `claude-haiku-4-5`). Do NOT re-extract findings after scoring begins — use one `findings.jsonl` per `/act` run.
+6. **P6 passed** — no cycle signals (reopened threads, duplicate rule flags, empty `/act` loop); retrospective + sink update done if anything went wrong this session.
 
 ## PR closing summary
 
@@ -176,8 +177,9 @@ Say **merge-ready** only when:
 3. **Review fixes** (bullet per theme / file — this is the main section)  
 4. Threads: how many resolved **after** fixes; `open_threads=0`  
 5. CI on HEAD  
-6. **P6:** cycle signals (none / blocked — list)  
-7. Left  
+6. **P5:** findings rated (N rows in `review_scores.csv`, committed on branch)  
+7. **P6:** cycle signals (none / blocked — list)  
+8. Left  
 
 ## Idempotency
 
