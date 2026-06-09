@@ -92,20 +92,39 @@ P5 and P6 are **required** before any merge-ready declaration. Skipping them is 
 **P5 — delegate to a `general` subagent (not inline):**
 
 ```bash
+# Orchestrator-side setup (run ONCE per /act cycle).
 # one scratch dir per /act run — never re-extract after scoring begins
 mkdir -p /tmp/agent_$$
 bun scripts/act/extract-findings.ts OWNER REPO PR > /tmp/agent_$$/findings.jsonl
-# pass findings.jsonl to a general subagent: "read findings, write scores.tsv, run submit-scores.ts"
-# subagent model name = --evaluator value (e.g. claude-haiku-4-5)
+```
+
+```bash
+# Subagent-side scoring (run INSIDE the spawned `general` subagent, model = haiku).
+# The orchestrator must NOT run these commands itself.
 bun scripts/act/submit-scores.ts OWNER REPO PR --evaluator <subagent-model-id> \
   --findings /tmp/agent_$$/findings.jsonl --scores /tmp/agent_$$/scores.tsv
-# verify the CSV was committed (git add + git commit on current branch)
+```
+
+```bash
+# Orchestrator-side verification — back in the orchestrator's context.
+git add .agents/act/review_scores.csv && git commit -m "chore(act): P5 scores for #PR"
 git log --oneline -1 -- .agents/act/review_scores.csv
+```
+
+Spawn the subagent with the explicit task contract (do not execute scoring in this context):
+
+```text
+task --subagent_type general --model <evaluator-id> \
+  "Read /tmp/agent_$$/findings.jsonl, score each finding 0–5 with a one-line reason,
+   write /tmp/agent_$$/scores.tsv (finding_id<TAB>score<TAB>why), then run
+   `bun scripts/act/submit-scores.ts OWNER REPO PR --evaluator <evaluator-id>
+   --findings /tmp/agent_$$/findings.jsonl --scores /tmp/agent_$$/scores.tsv`.
+   Do not re-run extract-findings.ts — the snapshot is already on disk."
 ```
 
 P5 scoring is mechanical judgment (0–5 per finding). Use `haiku` via a `general` subagent — do **not** burn the orchestrator's context on it.
 
-**P6 — cycle check + retrospective (see [EVALUATE.md](../../agents/skills/act/EVALUATE.md)):**
+**P6 — cycle check + retrospective (see [EVALUATE.md](../../skills/act/EVALUATE.md)):**
 
 Run the checklist after P5 commits. If any cycle signal fires (reopened thread, same rule 2+ times, empty `/act` loop), stop and escalate — do not merge.
 
@@ -113,7 +132,7 @@ Run the checklist after P5 commits. If any cycle signal fires (reopened thread, 
 
 When the context window is > 60% full on a long orchestration task, delegate summarization to the `compaction` subagent. The orchestrator's mental state matters more than raw history.
 
-## 9. Mental model — design to 10.0 on the delta
+## 10. Mental model — design to 10.0 on the delta
 
 > "Design new code to score 10.0 on the CodeScene delta from the first push — never inherit low-CC code into a small PR."
 
