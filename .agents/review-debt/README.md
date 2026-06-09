@@ -18,10 +18,11 @@ Queryable queue of **unresolved PR review threads** harvested **after merge** (o
 
 | Trigger | Scope |
 | ------- | ----- |
-| `pull_request` **closed** + merged | That PR only |
+| `pull_request` **closed** + merged | That PR only (immediate) |
+| `workflow_run` **CI** completed on `pull_request` | Same merged PR after PR CI finishes (late bot comments) |
 | `workflow_dispatch` | Filtered batch (see workflow inputs) |
 
-**CI:** each harvest adds **new files** under `harvests/` and opens a **bot PR to `main`** (no direct push, no merge conflicts on a shared ledger file).
+**CI:** each harvest adds **new files** under `harvests/` and **pushes them straight to `main`** (append-only unique filenames + rebase retry). No bot PR for harvest data — debt is fixed later via `/act debt` in a normal feature PR.
 
 Harvest does **not** run on every `/act`, every CI run, or every push to `main`.
 

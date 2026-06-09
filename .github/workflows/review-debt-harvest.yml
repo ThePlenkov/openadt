@@ -1,11 +1,16 @@
 # Harvest unresolved review threads into .agents/review-debt/harvests/*.jsonl
-# Does NOT run on every push or every /act — only on merge or manual dispatch.
-# New harvest files land on main via bot PR (append-only — no ledger merge conflicts).
+# Does NOT run on every push or every /act — only on merge, after PR CI, or manual dispatch.
+# New harvest files land on main as append-only paths (unique per run — no ledger conflicts).
 name: Review debt harvest
 
 on:
   pull_request:
     types: [closed]
+
+  # Catch bot review threads posted late in PR CI when merge happens before CI finishes.
+  workflow_run:
+    workflows: ["CI"]
+    types: [completed]
 
   workflow_dispatch:
     inputs:
@@ -45,14 +50,22 @@ on:
         type: boolean
 
 permissions:
+  actions: read
   contents: write
-  pull-requests: write
+  pull-requests: read
+
+concurrency:
+  group: review-debt-land-main
+  cancel-in-progress: false
 
 jobs:
   harvest:
     if: |
       github.event_name == 'workflow_dispatch' ||
-      github.event.pull_request.merged == true
+      (github.event_name == 'pull_request' && github.event.pull_request.merged == true) ||
+      (github.event_name == 'workflow_run' &&
+        github.event.workflow_run.event == 'pull_request' &&
+        github.event.workflow_run.conclusion != 'cancelled')
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v6
@@ -64,22 +77,35 @@ jobs:
 
       - run: bun install --frozen-lockfile
 
-      - name: Harvest unresolved threads
+      - name: Resolve harvest target (merge or post-PR-CI)
+        if: github.event_name == 'pull_request' || github.event_name == 'workflow_run'
+        id: target
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: bun .agents/skills/act/scripts/resolve-harvest-target.ts
+
+      - name: Harvest unresolved threads (single PR)
+        if: |
+          (github.event_name == 'pull_request' || github.event_name == 'workflow_run') &&
+          steps.target.outputs.should_harvest == 'true'
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          bun .agents/skills/act/scripts/harvest-threads.ts \
+            "${{ github.repository_owner }}" \
+            "${{ github.event.repository.name }}" \
+            "${{ steps.target.outputs.pr_number }}" \
+            --merged-sha "${{ steps.target.outputs.merge_sha }}" \
+            --run-id "${{ github.run_id }}"
+
+      - name: Harvest unresolved threads (batch dispatch)
+        if: github.event_name == 'workflow_dispatch'
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           OWNER="${{ github.repository_owner }}"
           REPO="${{ github.event.repository.name }}"
           RUN_ID="${{ github.run_id }}"
-
-          if [ "${{ github.event_name }}" = "pull_request" ]; then
-            PR="${{ github.event.pull_request.number }}"
-            SHA="${{ github.event.pull_request.merge_commit_sha }}"
-            bun .agents/skills/act/scripts/harvest-threads.ts "$OWNER" "$REPO" "$PR" \
-              --merged-sha "$SHA" \
-              --run-id "$RUN_ID"
-            exit 0
-          fi
 
           ARGS=()
           [ -n "${{ github.event.inputs.pr_numbers }}" ] && \
@@ -103,31 +129,19 @@ jobs:
             "${ARGS[@]}" \
             --run-id "$RUN_ID"
 
-      - name: Open PR with new harvest files
-        if: github.event_name == 'pull_request' || github.event.inputs.list_only != true
+      - name: Land harvest files on main
+        if: |
+          ((github.event_name == 'pull_request' || github.event_name == 'workflow_run') &&
+          steps.target.outputs.should_harvest == 'true') ||
+          (github.event_name == 'workflow_dispatch' && github.event.inputs.list_only != 'true')
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          set -euo pipefail
-          if [ -z "$(git status --porcelain .agents/review-debt/harvests/ 2>/dev/null)" ]; then
-            echo "No new harvest files"
-            exit 0
-          fi
-
-          BRANCH="review-debt/harvest-${GITHUB_RUN_ID}"
-          git config user.name "github-actions[bot]"
-          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git checkout -b "$BRANCH"
-          git add .agents/review-debt/harvests/
-
           if [ "${{ github.event_name }}" = "pull_request" ]; then
             TITLE="chore(review-debt): harvest PR #${{ github.event.pull_request.number }}"
-            BODY="Append-only harvest files under .agents/review-debt/harvests/ (timestamp-pr-run). Merge to add to main without ledger conflicts."
+          elif [ "${{ github.event_name }}" = "workflow_run" ]; then
+            TITLE="chore(review-debt): harvest PR #${{ steps.target.outputs.pr_number }} (after PR CI)"
           else
             TITLE="chore(review-debt): harvest batch (run ${{ github.run_id }})"
-            BODY="Append-only harvest files from workflow_dispatch run ${{ github.run_id }}. Merge to add to main."
           fi
-
-          git commit -m "$TITLE"
-          git push -u origin "$BRANCH"
-          gh pr create --base main --head "$BRANCH" --title "$TITLE" --body "$BODY"
+          bash .agents/skills/act/scripts/land-harvest-files.sh "$TITLE"

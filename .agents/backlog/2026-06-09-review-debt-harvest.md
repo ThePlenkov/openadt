@@ -15,4 +15,4 @@ Remaining from [docs/plans/2026-06-09-review-debt-harvest.md](../../docs/plans/2
 1. Validate `harvest-threads.ts` on a real merged PR (`workflow_dispatch`).
 2. Tune `.agents/review-debt/config.json` for the full reviewer fleet.
 3. Optional: auto-reply on source PRs after debt PR merges (`reply-threads.sh`).
-4. Optional: bot PR for ledger commits instead of direct push to `main`.
+4. ~~Optional: bot PR for ledger commits~~ — **not used**; harvest lands as new `harvests/*.jsonl` on `main` only.

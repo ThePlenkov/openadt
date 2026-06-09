@@ -31,10 +31,11 @@ flowchart LR
 
 ## Triggers
 
-| Trigger                            | When       | Scope                  |
-| ---------------------------------- | ---------- | ---------------------- |
-| `pull_request` `closed` + `merged` | Each merge | That PR only           |
-| `workflow_dispatch`                | Manual     | PR filters (see below) |
+| Trigger                                           | When           | Scope                                      |
+| ------------------------------------------------- | -------------- | ------------------------------------------ |
+| `pull_request` `closed` + `merged`                | Each merge     | That PR only (immediate)                   |
+| `workflow_run` `CI` `completed` on `pull_request` | PR CI finishes | Merged PR only (deferred; merge-before-CI) |
+| `workflow_dispatch`                               | Manual         | PR filters (see below)                     |
 
 Do **not** harvest on: every `/act`, every CI run, generic push to `main`.
 
@@ -80,7 +81,7 @@ Do **not** harvest on: every `/act`, every CI run, generic push to `main`.
 - [x] ACT skill — debt mode section
 - [x] `REVIEW.md` merge-policy note
 - [ ] Tune `config.json` bot list on first real harvest
-- [x] Harvest → append-only `harvests/{timestamp}-pr-{N}-run-{id}.jsonl` + bot PR to `main` (not direct push)
+- [x] Harvest → append-only `harvests/{timestamp}-pr-{N}-run-{id}.jsonl` + push to `main` (rebase retry; no harvest bot PR)
 - [x] Status updates → `ledger.jsonl` overlays (`update-debt-status.ts`)
 
 ## Phase 2
@@ -94,10 +95,10 @@ Do **not** harvest on: every `/act`, every CI run, generic push to `main`.
 
 - [ ] Join P5 `review_scores.csv` → auto-`wontfix` for score 0–1
 - [ ] Archive `done` rows to `debt-archive-YYYY.jsonl`
-- [x] Ledger harvest via bot PR (append-only files under `harvests/`)
+- [x] Ledger harvest via append-only files under `harvests/` on `main`
 
 ## Open decisions
 
-1. ~~Direct push of ledger to `main`~~ → **append-only harvest files + bot PR** (MVP).
+1. ~~Monolithic `debt.jsonl` push~~ → **append-only harvest files** pushed to `main` (unique paths per run).
 2. Default batch size for `/act debt` (suggest 25).
 3. Expand `ignore_authors` / `nit_authors` from your reviewer fleet.
