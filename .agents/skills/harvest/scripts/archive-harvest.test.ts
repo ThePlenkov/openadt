@@ -1,4 +1,4 @@
-import { afterEach, beforeEach, describe, expect, test } from "bun:test";
+import { describe, expect, test } from "bun:test";
 import {
   existsSync,
   mkdirSync,
@@ -17,37 +17,7 @@ interface ArchiveEnv {
   debtDir: string;
 }
 
-const ENV_KEYS = [
-  "OPENADT_DEBT_DIR",
-  "OPENADT_LEDGER_FILE",
-  "OPENADT_DEBT_SUMMARY",
-  "OPENADT_DEBT_FILE",
-] as const;
-
-const savedEnv: Record<string, string | undefined> = {};
 const activeEnvs: ArchiveEnv[] = [];
-
-beforeEach(() => {
-  for (const key of ENV_KEYS) {
-    savedEnv[key] = process.env[key];
-    delete process.env[key];
-  }
-  activeEnvs.length = 0;
-});
-
-afterEach(() => {
-  for (const env of activeEnvs) {
-    rmSync(env.tmp, { recursive: true, force: true });
-  }
-  for (const key of ENV_KEYS) {
-    const previous = savedEnv[key];
-    if (previous === undefined) {
-      delete process.env[key];
-    } else {
-      process.env[key] = previous;
-    }
-  }
-});
 
 function setupArchiveEnv(prefix: string): ArchiveEnv {
   const tmp = mkdtempSync(join(tmpdir(), `archive-harvest-${prefix}-`));
@@ -61,6 +31,17 @@ function setupArchiveEnv(prefix: string): ArchiveEnv {
   const env: ArchiveEnv = { tmp, debtDir };
   activeEnvs.push(env);
   return env;
+}
+
+function cleanupAll(): void {
+  for (const env of activeEnvs) {
+    rmSync(env.tmp, { recursive: true, force: true });
+  }
+  activeEnvs.length = 0;
+  delete process.env.OPENADT_DEBT_DIR;
+  delete process.env.OPENADT_LEDGER_FILE;
+  delete process.env.OPENADT_DEBT_SUMMARY;
+  delete process.env.OPENADT_DEBT_FILE;
 }
 
 function makeRecord(overrides: Partial<DebtRecord>): DebtRecord {
@@ -158,6 +139,7 @@ describe("archive-harvest", () => {
     const { stderr } = invoke([]);
     const harvests = join(env.debtDir, "harvests");
     const checks = checkAllDone(harvests);
+    cleanupAll();
     expect(stderr).toMatch(/1 file\(s\) archived/);
     expect(checks.archiveExists).toBe(true);
     expect(checks.origStillThere).toBe(false);
@@ -176,6 +158,7 @@ describe("archive-harvest", () => {
 
     const { stderr } = invoke([]);
     const checks = checkMixed(join(env.debtDir, "harvests"));
+    cleanupAll();
     expect(stderr).toMatch(/0 file\(s\) archived/);
     expect(checks.stillThere).toBe(true);
     expect(checks.archivedAway).toBe(false);
@@ -192,6 +175,7 @@ describe("archive-harvest", () => {
     const file = join(env.debtDir, "harvests", "2026-01-01T000000Z-pr-1-run-test.jsonl");
     const stillThere = existsSync(file);
     const archiveDirExists = existsSync(join(env.debtDir, "harvests", "archive"));
+    cleanupAll();
     expect(stillThere).toBe(true);
     expect(archiveDirExists).toBe(false);
     expect(stderr).toMatch(/1 file\(s\) would archive/);
@@ -213,6 +197,7 @@ describe("archive-harvest", () => {
       join(env.debtDir, "harvests", "archive", "2026-01-01T000000Z-pr-1-run-test.archived.json"),
       "utf8",
     );
+    cleanupAll();
     const parsed = JSON.parse(marker) as { rows: number };
     expect(parsed.rows).toBe(2);
   });

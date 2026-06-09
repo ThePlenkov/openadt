@@ -21,7 +21,7 @@ import {
   renameSync,
   writeFileSync,
 } from "node:fs";
-import { join } from "node:path";
+import { dirname, join } from "node:path";
 import {
   listHarvestPaths,
   readDebtRecords,
@@ -30,26 +30,8 @@ import {
 
 const ARCHIVE_DIR_NAME = "archive";
 
-const TERMINAL_STATUSES = new Set(["done", "wontfix", "duplicate"]);
-
-function isTerminalStatus(status: string): boolean {
-  return TERMINAL_STATUSES.has(status);
-}
-
-function effectiveStatus(
-  overlays: Map<string, { status?: string }>,
-  row: { thread_id: string; status: string },
-): string {
-  return overlays.get(row.thread_id)?.status ?? row.status;
-}
-
-function defaultDebtDir(): string {
-  return join(import.meta.dir, "../../../review-debt");
-}
-
 function archiveDir(): string {
-  const debtRoot = process.env.OPENADT_DEBT_DIR ?? defaultDebtDir();
-  return join(debtRoot, "harvests", ARCHIVE_DIR_NAME);
+  return join(dirname(listHarvestPaths()[0] ?? ""), ARCHIVE_DIR_NAME);
 }
 
 interface LiveThreadIds {
@@ -57,30 +39,28 @@ interface LiveThreadIds {
   totals: { harvested: number; open: number; archived: number };
 }
 
-function collectLiveThreadIds(
-  all: Array<{ thread_id: string; status: string }>,
-  overlays: Map<string, { status?: string }>,
-): Set<string> {
+function computeLiveThreadIds(): LiveThreadIds {
+  const all = readDebtRecords();
+  const overlays = readLedgerOverlays();
   const live = new Set<string>();
   for (const row of all) {
-    if (isTerminalStatus(effectiveStatus(overlays, row))) {
+    const overlay = overlays.get(row.thread_id);
+    const status = overlay?.status ?? row.status;
+    if (status === "done" || status === "wontfix" || status === "duplicate") {
       continue;
     }
     live.add(row.thread_id);
   }
-  return live;
-}
-
-function loadLiveThreadIds(): LiveThreadIds {
-  const all = readDebtRecords();
-  const overlays = readLedgerOverlays();
-  const live = collectLiveThreadIds(all, overlays);
-  const totals = {
-    harvested: all.length,
-    open: all.filter((r) => effectiveStatus(overlays, r) === "open").length,
-    archived: 0,
+  return {
+    live,
+    totals: {
+      harvested: all.length,
+      open: all.filter(
+        (r) => (overlays.get(r.thread_id)?.status ?? r.status) === "open",
+      ).length,
+      archived: 0,
+    },
   };
-  return { live, totals };
 }
 
 function archivedCount(): number {
@@ -149,7 +129,7 @@ function parseArgs(argv: string[]): { dryRun: boolean } {
 
 export function main(): void {
   const args = parseArgs(process.argv.slice(2));
-  const { live, totals } = loadLiveThreadIds();
+  const { live, totals } = computeLiveThreadIds();
   const paths = listHarvestPaths();
   if (paths.length === 0) {
     console.error("archive: no harvest files found");

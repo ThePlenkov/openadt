@@ -7,9 +7,9 @@
  *   bun run act:debt:plan -- --limit 25 --area apps/openadt-cli
  *   bun run act:debt:plan -- --out /tmp/agent_$$/debt-batch-plan.md
  */
-import { mkdirSync, writeFileSync } from "node:fs";
-import { dirname } from "node:path";
-import { readDebtRecords, type DebtRecord } from "../../harvest/scripts/review-debt-lib.ts";
+import { mkdirSync, writeFileSync } from 'node:fs'
+import { dirname } from 'node:path'
+import { readDebtRecords, type DebtRecord } from '../../harvest/scripts/review-debt-lib.ts'
 
 interface PlanArgs {
   limit: number;
