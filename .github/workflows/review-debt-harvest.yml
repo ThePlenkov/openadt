@@ -1,6 +1,7 @@
 # Harvest unresolved review threads into .agents/review-debt/harvests/*.jsonl
 # Does NOT run on every push or every /act — only on merge, after PR CI, or manual dispatch.
 # New harvest files land on main as append-only paths (unique per run — no ledger conflicts).
+# Scripts now live under .agents/skills/harvest/ (see /harvest SKILL.md).
 name: Review debt harvest
 
 on:
@@ -82,7 +83,7 @@ jobs:
         id: target
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        run: bun .agents/skills/act/scripts/resolve-harvest-target.ts
+        run: bun .agents/skills/harvest/scripts/resolve-harvest-target.ts
 
       - name: Harvest unresolved threads (single PR)
         if: |
@@ -91,7 +92,7 @@ jobs:
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          bun .agents/skills/act/scripts/harvest-threads.ts \
+          bun .agents/skills/harvest/scripts/harvest-threads.ts \
             "${{ github.repository_owner }}" \
             "${{ github.event.repository.name }}" \
             "${{ steps.target.outputs.pr_number }}" \
@@ -125,7 +126,7 @@ jobs:
           [ "${{ github.event.inputs.list_only }}" = "true" ] && \
             ARGS+=(--list-only)
 
-          bun .agents/skills/act/scripts/harvest-debt-batch.ts "$OWNER" "$REPO" \
+          bun .agents/skills/harvest/scripts/harvest-debt-batch.ts "$OWNER" "$REPO" \
             "${ARGS[@]}" \
             --run-id "$RUN_ID"
 
@@ -144,4 +145,4 @@ jobs:
           else
             TITLE="chore(review-debt): harvest batch (run ${{ github.run_id }})"
           fi
-          bash .agents/skills/act/scripts/land-harvest-files.sh "$TITLE"
+          bash .agents/skills/harvest/scripts/land-harvest-files.sh "$TITLE"

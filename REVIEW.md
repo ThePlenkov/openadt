@@ -40,9 +40,25 @@ Before claiming “N issues fixed”: name the **source**, query it on **current
 ## Review debt (post-merge batch)
 
 Unresolved review threads can be **harvested after merge** into
-[`.agents/review-debt/debt.jsonl`](.agents/review-debt/debt.jsonl) and fixed in batch via
-`/act debt`. Harvest runs on **merged PR close** or
-[`workflow_dispatch`](.github/workflows/review-debt-harvest.yml) — not on every `/act` or CI run.
+[`.agents/review-debt/harvests/`](.agents/review-debt/harvests/) and fixed in
+batch via `/act harvest` (alias `/act debt`). The pipeline is three skills
+working in series:
+
+```text
+/harvest  →  /backlog  →  /act  →  /backlog (archive)
+```
+
+| Step                                   | Skill                                             | Reads                               | Writes                                            |
+| -------------------------------------- | ------------------------------------------------- | ----------------------------------- | ------------------------------------------------- |
+| Collect on merge                       | [`/harvest`](.agents/skills/harvest/SKILL.md)     | GitHub PR                           | `harvests/*.jsonl`, `debt-summary.json` on `main` |
+| Triage (priorities, grouping, wontfix) | [`/backlog`](.agents/skills/backlog/SKILL.md)     | `harvests/*.jsonl`                  | `.agents/backlog/*.md`                            |
+| Fix                                    | [`/act`](.agents/skills/act/SKILL.md) `<context>` | source PRs (or backlog)             | product code + batch PR                           |
+| Close loop                             | `/act done`                                       | batch PR                            | `ledger.jsonl`                                    |
+| Archive                                | `/harvest archive` (or `/backlog harvest`)        | `harvests/*.jsonl` + `ledger.jsonl` | `archive/harvests/*.jsonl`                        |
+
+Triggers live in
+[`.github/workflows/review-debt-harvest.yml`](.github/workflows/review-debt-harvest.yml) —
+PR merge, post-PR-CI, manual dispatch. Not on every `/act` or CI run.
 
 Plan: [docs/plans/2026-06-09-review-debt-harvest.md](docs/plans/2026-06-09-review-debt-harvest.md).
 Ledger contract: [.agents/review-debt/README.md](.agents/review-debt/README.md).

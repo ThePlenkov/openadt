@@ -14,7 +14,7 @@ import {
   readDebtRecords,
   writeSummary,
   type DebtRecord,
-} from "./review-debt-lib.ts";
+} from "../../harvest/scripts/review-debt-lib.ts";
 
 interface QueryArgs {
   status: string | null;

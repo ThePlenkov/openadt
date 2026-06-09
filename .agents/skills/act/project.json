@@ -9,18 +9,6 @@
         "command": "bun .agents/skills/act/scripts/review-debt-cli.ts"
       }
     },
-    "act-debt-harvest": {
-      "executor": "nx:run-commands",
-      "options": {
-        "command": "bun .agents/skills/act/scripts/review-debt-cli.ts harvest"
-      }
-    },
-    "act-debt-harvest-pr": {
-      "executor": "nx:run-commands",
-      "options": {
-        "command": "bun .agents/skills/act/scripts/review-debt-cli.ts harvest-pr"
-      }
-    },
     "act-debt-query": {
       "executor": "nx:run-commands",
       "options": {
