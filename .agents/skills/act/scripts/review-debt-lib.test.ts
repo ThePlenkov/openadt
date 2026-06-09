@@ -1,5 +1,16 @@
 import { describe, expect, test } from "bun:test";
-import { buildSummary, upsertRecords, type DebtRecord } from "./review-debt-lib.ts";
+import { mkdtempSync, rmSync } from "node:fs";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
+import {
+  buildSummary,
+  harvestFilename,
+  readDebtRecords,
+  upsertLedgerOverlays,
+  writeHarvestFile,
+  upsertRecords,
+  type DebtRecord,
+} from "./review-debt-lib.ts";
 import {
   bodyPreview,
   deriveArea,
@@ -92,5 +103,53 @@ describe("review-debt-lib", () => {
     const summary = buildSummary([]);
     expect(summary.open_count).toBe(0);
     expect(summary.oldest_open).toBeNull();
+  });
+
+});
+
+describe("review-debt harvest files", () => {
+  test("harvestFilename includes timestamp pr and run", () => {
+    expect(
+      harvestFilename({
+        harvestedAt: "2026-06-09T15:46:45.123Z",
+        pr: 82,
+        runId: "27218119809",
+      }),
+    ).toBe("2026-06-09T154645Z-pr-82-run-27218119809.jsonl");
+  });
+
+  test("readDebtRecords merges harvest files and ledger overlay", () => {
+    const dir = mkdtempSync(join(tmpdir(), "debt-harvest-"));
+    const prevDir = process.env.OPENADT_DEBT_DIR;
+    process.env.OPENADT_DEBT_DIR = dir;
+    try {
+      const row = sampleDebtRecord();
+      writeHarvestFile({
+        pr: 1,
+        runId: "run1",
+        harvestedAt: "2026-01-01T00:00:00Z",
+        records: [row],
+      });
+      upsertLedgerOverlays([
+        {
+          thread_id: "PRRT_1",
+          status: "done",
+          fix_pr: 99,
+          fixed_at: "2026-02-01T00:00:00Z",
+          notes: null,
+        },
+      ]);
+      const merged = readDebtRecords();
+      expect(merged).toHaveLength(1);
+      expect(merged[0]?.status).toBe("done");
+      expect(merged[0]?.fix_pr).toBe(99);
+    } finally {
+      if (prevDir === undefined) {
+        delete process.env.OPENADT_DEBT_DIR;
+      } else {
+        process.env.OPENADT_DEBT_DIR = prevDir;
+      }
+      rmSync(dir, { recursive: true, force: true });
+    }
   });
 });

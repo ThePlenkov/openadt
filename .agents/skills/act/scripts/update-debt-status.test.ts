@@ -1,5 +1,5 @@
 import { describe, expect, test } from "bun:test";
-import { mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import { mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import type { DebtRecord } from "./review-debt-lib.ts";
@@ -35,9 +35,14 @@ function sampleOpenRecord(): DebtRecord {
 describe("update-debt-status", () => {
   test("marks ledger rows done with fix PR", () => {
     const dir = mkdtempSync(join(tmpdir(), "debt-test-"));
-    const debtPath = join(dir, "debt.jsonl");
+    const harvestDir = join(dir, "harvests");
     const summaryPath = join(dir, "summary.json");
-    writeFileSync(debtPath, `${JSON.stringify(sampleOpenRecord())}\n`, "utf8");
+    mkdirSync(harvestDir, { recursive: true });
+    writeFileSync(
+      join(harvestDir, "2026-01-01T000000Z-pr-1-run-test.jsonl"),
+      `${JSON.stringify(sampleOpenRecord())}\n`,
+      "utf8",
+    );
 
     const proc = Bun.spawnSync(
       [
@@ -54,15 +59,17 @@ describe("update-debt-status", () => {
         cwd: join(import.meta.dir, "../../../.."),
         env: {
           ...process.env,
-          OPENADT_DEBT_FILE: debtPath,
+          OPENADT_DEBT_DIR: dir,
           OPENADT_DEBT_SUMMARY: summaryPath,
         },
       },
     );
     expect(proc.exitCode).toBe(0);
-    const row = JSON.parse(readFileSync(debtPath, "utf8").trim()) as DebtRecord;
-    expect(row.status).toBe("done");
-    expect(row.fix_pr).toBe(99);
+    const ledger = JSON.parse(
+      readFileSync(join(dir, "ledger.jsonl"), "utf8").trim(),
+    ) as { status: string; fix_pr: number };
+    expect(ledger.status).toBe("done");
+    expect(ledger.fix_pr).toBe(99);
     rmSync(dir, { recursive: true, force: true });
   });
 });

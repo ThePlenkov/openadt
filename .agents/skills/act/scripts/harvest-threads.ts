@@ -1,6 +1,6 @@
 #!/usr/bin/env bun
 /**
- * Harvest unresolved PR review threads into .agents/review-debt/debt.jsonl.
+ * Harvest unresolved PR review threads into .agents/review-debt/harvests/*.jsonl.
  *
  * Triggered by review-debt-harvest.yml on merge (or workflow_dispatch).
  * Not part of /act — run only on merge or manual backfill.
@@ -15,8 +15,7 @@ import {
   classifyThread,
   loadConfig,
   readDebtRecords,
-  upsertRecords,
-  writeDebtRecords,
+  writeHarvestFile,
   writeSummary,
   type DebtRecord,
 } from "./review-debt-lib.ts";
@@ -381,13 +380,21 @@ async function main(): Promise<void> {
     return;
   }
 
-  const merged = upsertRecords(readDebtRecords(), result.incoming);
-  writeDebtRecords(merged);
-  writeSummary(buildSummary(merged));
+  if (result.incoming.length === 0) {
+    console.error("harvest: no harvestable threads");
+    return;
+  }
 
-  console.error(
-    `harvest: wrote ${result.incoming.length} row(s) to debt.jsonl`,
-  );
+  const harvestedAt = result.incoming[0]!.harvested_at;
+  const path = writeHarvestFile({
+    pr: args.pr,
+    runId: args.runId,
+    harvestedAt,
+    records: result.incoming,
+  });
+  writeSummary(buildSummary(readDebtRecords()));
+
+  console.error(`harvest: wrote ${result.incoming.length} row(s) to ${path}`);
 }
 
 if (import.meta.main) {

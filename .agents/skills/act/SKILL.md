@@ -3,7 +3,7 @@ name: act
 description: >-
   Use when the user invokes /act on a PR/MR or /act debt for batched review debt.
   PR mode: fix CI and implement review feedback in product code. Debt mode: fix
-  harvested threads from .agents/review-debt/debt.jsonl in one batch PR. Resolve
+  harvested threads from .agents/review-debt/ (harvests/*.jsonl + ledger) in one batch PR. Resolve
   threads only after each item is fixed or answered. Never resolve-only.
 disable-model-invocation: true
 compatibility: Requires gh, jq, bun; optional ledger at .agents/review-debt/ (override OPENADT_DEBT_FILE).
@@ -28,7 +28,7 @@ Applies to `/act`, `/act debt`, `/act all`, `@claude /act`, `@codex /act`, `@cop
 | ------- | ---- | ------ |
 | `/act` | **PR** (default when a PR is in context) | Current PR — P0–P6 below |
 | `/act 42` | **PR** | PR `#42` |
-| `/act debt` | **Debt** | Open rows in [`.agents/review-debt/debt.jsonl`](../../../.agents/review-debt/debt.jsonl) → **new batch PR** |
+| `/act debt` | **Debt** | Open rows in [`.agents/review-debt/`](../../../.agents/review-debt/) (`harvests/` + `ledger.jsonl`) → **new batch PR** |
 | `/act debt --limit 25` | **Debt** | Cap batch size (suggested default: 25) |
 | `/act all` | **Debt** | Same as `/act debt` when no PR is in context |
 
@@ -257,9 +257,9 @@ prefix paths with `.agents/skills/act/` (or use `bun run act:debt:*` for ledger 
 | **Extract findings (P5)**    | `bun scripts/extract-findings.ts OWNER REPO PR`           | N × `gh api` check-runs/annotations/comments reads |
 | **Submit scores (P5)**       | `bun scripts/submit-scores.ts … --findings F --scores S`   | per-finding parse + CSV writes (local, no API) |
 | **Harvest debt (on merge)**  | `bun run act:debt:harvest-pr -- PR`                       | Not during `/act`; CI workflow or manual dispatch |
-| **Query debt (D0)**          | `bun run act:debt:query -- --status open --format tsv`    | Reading `debt.jsonl` by hand |
+| **Query debt (D0)**          | `bun run act:debt:query -- --status open --format tsv`    | Reading harvest files by hand |
 | **Plan debt batch (D1)**     | `bun run act:debt:plan -- --limit 25`                     | Hand-grouping ledger rows |
-| **Mark debt done (D6)**      | `bun run act:debt:done -- --status done …`                | Editing `debt.jsonl` by hand |
+| **Mark debt done (D6)**      | `bun run act:debt:done -- --status done …`                | Editing `ledger.jsonl` by hand |
 
 **Scratch artifacts (e.g. `replies.tsv`) MUST live outside the worktree** —
 use an absolute path under the cloud-agent pre-approved `/tmp/agent_*/`. The

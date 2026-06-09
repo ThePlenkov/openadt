@@ -6,9 +6,11 @@ Queryable queue of **unresolved PR review threads** harvested **after merge** (o
 
 ## Files
 
-| File | Purpose |
-| ---- | ------- |
-| `debt.jsonl` | One JSON object per line; canonical row per `thread_id` |
+| File / dir | Purpose |
+| ---------- | ------- |
+| `harvests/*.jsonl` | **Append-only** harvest snapshots (`{timestamp}-pr-{N}-run-{id}.jsonl`) |
+| `ledger.jsonl` | Status overlays (`done` / `wontfix` / …) from `act:debt:done` |
+| `debt.jsonl` | Legacy monolithic file (still merged at query time if present) |
 | `debt-summary.json` | Generated hotspots (`by_area`, `by_author`, duplicate fingerprints) |
 | `config.json` | `ignore_authors` / `nit_authors` classification |
 
@@ -17,7 +19,9 @@ Queryable queue of **unresolved PR review threads** harvested **after merge** (o
 | Trigger | Scope |
 | ------- | ----- |
 | `pull_request` **closed** + merged | That PR only |
-| `workflow_dispatch` | One PR (`pr_number` input) |
+| `workflow_dispatch` | Filtered batch (see workflow inputs) |
+
+**CI:** each harvest adds **new files** under `harvests/` and opens a **bot PR to `main`** (no direct push, no merge conflicts on a shared ledger file).
 
 Harvest does **not** run on every `/act`, every CI run, or every push to `main`.
 
