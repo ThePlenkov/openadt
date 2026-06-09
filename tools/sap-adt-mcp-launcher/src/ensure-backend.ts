@@ -282,6 +282,11 @@ function formatError(err: unknown): string {
   return err instanceof Error ? err.message : String(err);
 }
 
+/** Path to the stderr log file for a detached daemon on the given port. */
+export function daemonLogFilePath(port: number): string {
+  return join(homedir(), ".openadt", "logs", `mcp-daemon-${port}.log`);
+}
+
 /**
  * Spawn the launcher in detached mode (HTTP-only daemon).
  * The child is not a child of the bridge process — it survives parent exit.
@@ -305,12 +310,23 @@ function spawnDetachedServeInternal(request: {
     ...plan.args,
     "--port",
     String(request.port),
-    "--foreground",
     ...request.serveArgs,
   ];
+
+  // Redirect daemon stderr to a log file so startup failures are diagnosable.
+  // Falls back to "ignore" if the log file cannot be opened.
+  const logPath = daemonLogFilePath(request.port);
+  let stderrFd: number | "ignore" = "ignore";
+  try {
+    mkdirSync(dirname(logPath), { recursive: true });
+    stderrFd = openSync(logPath, "a");
+  } catch {
+    /* non-critical: proceed without capture */
+  }
+
   const child = spawn(plan.command, args, {
     cwd: process.cwd(),
-    stdio: "ignore",
+    stdio: ["ignore", "ignore", stderrFd],
     env: {
       ...runtime.env,
       ...(request.options.extraEnv ?? {}),
@@ -318,6 +334,12 @@ function spawnDetachedServeInternal(request: {
     detached: true,
     windowsHide: true,
   });
+
+  // Parent closes its copy; child has inherited the fd and can write independently.
+  if (typeof stderrFd === "number") {
+    closeSync(stderrFd);
+  }
+
   child.unref();
   return child;
 }
@@ -494,7 +516,7 @@ function daemonError(request: {
   const message =
     request.kind === "spawn-failed"
       ? `Failed to spawn MCP daemon on port ${request.port}`
-      : `MCP daemon on port ${request.port} did not become healthy within ${request.timeoutMs}ms`;
+      : `MCP daemon on port ${request.port} did not become healthy within ${request.timeoutMs}ms. See daemon log: ${daemonLogFilePath(request.port)}`;
   const code =
     request.kind === "spawn-failed"
       ? "OPENADT_MCP_SPAWN_FAILED"

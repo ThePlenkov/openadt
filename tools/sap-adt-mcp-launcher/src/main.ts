@@ -259,6 +259,16 @@ async function cmdServe(argv: string[]): Promise<number> {
  * Used when `--standalone` is set, or for `serve` without --stdio.
  */
 async function cmdServeStandalone(cfg: McpServeConfig): Promise<number> {
+  // In daemon mode (no --stdio, no --standalone) check for a healthy endpoint
+  // before starting adt-lsc. If one already exists, exit without touching it —
+  // we're a redundant spawn (race between two bridges). --restart overrides.
+  if (!cfg.stdio && !cfg.standalone && !cfg.restart) {
+    const existing = await findHealthyEndpoint(cfg.port);
+    if (existing.status === "one") {
+      return EXIT_OK;
+    }
+  }
+
   const bridge = cfg.stdio ? createStdioMcpBridge() : undefined;
   if (bridge) {
     bridge.start();
@@ -470,6 +480,14 @@ async function cmdServeSharedStdio(cfg: McpServeConfig): Promise<number> {
     });
     announceSharedAttach(cfg, ensured.url);
     wireReadBackendFromDaemon(cfg, bridge, ensured);
+    bridge.setEndpointFailureHandler(async () => {
+      const found = await findHealthyEndpoint(
+        cfg.explicitPort ? cfg.port : undefined,
+      );
+      if (found.status !== "one") return undefined;
+      wireReadBackendFromDaemon(cfg, bridge, { record: found.record });
+      return McpHttpEndpoint.forConfig(found.record.port, found.record.token);
+    });
     await bridge.run(McpHttpEndpoint.forConfig(ensured.port, ensured.token));
     return EXIT_OK;
   } catch (err) {

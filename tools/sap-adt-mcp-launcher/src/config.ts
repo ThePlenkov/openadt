@@ -25,7 +25,6 @@ export function parseServeArgv(argv: string[]): McpServeConfig {
     destination: undefined,
     json: false,
     showToken: false,
-    foreground: true,
     verbose: false,
     logFile: undefined,
     logonTimeoutMs: DEFAULT_LOGON_TIMEOUT_MS,
@@ -58,7 +57,6 @@ type ServeArgvState = {
   destination: string | undefined;
   json: boolean;
   showToken: boolean;
-  foreground: boolean;
   verbose: boolean;
   logFile: string | undefined;
   logonTimeoutMs: number;
@@ -162,12 +160,6 @@ function booleanFlagArgvHandlers(): ServeArgvHandler[] {
         s.verbose = true;
       },
       ["--verbose", "-v"],
-    ),
-    boolFlag(
-      (s) => {
-        s.foreground = true;
-      },
-      ["--foreground"],
     ),
   ];
 }
