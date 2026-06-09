@@ -26,6 +26,19 @@ interface QueryArgs {
   writeSummary: boolean;
 }
 
+function coerceOutputFormat(
+  value: string | null,
+): QueryArgs["format"] | null {
+  switch (value) {
+    case "json":
+    case "tsv":
+    case "table":
+      return value;
+    default:
+      return null;
+  }
+}
+
 function readOption(argv: string[], index: number): string | null {
   const value = argv[index + 1];
   if (!value || value.startsWith("--")) {
@@ -63,8 +76,8 @@ const FLAG_HANDLERS: Record<
     return 1;
   },
   "--format": (args, argv, i) => {
-    const fmt = readOption(argv, i);
-    if (fmt === "json" || fmt === "tsv" || fmt === "table") {
+    const fmt = coerceOutputFormat(readOption(argv, i));
+    if (fmt) {
       args.format = fmt;
     }
     return 1;

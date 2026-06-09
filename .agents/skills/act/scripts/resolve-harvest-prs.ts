@@ -19,32 +19,42 @@ export interface HarvestPrFilters {
   labels: string[];
 }
 
-export function parseCsvInts(value: string | null | undefined): number[] {
+function parseCsvParts(value: string | null | undefined): string[] {
   if (!value?.trim()) {
     return [];
   }
-  return [
-    ...new Set(
-      value
-        .split(",")
-        .map((part) => Number(part.trim()))
-        .filter((n) => Number.isFinite(n) && n > 0),
-    ),
-  ];
+  return value.split(",").map((part) => part.trim());
+}
+
+function parseCsvMapped<T>(
+  value: string | null | undefined,
+  mapPart: (part: string) => T | null,
+): T[] {
+  const out: T[] = [];
+  const seen = new Set<T>();
+  for (const part of parseCsvParts(value)) {
+    const mapped = mapPart(part);
+    if (mapped === null || seen.has(mapped)) {
+      continue;
+    }
+    seen.add(mapped);
+    out.push(mapped);
+  }
+  return out;
+}
+
+export function parseCsvInts(value: string | null | undefined): number[] {
+  return parseCsvMapped(value, (part) => {
+    const n = Number(part);
+    if (!Number.isFinite(n) || n <= 0) {
+      return null;
+    }
+    return n;
+  });
 }
 
 export function parseCsvStrings(value: string | null | undefined): string[] {
-  if (!value?.trim()) {
-    return [];
-  }
-  return [
-    ...new Set(
-      value
-        .split(",")
-        .map((part) => part.trim())
-        .filter((part) => part.length > 0),
-    ),
-  ];
+  return parseCsvMapped(value, (part) => (part.length > 0 ? part : null));
 }
 
 function dayStart(isoDate: string): number {
@@ -89,12 +99,22 @@ export function filterByLabels(
   });
 }
 
+function isPositiveLastN(lastN: number | null): lastN is number {
+  if (lastN === null) {
+    return false;
+  }
+  if (!Number.isFinite(lastN)) {
+    return false;
+  }
+  return lastN > 0;
+}
+
 export function applyLastN(
   prs: MergedPrCandidate[],
   lastN: number | null,
 ): MergedPrCandidate[] {
   const sorted = [...prs].sort((a, b) => b.mergedAt.localeCompare(a.mergedAt));
-  if (lastN === null || !Number.isFinite(lastN) || lastN <= 0) {
+  if (!isPositiveLastN(lastN)) {
     return sorted;
   }
   return sorted.slice(0, lastN);
@@ -150,23 +170,29 @@ function fetchExplicitMergedPrs(opts: {
 }): MergedPrCandidate[] {
   const out: MergedPrCandidate[] = [];
   for (const number of opts.prIds) {
-    const viewed = JSON.parse(
-      gh([
-        "pr",
-        "view",
-        String(number),
-        "--repo",
-        `${opts.owner}/${opts.repo}`,
-        "--json",
-        "number,mergedAt,author,labels,state",
-      ]),
-    ) as {
+    let viewed: {
       number: number;
       mergedAt: string | null;
       state: string;
       author?: { login?: string };
       labels?: Array<{ name: string }>;
     };
+    try {
+      viewed = JSON.parse(
+        gh([
+          "pr",
+          "view",
+          String(number),
+          "--repo",
+          `${opts.owner}/${opts.repo}`,
+          "--json",
+          "number,mergedAt,author,labels,state",
+        ]),
+      ) as typeof viewed;
+    } catch {
+      console.error(`warning: PR #${number} fetch failed — skipped`);
+      continue;
+    }
     if (viewed.state !== "MERGED" || !viewed.mergedAt) {
       console.error(`warning: PR #${number} is not merged — skipped`);
       continue;

@@ -1,12 +1,44 @@
 import { describe, expect, test } from "bun:test";
 import {
   bodyPreview,
+  buildSummary,
   deriveArea,
   fingerprint,
   normalizeBody,
   upsertRecords,
   type DebtRecord,
 } from "./review-debt-lib.ts";
+
+function sampleDebtRecord(
+  overrides: Partial<DebtRecord> = {},
+): DebtRecord {
+  return {
+    thread_id: "PRRT_1",
+    thread_url: "https://example.com#1",
+    status: "open",
+    priority: "nit",
+    needs: "code_change",
+    source_pr: 1,
+    source_pr_url: "https://example.com/pull/1",
+    source_pr_title: "t",
+    merged_at: "2026-01-01T00:00:00Z",
+    merged_sha: "abc",
+    path: "a/b",
+    line: 1,
+    author: "bot",
+    body: "fix",
+    body_preview: "fix",
+    fingerprint: "sha256:1",
+    area: "a",
+    harvested_at: "2026-01-01T00:00:00Z",
+    harvest_run_id: "r1",
+    times_seen: 1,
+    fix_pr: null,
+    fixed_at: null,
+    notes: null,
+    ...overrides,
+  };
+}
 
 describe("review-debt-lib", () => {
   test("fingerprint is stable for normalized body", () => {
@@ -32,34 +64,34 @@ describe("review-debt-lib", () => {
   });
 
   test("upsertRecords increments times_seen", () => {
-    const base: DebtRecord = {
-      thread_id: "PRRT_1",
-      thread_url: "https://example.com#1",
-      status: "open",
-      priority: "nit",
-      needs: "code_change",
-      source_pr: 1,
-      source_pr_url: "https://example.com/pull/1",
-      source_pr_title: "t",
-      merged_at: "2026-01-01T00:00:00Z",
-      merged_sha: "abc",
-      path: "a/b",
-      line: 1,
-      author: "bot",
-      body: "fix",
-      body_preview: "fix",
-      fingerprint: "sha256:1",
-      area: "a",
-      harvested_at: "2026-01-01T00:00:00Z",
-      harvest_run_id: "r1",
-      times_seen: 1,
-      fix_pr: null,
-      fixed_at: null,
-      notes: null,
-    };
+    const base = sampleDebtRecord();
     const incoming = { ...base, harvested_at: "2026-02-01T00:00:00Z" };
     const merged = upsertRecords([base], [incoming]);
     expect(merged).toHaveLength(1);
     expect(merged[0]?.times_seen).toBe(2);
+  });
+
+  test("upsertRecords reopens done rows on re-harvest", () => {
+    const done = sampleDebtRecord({
+      status: "done",
+      fix_pr: 99,
+      fixed_at: "2026-02-01T00:00:00Z",
+    });
+    const incoming = {
+      ...done,
+      status: "open" as const,
+      harvested_at: "2026-03-01T00:00:00Z",
+      harvest_run_id: "r2",
+    };
+    const merged = upsertRecords([done], [incoming]);
+    expect(merged[0]?.status).toBe("open");
+    expect(merged[0]?.fix_pr).toBeNull();
+    expect(merged[0]?.times_seen).toBe(2);
+  });
+
+  test("buildSummary handles zero open rows", () => {
+    const summary = buildSummary([]);
+    expect(summary.open_count).toBe(0);
+    expect(summary.oldest_open).toBeNull();
   });
 });

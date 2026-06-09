@@ -124,21 +124,37 @@ function prefixOwnerRepo(cmd: Subcommand, argv: string[]): string[] {
   return [owner, repo, ...argv];
 }
 
+function wantsUsage(cmd: string | undefined): boolean {
+  if (!cmd) {
+    return true;
+  }
+  return cmd === "--help" || cmd === "-h";
+}
+
+function subcommandScript(cmd: string): string {
+  const script = SUBCOMMANDS[cmd as Subcommand];
+  if (script) {
+    return script;
+  }
+  console.error(`Unknown command: ${cmd}`);
+  usage();
+}
+
+function runCommand(cmd: string, rest: string[]): number {
+  if (cmd === "test") {
+    return runTests();
+  }
+  const script = subcommandScript(cmd);
+  const args = prefixOwnerRepo(cmd as Subcommand, rest);
+  return runBun(script, args);
+}
+
 function main(): void {
   const [cmd, ...rest] = process.argv.slice(2);
-  if (!cmd || cmd === "--help" || cmd === "-h") {
+  if (wantsUsage(cmd)) {
     usage();
   }
-  if (cmd === "test") {
-    process.exit(runTests());
-  }
-  const script = SUBCOMMANDS[cmd as Subcommand];
-  if (!script) {
-    console.error(`Unknown command: ${cmd}`);
-    usage();
-  }
-  const args = prefixOwnerRepo(cmd as Subcommand, rest);
-  process.exit(runBun(script, args));
+  process.exit(runCommand(cmd!, rest));
 }
 
 if (import.meta.main) {

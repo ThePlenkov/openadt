@@ -16,7 +16,6 @@ import {
   classifyThread,
   deriveArea,
   ensureGhAuth,
-  fetchReviewThreads,
   fingerprint,
   gh,
   loadConfig,
@@ -26,6 +25,7 @@ import {
   writeSummary,
   type DebtRecord,
 } from "./review-debt-lib.ts";
+import { fetchReviewThreads } from "./review-debt-gh.ts";
 
 interface HarvestArgs {
   owner: string;
@@ -44,47 +44,82 @@ function readFlag(argv: string[], index: number): [string | null, number] {
   return [value, index + 1];
 }
 
-function parseArgs(argv: string[]): HarvestArgs {
-  const positional: string[] = [];
-  let mergedSha = "";
-  let runId = "local";
-  let dryRun = false;
-
-  for (let i = 0; i < argv.length; i += 1) {
-    const arg = argv[i];
-    if (arg === "--dry-run") {
-      dryRun = true;
-      continue;
-    }
-    if (arg === "--merged-sha") {
-      const [value, next] = readFlag(argv, i);
-      mergedSha = value ?? "";
-      i = next;
-      continue;
-    }
-    if (arg === "--run-id") {
-      const [value, next] = readFlag(argv, i);
-      if (value) {
-        runId = value;
-      }
-      i = next;
-      continue;
-    }
-    positional.push(arg);
-  }
-
-  return finalizeHarvestArgs({ positional, mergedSha, runId, dryRun });
-}
-
-function finalizeHarvestArgs(opts: {
+interface HarvestParseState {
   positional: string[];
   mergedSha: string;
   runId: string;
   dryRun: boolean;
-}): HarvestArgs {
+}
+
+const HARVEST_FLAG_HANDLERS: Record<
+  string,
+  (state: HarvestParseState, argv: string[], i: number) => number
+> = {
+  "--dry-run": (state) => {
+    state.dryRun = true;
+    return 0;
+  },
+  "--merged-sha": (state, argv, i) => {
+    const [value, next] = readFlag(argv, i);
+    state.mergedSha = value ?? "";
+    return next - i;
+  },
+  "--run-id": (state, argv, i) => {
+    const [value, next] = readFlag(argv, i);
+    if (value) {
+      state.runId = value;
+    }
+    return next - i;
+  },
+};
+
+function applyHarvestToken(
+  state: HarvestParseState,
+  arg: string,
+  argv: string[],
+  index: number,
+): number {
+  const handler = HARVEST_FLAG_HANDLERS[arg];
+  if (!handler) {
+    state.positional.push(arg);
+    return 0;
+  }
+  return handler(state, argv, index);
+}
+
+function parseArgs(argv: string[]): HarvestArgs {
+  const state: HarvestParseState = {
+    positional: [],
+    mergedSha: "",
+    runId: "local",
+    dryRun: false,
+  };
+
+  for (let i = 0; i < argv.length; i += 1) {
+    i += applyHarvestToken(state, argv[i]!, argv, i);
+  }
+
+  return finalizeHarvestArgs(state);
+}
+
+function missingHarvestPositionals(
+  owner: string | undefined,
+  repo: string | undefined,
+  pr: number,
+): boolean {
+  if (!owner) {
+    return true;
+  }
+  if (!repo) {
+    return true;
+  }
+  return !Number.isFinite(pr);
+}
+
+function finalizeHarvestArgs(opts: HarvestParseState): HarvestArgs {
   const [owner, repo, prRaw] = opts.positional;
   const pr = Number(prRaw);
-  if (!owner || !repo || !Number.isFinite(pr)) {
+  if (missingHarvestPositionals(owner, repo, pr)) {
     console.error(
       "Usage: harvest-threads.ts OWNER REPO PR_NUMBER [--merged-sha SHA] [--run-id ID] [--dry-run]",
     );

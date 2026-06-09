@@ -126,6 +126,10 @@ function parseArgs(argv: string[]): StatusArgs {
   };
 }
 
+function isTerminalStatus(status: DebtStatus): boolean {
+  return status === "done" || status === "wontfix";
+}
+
 function applyStatus(
   records: DebtRecord[],
   args: StatusArgs,
@@ -144,11 +148,8 @@ function applyStatus(
     return {
       ...row,
       status: args.status,
-      fix_pr: args.fixPr ?? row.fix_pr,
-      fixed_at:
-        args.status === "done" || args.status === "wontfix"
-          ? now
-          : row.fixed_at,
+      fix_pr: isTerminalStatus(args.status) ? (args.fixPr ?? row.fix_pr) : null,
+      fixed_at: isTerminalStatus(args.status) ? now : null,
       notes: args.notes ?? row.notes,
     };
   });

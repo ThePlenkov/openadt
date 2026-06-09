@@ -172,11 +172,14 @@ export function upsertRecords(
       continue;
     }
     if (prev.status === "done" || prev.status === "wontfix") {
+      // Re-harvest means the thread is still unresolved on GitHub — reopen.
       byId.set(row.thread_id, {
-        ...prev,
+        ...row,
         times_seen: prev.times_seen + 1,
-        harvested_at: row.harvested_at,
-        harvest_run_id: row.harvest_run_id,
+        status: "open",
+        fix_pr: null,
+        fixed_at: null,
+        notes: null,
       });
       continue;
     }
@@ -223,101 +226,29 @@ export function buildSummary(records: DebtRecord[]): DebtSummary {
     }))
     .sort((a, b) => b.count - a.count);
 
-  const oldest = open
-    .map((r) => r.harvested_at)
-    .sort((a, b) => a.localeCompare(b))[0];
-
   return {
     generated_at: new Date().toISOString(),
     open_count: open.length,
     by_area: byArea,
     by_author: byAuthor,
     duplicate_fingerprints,
-    oldest_open: oldest ?? null,
+    oldest_open: oldestOpenHarvest(open),
   };
+}
+
+function oldestOpenHarvest(open: DebtRecord[]): string | null {
+  if (open.length === 0) {
+    return null;
+  }
+  return open.reduce(
+    (min, row) => (row.harvested_at < min ? row.harvested_at : min),
+    open[0]!.harvested_at,
+  );
 }
 
 export function writeSummary(summary: DebtSummary): void {
   mkdirSync(dirname(SUMMARY_FILE), { recursive: true });
   writeFileSync(SUMMARY_FILE, `${JSON.stringify(summary, null, 2)}\n`, "utf8");
-}
-
-export async function fetchReviewThreads(opts: {
-  owner: string;
-  repo: string;
-  pr: number;
-}): Promise<ReviewThreadNode[]> {
-  const nodes: ReviewThreadNode[] = [];
-  let cursor = "";
-  let hasNext = true;
-
-  while (hasNext) {
-    const afterClause = cursor
-      ? `, after: "${cursor.replace(/\\/g, "\\\\").replace(/"/g, '\\"')}"`
-      : "";
-    const query = `
-      query($o: String!, $r: String!, $pr: Int!, $n: Int!) {
-        repository(owner: $o, name: $r) {
-          pullRequest(number: $pr) {
-            reviewThreads(first: $n${afterClause}) {
-              pageInfo { hasNextPage endCursor }
-              nodes {
-                id
-                isResolved
-                isOutdated
-                comments(first: 1) {
-                  nodes { author { login } path line body }
-                }
-              }
-            }
-          }
-        }
-      }`;
-
-    const raw = gh([
-      "api",
-      "graphql",
-      "-f",
-      `query=${query}`,
-      "-f",
-      `o=${opts.owner}`,
-      "-f",
-      `r=${opts.repo}`,
-      "-F",
-      `pr=${opts.pr}`,
-      "-F",
-      "n=100",
-    ]);
-
-    const parsed = JSON.parse(raw) as {
-      data?: {
-        repository?: {
-          pullRequest?: {
-            reviewThreads?: {
-              pageInfo: { hasNextPage: boolean; endCursor: string | null };
-              nodes: ReviewThreadNode[];
-            };
-          };
-        };
-      };
-      errors?: unknown;
-    };
-
-    if (parsed.errors) {
-      throw new Error(`GraphQL errors: ${JSON.stringify(parsed.errors)}`);
-    }
-
-    const threads = parsed.data?.repository?.pullRequest?.reviewThreads;
-    if (!threads) {
-      throw new Error(`pull request #${opts.pr} not found`);
-    }
-
-    nodes.push(...threads.nodes);
-    hasNext = threads.pageInfo.hasNextPage;
-    cursor = threads.pageInfo.endCursor ?? "";
-  }
-
-  return nodes;
 }
 
 export function classifyThread(opts: { author: string; config: DebtConfig }): {

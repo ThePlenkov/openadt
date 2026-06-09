@@ -7,7 +7,8 @@
  *   bun run act:debt:plan -- --limit 25 --area apps/openadt-cli
  *   bun run act:debt:plan -- --out /tmp/agent_$$/debt-batch-plan.md
  */
-import { writeFileSync } from "node:fs";
+import { mkdirSync, writeFileSync } from "node:fs";
+import { dirname } from "node:path";
 import { readDebtRecords, type DebtRecord } from "./review-debt-lib.ts";
 
 interface PlanArgs {
@@ -25,6 +26,47 @@ function readOption(argv: string[], index: number): string | null {
   return value;
 }
 
+const PLAN_FLAG_HANDLERS: Record<
+  string,
+  (args: PlanArgs, argv: string[], i: number) => number
+> = {
+  "--limit": (args, argv, i) => {
+    const n = Number(readOption(argv, i));
+    if (Number.isFinite(n) && n > 0) {
+      args.limit = n;
+    }
+    return 1;
+  },
+  "--area": (args, argv, i) => {
+    args.area = readOption(argv, i);
+    return 1;
+  },
+  "--status": (args, argv, i) => {
+    const s = readOption(argv, i);
+    if (s) {
+      args.status = s;
+    }
+    return 1;
+  },
+  "--out": (args, argv, i) => {
+    args.outPath = readOption(argv, i);
+    return 1;
+  },
+};
+
+function applyPlanFlag(
+  args: PlanArgs,
+  arg: string,
+  argv: string[],
+  i: number,
+): number {
+  const handler = PLAN_FLAG_HANDLERS[arg];
+  if (!handler) {
+    return i;
+  }
+  return i + handler(args, argv, i);
+}
+
 function parseArgs(argv: string[]): PlanArgs {
   const args: PlanArgs = {
     limit: 25,
@@ -34,32 +76,7 @@ function parseArgs(argv: string[]): PlanArgs {
   };
 
   for (let i = 0; i < argv.length; i += 1) {
-    const arg = argv[i]!;
-    if (arg === "--limit") {
-      const n = Number(readOption(argv, i));
-      if (Number.isFinite(n) && n > 0) {
-        args.limit = n;
-      }
-      i += 1;
-      continue;
-    }
-    if (arg === "--area") {
-      args.area = readOption(argv, i);
-      i += 1;
-      continue;
-    }
-    if (arg === "--status") {
-      const s = readOption(argv, i);
-      if (s) {
-        args.status = s;
-      }
-      i += 1;
-      continue;
-    }
-    if (arg === "--out") {
-      args.outPath = readOption(argv, i);
-      i += 1;
-    }
+    i = applyPlanFlag(args, argv[i]!, argv, i);
   }
 
   return args;
@@ -124,6 +141,7 @@ function main(): void {
   const plan = renderPlan(rows, args);
 
   if (args.outPath) {
+    mkdirSync(dirname(args.outPath), { recursive: true });
     writeFileSync(args.outPath, plan, "utf8");
     console.error(`wrote ${rows.length} item(s) to ${args.outPath}`);
     return;
