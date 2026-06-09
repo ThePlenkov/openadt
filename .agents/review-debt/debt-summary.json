@@ -1,11 +1,14 @@
 {
-  "generated_at": "2026-06-09T15:46:51.945Z",
-  "open_count": 4,
+  "generated_at": "2026-06-09T15:54:25.345Z",
+  "open_count": 6,
   "by_area": {
-    ".agents/skills": 4
+    ".agents/skills": 4,
+    "AGENTS.md": 2
   },
   "by_author": {
-    "gemini-code-assist": 4
+    "gemini-code-assist": 4,
+    "greptile-apps": 1,
+    "coderabbitai": 1
   },
   "duplicate_fingerprints": [],
   "oldest_open": "2026-06-09T15:46:51.408Z"
