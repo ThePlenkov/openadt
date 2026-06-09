@@ -36,6 +36,7 @@ function isAcceptableMaxToolNameLen(parsed: number): boolean {
 export class ToolNameRegistry {
   private readonly toAlias = new Map<string, string>();
   private readonly fromAlias = new Map<string, string>();
+  private readonly exposed = new Set<string>();
 
   private readonly maxLen: number;
 
@@ -45,15 +46,17 @@ export class ToolNameRegistry {
 
   exportName(original: string): string {
     if (original.length <= this.maxLen) {
+      this.exposed.add(original);
       return original;
     }
     const existing = this.toAlias.get(original);
     if (existing) {
       return existing;
     }
-    const alias = this.makeAlias(original);
+    const alias = this.uniqueAlias(original);
     this.toAlias.set(original, alias);
     this.fromAlias.set(alias, original);
+    this.exposed.add(alias);
     return alias;
   }
 
@@ -69,6 +72,30 @@ export class ToolNameRegistry {
     const suffix = `_x${hash}`;
     const prefixLen = Math.max(1, this.maxLen - suffix.length);
     return `${original.slice(0, prefixLen)}${suffix}`;
+  }
+
+  private uniqueAlias(original: string): string {
+    const baseAlias = this.makeAlias(original);
+    const owner = this.fromAlias.get(baseAlias);
+    if (owner === original) {
+      return baseAlias;
+    }
+    if (!owner && !this.exposed.has(baseAlias)) {
+      return baseAlias;
+    }
+    for (let attempt = 1; attempt < 0x100; attempt++) {
+      const suffix = attempt.toString(16).padStart(2, "0");
+      const candidate = `${baseAlias.slice(0, this.maxLen - suffix.length)}${suffix}`;
+      const candidateOwner = this.fromAlias.get(candidate);
+      if (
+        candidateOwner !== original &&
+        !candidateOwner &&
+        !this.exposed.has(candidate)
+      ) {
+        return candidate;
+      }
+    }
+    throw new Error(`ToolNameRegistry: alias space exhausted for ${original}`);
   }
 }
 

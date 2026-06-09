@@ -484,7 +484,7 @@ Fix:
 
 1. Use a **short server key** in `.mcp.json` (Claude Code) or `.cursor/mcp.json` (Cursor): `"sap-adt"` or `"adt"`, not `"sap-adt-dev"`.
 2. Restart the agent / reload MCP after editing the config.
-3. If you need a longer server key, set `OPENADT_MCP_MAX_TOOL_NAME` to `57 - len(serverKey)` in the MCP spawn environment.
+3. If you need a longer server key, set `OPENADT_MCP_MAX_TOOL_NAME` to `clamp(57 - len(serverKey), 16, 57)` in the MCP spawn environment. Values outside the 16..57 range silently fall back to the default, so the clamp is required.
 
 The stdio proxy also shortens SAP tool names longer than 45 characters by default. Full contract: [specs/mcp.md — Agent backend tool name limits](../specs/mcp.md#agent-backend-tool-name-limits-claude--aws-bedrock).
 

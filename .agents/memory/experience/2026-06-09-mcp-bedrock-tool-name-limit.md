@@ -37,4 +37,4 @@ len(serverKey) + len(longestToolName) ≤ 57   // Claude + Bedrock
 
 Use `sap-adt` or `adt`. Avoid `-dev` / `-local` suffixes unless `OPENADT_MCP_MAX_TOOL_NAME` is lowered accordingly.
 
-**Authoritative spec:** [specs/mcp.md — Agent backend tool name limits](../../specs/mcp.md#agent-backend-tool-name-limits-claude--aws-bedrock)
+**Authoritative spec:** [specs/mcp.md — Agent backend tool name limits](../../../specs/mcp.md#agent-backend-tool-name-limits-claude--aws-bedrock)

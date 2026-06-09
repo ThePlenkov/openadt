@@ -40,6 +40,27 @@ describe("ToolNameRegistry", () => {
       new ToolNameRegistry(MIN_REGISTRY_MAX_LEN).exportName(long),
     );
   });
+
+  test("avoids alias collisions with previously registered long names", () => {
+    const registry = new ToolNameRegistry(10);
+    const a = "abap_business_services-fetch_service_information";
+    const b = "abap_business_services-save_service_information";
+    const aliasA = registry.exportName(a);
+    const aliasB = registry.exportName(b);
+    expect(aliasA).not.toBe(aliasB);
+    expect(registry.importName(aliasA)).toBe(a);
+    expect(registry.importName(aliasB)).toBe(b);
+  });
+
+  test("avoids alias collisions with exposed short tool names", () => {
+    const registry = new ToolNameRegistry(10);
+    const short = registry.exportName("abap_transport-get");
+    const long = "abap_business_services-fetch_service_information";
+    const longAlias = registry.exportName(long);
+    expect(longAlias).not.toBe(short);
+    expect(registry.importName(short)).toBe("abap_transport-get");
+    expect(registry.importName(longAlias)).toBe(long);
+  });
 });
 
 describe("shortenToolsInListResponse", () => {
