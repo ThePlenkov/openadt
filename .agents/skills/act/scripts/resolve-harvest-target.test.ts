@@ -31,4 +31,10 @@ describe("resolve-harvest-target", () => {
       shouldHarvestAfterCiRun({ event: "push", conclusion: "success" }),
     ).toBe(false);
   });
+
+  test("workflowRunPrNumbers tolerates null and undefined", () => {
+    expect(workflowRunPrNumbers(null)).toEqual([]);
+    expect(workflowRunPrNumbers(undefined)).toEqual([]);
+    expect(workflowRunPrNumbers([])).toEqual([]);
+  });
 });

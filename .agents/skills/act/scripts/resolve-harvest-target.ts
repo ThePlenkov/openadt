@@ -15,6 +15,13 @@
 import { appendFileSync, readFileSync } from "node:fs";
 import { gh } from "./review-debt-gh.ts";
 
+class EventFileError extends Error {
+  constructor(public readonly path: string, cause: unknown) {
+    super(`failed to read or parse event file at ${path}: ${String(cause)}`);
+    this.name = "EventFileError";
+  }
+}
+
 interface GhOutput {
   pr_number: string;
   merge_sha: string;
@@ -60,6 +67,10 @@ function harvestTarget(pr: number, mergeSha: string): void {
   });
 }
 
+function isPositivePrNumber(n: unknown): n is number {
+  return typeof n === "number" && n > 0;
+}
+
 export function workflowRunPrNumbers(
   pullRequests: WorkflowRunPrRef[] | null | undefined,
 ): number[] {
@@ -68,10 +79,9 @@ export function workflowRunPrNumbers(
   }
   const out: number[] = [];
   for (const ref of pullRequests) {
-    const n = ref.number;
-    if (typeof n === "number" && n > 0 && !out.includes(n)) {
-      out.push(n);
-    }
+    if (!isPositivePrNumber(ref.number)) continue;
+    if (out.includes(ref.number)) continue;
+    out.push(ref.number);
   }
   return out;
 }
@@ -144,6 +154,36 @@ function resolveFromWorkflowRun(event: { workflow_run?: WorkflowRunPayload }): v
   harvestTarget(merged.pr, merged.sha);
 }
 
+function readEvent(path: string): Record<string, unknown> {
+  try {
+    return JSON.parse(readFileSync(path, "utf8")) as Record<string, unknown>;
+  } catch (cause) {
+    throw new EventFileError(path, cause);
+  }
+}
+
+function isMergedPullRequestPayload(
+  value: unknown,
+): value is { merged: true; number: number; merge_commit_sha: string } {
+  if (typeof value !== "object" || value === null) return false;
+  const pr = value as Record<string, unknown>;
+  return (
+    pr.merged === true &&
+    typeof pr.number === "number" &&
+    typeof pr.merge_commit_sha === "string" &&
+    pr.merge_commit_sha.length > 0
+  );
+}
+
+function resolvePullRequestEvent(event: Record<string, unknown>): void {
+  if (isMergedPullRequestPayload(event.pull_request)) {
+    const pr = event.pull_request;
+    harvestTarget(pr.number, pr.merge_commit_sha);
+    return;
+  }
+  skip("pull_request not merged");
+}
+
 function main(): void {
   const eventName = process.env.GITHUB_EVENT_NAME;
   const eventPath = process.env.GITHUB_EVENT_PATH;
@@ -152,28 +192,27 @@ function main(): void {
     process.exit(1);
   }
 
-  const event = JSON.parse(readFileSync(eventPath, "utf8")) as Record<
-    string,
-    unknown
-  >;
+  let event: Record<string, unknown>;
+  try {
+    event = readEvent(eventPath);
+  } catch (err) {
+    if (err instanceof EventFileError) {
+      console.error(err.message);
+      process.exit(1);
+    }
+    throw err;
+  }
 
   if (eventName === "pull_request") {
-    const pr = event.pull_request as
-      | { merged?: boolean; number?: number; merge_commit_sha?: string }
-      | undefined;
-    if (pr?.merged && pr.number && pr.merge_commit_sha) {
-      harvestTarget(pr.number, pr.merge_commit_sha);
-      return;
-    }
-    skip("pull_request not merged");
+    resolvePullRequestEvent(event);
     return;
   }
-
   if (eventName === "workflow_run") {
-    resolveFromWorkflowRun(event as Parameters<typeof resolveFromWorkflowRun>[0]);
+    resolveFromWorkflowRun(
+      event as Parameters<typeof resolveFromWorkflowRun>[0],
+    );
     return;
   }
-
   skip(`unsupported event ${eventName}`);
 }
 

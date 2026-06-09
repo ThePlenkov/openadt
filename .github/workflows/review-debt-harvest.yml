@@ -131,9 +131,9 @@ jobs:
 
       - name: Land harvest files on main
         if: |
-          (github.event_name == 'pull_request' || github.event_name == 'workflow_run') &&
-          steps.target.outputs.should_harvest == 'true' ||
-          (github.event_name == 'workflow_dispatch' && github.event.inputs.list_only != true)
+          ((github.event_name == 'pull_request' || github.event_name == 'workflow_run') &&
+          steps.target.outputs.should_harvest == 'true') ||
+          (github.event_name == 'workflow_dispatch' && github.event.inputs.list_only != 'true')
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
