@@ -481,63 +481,83 @@ export function createStdioMcpBridge(): StdioMcpBridge {
     if (!backend) {
       return;
     }
-    // On network error, try once to reconnect to a fresh healthy endpoint.
-    const tryPost = async (ep: McpHttpEndpoint): Promise<void> => {
-      const result = await postMcpHttpMessage(ep, message);
-      chain.captureSessionId(result.sessionId);
-      if (result.messages.length === 0 && result.status >= 400) {
-        await replyError(
-          message,
-          new JsonRpcError(-32000, `MCP HTTP ${result.status}`),
-        );
-        return;
-      }
-      const hasReadBackend = readBackend !== undefined;
-      for (const msg of result.messages) {
-        const rewritten = rewriteForwardedMessage(
-          msg,
-          request,
-          injectMethod,
-          hasReadBackend,
-        );
-        await writeMcpStdioMessage(encoder, rewritten);
-      }
-    };
-    const reconnectAndPost = async (): Promise<boolean> => {
-      if (!onEndpointFailure || !backend) return false;
-      let fresh: McpHttpEndpoint | undefined;
-      try {
-        fresh = await onEndpointFailure();
-      } catch (handlerErr) {
-        await handleForwardError(message, handlerErr);
-        return true;
-      }
-      if (!fresh) return false;
-      // Reset session: a fresh endpoint represents a new backend with its
-      // own session state. Reattaching the old `Mcp-Session-Id` would 4xx
-      // per the MCP HTTP spec and break subsequent requests.
-      const sameBackend =
-        backend.url === fresh.url && backend.token === fresh.token;
-      backend = fresh;
-      if (!sameBackend) {
-        chain.resetSessionId();
-      }
-      try {
-        await tryPost(fresh.withSessionId(chain.sessionId));
-      } catch (retryErr) {
-        await handleForwardError(message, retryErr);
-      }
-      return true;
-    };
     try {
-      await tryPost(backend.withSessionId(chain.sessionId));
+      await tryPost(
+        message,
+        request,
+        injectMethod,
+        backend.withSessionId(chain.sessionId),
+      );
     } catch (err) {
       if (isNetworkError(err) && onEndpointFailure) {
-        const handled = await reconnectAndPost();
+        const handled = await reconnectAndPost(message, request, injectMethod);
         if (handled) return;
       }
       await handleForwardError(message, err);
     }
+  };
+
+  const tryPost = async (
+    message: McpStdioMessage,
+    request: ParsedRpc | undefined,
+    injectMethod: string | undefined,
+    ep: McpHttpEndpoint,
+  ): Promise<void> => {
+    const result = await postMcpHttpMessage(ep, message);
+    chain.captureSessionId(result.sessionId);
+    if (result.messages.length === 0 && result.status >= 400) {
+      await replyError(
+        message,
+        new JsonRpcError(-32000, `MCP HTTP ${result.status}`),
+      );
+      return;
+    }
+    const hasReadBackend = readBackend !== undefined;
+    for (const msg of result.messages) {
+      const rewritten = rewriteForwardedMessage(
+        msg,
+        request,
+        injectMethod,
+        hasReadBackend,
+      );
+      await writeMcpStdioMessage(encoder, rewritten);
+    }
+  };
+
+  const reconnectAndPost = async (
+    message: McpStdioMessage,
+    request: ParsedRpc | undefined,
+    injectMethod: string | undefined,
+  ): Promise<boolean> => {
+    if (!onEndpointFailure || !backend) return false;
+    let fresh: McpHttpEndpoint | undefined;
+    try {
+      fresh = await onEndpointFailure();
+    } catch (handlerErr) {
+      await handleForwardError(message, handlerErr);
+      return true;
+    }
+    if (!fresh) return false;
+    // Reset session: a fresh endpoint represents a new backend with its
+    // own session state. Reattaching the old `Mcp-Session-Id` would 4xx
+    // per the MCP HTTP spec and break subsequent requests.
+    const sameBackend =
+      backend.url === fresh.url && backend.token === fresh.token;
+    backend = fresh;
+    if (!sameBackend) {
+      chain.resetSessionId();
+    }
+    try {
+      await tryPost(
+        message,
+        request,
+        injectMethod,
+        fresh.withSessionId(chain.sessionId),
+      );
+    } catch (retryErr) {
+      await handleForwardError(message, retryErr);
+    }
+    return true;
   };
 
   const rewriteForwardedMessage = (
