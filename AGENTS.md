@@ -176,3 +176,57 @@ bun scripts/verify-package-docs.ts
 ./mvnw -q verify -Pdistribution
 bun run openadt:test
 ```
+
+## Cursor Cloud specific instructions
+
+### Prerequisites
+
+| Tool       | Notes                                                                                                                          |
+| ---------- | ------------------------------------------------------------------------------------------------------------------------------ |
+| **JDK 21** | Preinstalled on the cloud VM (`java -version`).                                                                                |
+| **Bun**    | Required for all scripts/Nx. Install once if missing: `curl -fsSL https://bun.sh/install \| bash` (adds `~/.bun/bin` to PATH). |
+| **Maven**  | Use `./mvnw` from repo root — do not rely on a system Maven install.                                                           |
+
+SAP JCo, Eclipse ADT plugins, and a live SAP system are **not** required for clone build, lint, or unit tests. They are only needed for SDK transport, `fetch`/`proxy` against a real landscape, and MCP with `adt-lsc`.
+
+### Dependency refresh (update script)
+
+`bun install` only — see VM update script. Ensure `~/.bun/bin` is on PATH (Bun installer adds it to `~/.bashrc`).
+
+### Build and test (no SAP plugins)
+
+CI and cloud agents build with the **distribution** profile so SAP system-scope jars are excluded:
+
+```bash
+export PATH="$HOME/.bun/bin:$PATH"
+bun install
+./mvnw -q verify -f pom.xml -Pdistribution -Dopenadt.distribution=true -Dsurefire.runOrder=alphabetical
+```
+
+Always pass both -Pdistribution and -Dopenadt.distribution=true (the property deactivates the sap-sdk Maven profile). Note that if verify fails on ConfigDestinationsCreateCommandTest with a user.home NPE, it is due to LocalProxyRegistryTest clearing user.home without restoring its original value; the proper fix is to correct the test's cleanup logic rather than relying on -Dsurefire.runOrder=alphabetical workarounds.
+
+Equivalent Nx targets (`openadt:build`, `openadt:test`) already pass those flags for the CLI module, but `openadt-sap-adt:compile` in Nx does **not** — see below.
+
+### Run the CLI from a clone
+
+| Goal                           | Command                                                                                                                                                                                                              |
+| ------------------------------ | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Package shaded jar             | `bun run openadt:build` → `apps/openadt-cli/target/openadt-*.jar`                                                                                                                                                    |
+| Run packaged CLI               | `java -jar apps/openadt-cli/target/openadt-*.jar --help`                                                                                                                                                             |
+| Dev launcher (`./dev-openadt`) | Needs `nx run openadt-cli:compile`, which triggers `openadt-sap-adt:compile` **without** distribution flags — fails without `~/.p2/pool/plugins`. Prefer `java -jar` after `openadt:build` on cloud VMs without SAP. |
+
+Hello-world without SAP: create a fixture destination profile:
+
+```bash
+java -jar apps/openadt-cli/target/openadt-*.jar config destinations create \
+  --config /tmp/openadt.toml --alias DEV --profile sso --transport http \
+  --auth browser-sso --base-url https://dev-adt.example.com --client 100 --language EN
+```
+
+### Lint and auxiliary checks
+
+See [Verify (before PR)](#verify-before-pr). Strict ESLint tier: `bunx eslint scripts/ .agents/skills/ --max-warnings 0 --no-error-on-unmatched-pattern`.
+
+### MCP launcher tests
+
+`bun test tools/sap-adt-mcp-launcher/src` (137+ unit tests, no SAP extension required).
