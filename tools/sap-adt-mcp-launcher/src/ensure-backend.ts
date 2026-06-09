@@ -324,7 +324,7 @@ function spawnDetachedServeInternal(request: {
     /* non-critical: proceed without capture */
   }
 
-  let child: ChildProcess;
+  let child: ChildProcess | undefined;
   try {
     child = spawn(plan.command, args, {
       cwd: process.cwd(),
@@ -343,6 +343,10 @@ function spawnDetachedServeInternal(request: {
     }
   }
 
+  if (!child) {
+    // spawn() threw synchronously and left child unassigned.
+    throw new Error("Failed to spawn MCP daemon");
+  }
   child.unref();
   return child;
 }
