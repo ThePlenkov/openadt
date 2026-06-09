@@ -1,7 +1,9 @@
 import { describe, expect, test } from "bun:test";
 import {
   DEFAULT_MAX_MCP_TOOL_NAME_LEN,
+  MAX_MCP_TOOL_NAME_LEN_CEILING,
   maxMcpToolNameLenFromEnv,
+  MIN_REGISTRY_MAX_LEN,
   rewriteToolsCallRequest,
   shortenToolsInListResponse,
   ToolNameRegistry,
@@ -26,6 +28,17 @@ describe("ToolNameRegistry", () => {
     expect(alias).toMatch(/_x[0-9a-f]{6}$/);
     expect(registry.exportName(long)).toBe(alias);
     expect(registry.importName(alias)).toBe(long);
+  });
+
+  test("clamps maxLen below MIN_REGISTRY_MAX_LEN so the suffix fits", () => {
+    const registry = new ToolNameRegistry(2);
+    const long = "abap_business_services-fetch_service_information";
+    const alias = registry.exportName(long);
+    expect(alias).toMatch(/_x[0-9a-f]{6}$/);
+    expect(registry.importName(alias)).toBe(long);
+    expect(new ToolNameRegistry(0).exportName(long)).toBe(
+      new ToolNameRegistry(MIN_REGISTRY_MAX_LEN).exportName(long),
+    );
   });
 });
 
@@ -92,5 +105,13 @@ describe("maxMcpToolNameLenFromEnv", () => {
     expect(maxMcpToolNameLenFromEnv({ OPENADT_MCP_MAX_TOOL_NAME: "bad" })).toBe(
       DEFAULT_MAX_MCP_TOOL_NAME_LEN,
     );
+  });
+
+  test("caps values above the Bedrock/Claude budget", () => {
+    expect(
+      maxMcpToolNameLenFromEnv({
+        OPENADT_MCP_MAX_TOOL_NAME: String(MAX_MCP_TOOL_NAME_LEN_CEILING + 1),
+      }),
+    ).toBe(DEFAULT_MAX_MCP_TOOL_NAME_LEN);
   });
 });

@@ -22,7 +22,6 @@ import {
 import {
   maxMcpToolNameLenFromEnv,
   rewriteToolsCallRequest,
-  shortenToolsInListResponse,
   ToolNameRegistry,
 } from "./tool-name-limit.ts";
 
@@ -162,42 +161,6 @@ function promptGetParams(params: Record<string, unknown>): {
   return { name, args };
 }
 
-/**
- * Inject launcher guidance into a backend response: append the workflow
- * cheat-sheet to `initialize.instructions`, and merge our prompts into
- * `prompts/list`. Returns the (possibly rewritten) message body. Untouched
- * for any other method, or when the response id does not match the request.
- */
-function injectGuidance(
-  msg: string,
-  reqId: ParsedRpc["id"],
-  method: string | undefined,
-): string {
-  if (!method || (method !== "initialize" && method !== "prompts/list")) {
-    return msg;
-  }
-  let parsed: { id?: unknown; result?: Record<string, unknown> };
-  try {
-    parsed = JSON.parse(msg);
-  } catch {
-    return msg;
-  }
-  if (parsed.id !== reqId || !parsed.result) {
-    return msg;
-  }
-  if (method === "initialize") {
-    parsed.result.instructions = augmentInstructions(
-      parsed.result.instructions as string | undefined,
-    );
-  } else {
-    const existing = Array.isArray(parsed.result.prompts)
-      ? parsed.result.prompts
-      : [];
-    parsed.result.prompts = [...existing, ...guidancePromptDefs()];
-  }
-  return JSON.stringify(parsed);
-}
-
 /** Extract `name` + `arguments` object from a tools/call request. */
 function toolCallParams(params: Record<string, unknown>): {
   name: string;
@@ -231,36 +194,6 @@ function isReadToolRequest(
     request?.method === "tools/call" &&
     request.id !== undefined
   );
-}
-
-/**
- * Merge our read tools into a backend `tools/list` response. No-op for any other
- * method, when read is disabled, when no read backend is wired, or when the
- * response id does not match the request.
- */
-function injectReadTools(
-  msg: string,
-  reqId: ParsedRpc["id"],
-  method: string | undefined,
-  hasBackend: boolean,
-): string {
-  if (!hasBackend || !readEnabled() || method !== "tools/list") {
-    return msg;
-  }
-  let parsed: { id?: unknown; result?: Record<string, unknown> };
-  try {
-    parsed = JSON.parse(msg);
-  } catch {
-    return msg;
-  }
-  if (parsed.id !== reqId || !parsed.result) {
-    return msg;
-  }
-  const existing = Array.isArray(parsed.result.tools)
-    ? parsed.result.tools
-    : [];
-  parsed.result.tools = [...existing, ...readToolDefs()];
-  return JSON.stringify(parsed);
 }
 
 /** Result of one HTTP POST to the MCP endpoint. */
@@ -576,19 +509,56 @@ export function createStdioMcpBridge(): StdioMcpBridge {
     injectMethod: string | undefined,
     hasReadBackend: boolean,
   ): string => {
-    const withGuidance = injectGuidance(msg, request?.id, injectMethod);
-    const withReadTools = injectReadTools(
-      withGuidance,
-      request?.id,
-      request?.method,
-      hasReadBackend,
-    );
-    return shortenToolsInListResponse(
-      withReadTools,
-      request?.id,
-      request?.method,
-      toolNames,
-    );
+    const method = request?.method;
+    const needsGuidance =
+      injectMethod === "initialize" || injectMethod === "prompts/list";
+    const needsReadTools =
+      hasReadBackend && readEnabled() && method === "tools/list";
+    const needsShorten = method === "tools/list";
+    if (!needsGuidance && !needsReadTools && !needsShorten) {
+      return msg;
+    }
+    let parsed: {
+      id?: unknown;
+      result?: { instructions?: unknown; prompts?: unknown; tools?: unknown };
+    };
+    try {
+      parsed = JSON.parse(msg) as typeof parsed;
+    } catch {
+      return msg;
+    }
+    if (parsed.id !== request?.id || !parsed.result) {
+      return msg;
+    }
+    const result = parsed.result as {
+      instructions?: unknown;
+      prompts?: unknown;
+      tools?: unknown;
+    };
+    if (needsGuidance && injectMethod === "initialize") {
+      result.instructions = augmentInstructions(
+        result.instructions as string | undefined,
+      );
+    } else if (needsGuidance && injectMethod === "prompts/list") {
+      const existing = Array.isArray(result.prompts) ? result.prompts : [];
+      result.prompts = [...existing, ...guidancePromptDefs()];
+    }
+    if (needsReadTools && Array.isArray(result.tools)) {
+      result.tools = [...result.tools, ...readToolDefs()];
+    }
+    if (needsShorten && Array.isArray(result.tools)) {
+      result.tools = (result.tools as Array<{ name?: unknown }>).map((tool) => {
+        if (!tool || typeof tool !== "object") {
+          return tool;
+        }
+        const name = (tool as { name?: unknown }).name;
+        if (typeof name !== "string") {
+          return tool;
+        }
+        return { ...tool, name: toolNames.exportName(name) };
+      });
+    }
+    return JSON.stringify(parsed);
   };
 
   const enqueuePending = (message: McpStdioMessage): void => {

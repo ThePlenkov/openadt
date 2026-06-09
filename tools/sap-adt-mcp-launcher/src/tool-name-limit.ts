@@ -4,6 +4,12 @@ import { createHash } from "node:crypto";
 export const DEFAULT_MAX_MCP_TOOL_NAME_LEN = 45;
 // Bedrock/Claude prefix budget: specs/mcp.md § Agent backend tool name limits
 
+/** Minimum supported `maxLen` — keeps the `_x<hash>` suffix (8 chars) from overflowing the alias. */
+export const MIN_REGISTRY_MAX_LEN = 9;
+
+/** Upper bound for `OPENADT_MCP_MAX_TOOL_NAME` — Bedrock/Claude prefix (7) + name must be ≤ 64. */
+export const MAX_MCP_TOOL_NAME_LEN_CEILING = 57;
+
 export function maxMcpToolNameLenFromEnv(
   env: NodeJS.ProcessEnv = process.env,
 ): number {
@@ -12,7 +18,11 @@ export function maxMcpToolNameLenFromEnv(
     return DEFAULT_MAX_MCP_TOOL_NAME_LEN;
   }
   const parsed = Number.parseInt(raw, 10);
-  if (!Number.isFinite(parsed) || parsed < 16) {
+  if (
+    !Number.isFinite(parsed) ||
+    parsed < 16 ||
+    parsed > MAX_MCP_TOOL_NAME_LEN_CEILING
+  ) {
     return DEFAULT_MAX_MCP_TOOL_NAME_LEN;
   }
   return parsed;
@@ -23,7 +33,11 @@ export class ToolNameRegistry {
   private readonly toAlias = new Map<string, string>();
   private readonly fromAlias = new Map<string, string>();
 
-  constructor(private readonly maxLen: number) {}
+  private readonly maxLen: number;
+
+  constructor(maxLen: number) {
+    this.maxLen = Math.max(MIN_REGISTRY_MAX_LEN, maxLen);
+  }
 
   exportName(original: string): string {
     if (original.length <= this.maxLen) {
