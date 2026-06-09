@@ -282,6 +282,11 @@ function formatError(err: unknown): string {
   return err instanceof Error ? err.message : String(err);
 }
 
+/** Path to the stderr log file for a detached daemon on the given port. */
+export function daemonLogFilePath(port: number): string {
+  return join(homedir(), ".openadt", "logs", `mcp-daemon-${port}.log`);
+}
+
 /**
  * Spawn the launcher in detached mode (HTTP-only daemon).
  * The child is not a child of the bridge process — it survives parent exit.
@@ -305,19 +310,43 @@ function spawnDetachedServeInternal(request: {
     ...plan.args,
     "--port",
     String(request.port),
-    "--foreground",
     ...request.serveArgs,
   ];
-  const child = spawn(plan.command, args, {
-    cwd: process.cwd(),
-    stdio: "ignore",
-    env: {
-      ...runtime.env,
-      ...(request.options.extraEnv ?? {}),
-    },
-    detached: true,
-    windowsHide: true,
-  });
+
+  // Redirect daemon stderr to a log file so startup failures are diagnosable.
+  // Falls back to "ignore" if the log file cannot be opened.
+  const logPath = daemonLogFilePath(request.port);
+  let stderrFd: number | "ignore" = "ignore";
+  try {
+    mkdirSync(dirname(logPath), { recursive: true });
+    stderrFd = openSync(logPath, "a");
+  } catch {
+    /* non-critical: proceed without capture */
+  }
+
+  let child: ChildProcess | undefined;
+  try {
+    child = spawn(plan.command, args, {
+      cwd: process.cwd(),
+      stdio: ["ignore", "ignore", stderrFd],
+      env: {
+        ...runtime.env,
+        ...(request.options.extraEnv ?? {}),
+      },
+      detached: true,
+      windowsHide: true,
+    });
+  } finally {
+    // Parent closes its copy; child has inherited the fd and can write independently.
+    if (typeof stderrFd === "number") {
+      closeSync(stderrFd);
+    }
+  }
+
+  if (!child) {
+    // spawn() threw synchronously and left child unassigned.
+    throw new Error("Failed to spawn MCP daemon");
+  }
   child.unref();
   return child;
 }
@@ -494,7 +523,7 @@ function daemonError(request: {
   const message =
     request.kind === "spawn-failed"
       ? `Failed to spawn MCP daemon on port ${request.port}`
-      : `MCP daemon on port ${request.port} did not become healthy within ${request.timeoutMs}ms`;
+      : `MCP daemon on port ${request.port} did not become healthy within ${request.timeoutMs}ms. See daemon log: ${daemonLogFilePath(request.port)}`;
   const code =
     request.kind === "spawn-failed"
       ? "OPENADT_MCP_SPAWN_FAILED"

@@ -93,7 +93,6 @@ export type McpServeConfig = {
   destination?: string;
   json: boolean;
   showToken: boolean;
-  foreground: boolean;
   verbose: boolean;
   logFile?: string;
   logonTimeoutMs: number;

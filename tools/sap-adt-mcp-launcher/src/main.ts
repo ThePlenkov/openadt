@@ -259,11 +259,11 @@ async function cmdServe(argv: string[]): Promise<number> {
  * Used when `--standalone` is set, or for `serve` without --stdio.
  */
 async function cmdServeStandalone(cfg: McpServeConfig): Promise<number> {
-  const bridge = cfg.stdio ? createStdioMcpBridge() : undefined;
-  if (bridge) {
-    bridge.start();
+  if (await shortCircuitIfExistingDaemon(cfg)) {
+    return EXIT_OK;
   }
 
+  const bridge = startStdioBridgeIfNeeded(cfg);
   const install = locateAdtLs();
   if (!install) {
     return failStdioAndExit(
@@ -273,6 +273,69 @@ async function cmdServeStandalone(cfg: McpServeConfig): Promise<number> {
     );
   }
 
+  const prepared = await prepareStandaloneBackend(bridge, install, cfg);
+  if (!prepared.ok) {
+    prepared.log?.dispose();
+    return failStdioAndExit(bridge, prepared.exit, prepared.message);
+  }
+  const { session, readBackend, gui, log, token } = prepared;
+
+  return runStandaloneServeOrFail({
+    bridge,
+    session,
+    readBackend,
+    cfg,
+    gui,
+    log,
+    token,
+    install,
+  });
+}
+
+async function shortCircuitIfExistingDaemon(
+  cfg: McpServeConfig,
+): Promise<boolean> {
+  if (!isRedundantDaemonSpawn(cfg)) return false;
+  const existing = await findHealthyEndpoint(cfg.port);
+  return existing.status === "one";
+}
+
+function isRedundantDaemonSpawn(cfg: McpServeConfig): boolean {
+  return !cfg.stdio && !cfg.standalone && !cfg.restart;
+}
+
+function startStdioBridgeIfNeeded(
+  cfg: McpServeConfig,
+): StdioMcpBridge | undefined {
+  if (!cfg.stdio) return undefined;
+  const bridge = createStdioMcpBridge();
+  bridge.start();
+  return bridge;
+}
+
+type PreparedStandaloneOk = {
+  ok: true;
+  gui: ReturnType<typeof resolveDestinationImport>;
+  log: ReturnType<typeof createMcpLog>;
+  token: string;
+  session: LspSession;
+  readBackend: LspReadBackend | undefined;
+};
+
+type PreparedStandaloneError = {
+  ok: false;
+  log: ReturnType<typeof createMcpLog>;
+  exit: number;
+  message: string;
+};
+
+type PreparedStandalone = PreparedStandaloneOk | PreparedStandaloneError;
+
+async function prepareStandaloneBackend(
+  bridge: StdioMcpBridge | undefined,
+  install: NonNullable<ReturnType<typeof locateAdtLs>>,
+  cfg: McpServeConfig,
+): Promise<PreparedStandalone> {
   const gui = resolveDestinationImport(
     cfg.workspace,
     cfg.importFrom,
@@ -286,25 +349,19 @@ async function cmdServeStandalone(cfg: McpServeConfig): Promise<number> {
   const token = generateMcpToken();
   const connectResult = await connectLanguageServer(install, cfg, gui, log);
   if ("exit" in connectResult) {
-    log?.dispose();
-    return failStdioAndExit(bridge, connectResult.exit, connectResult.message);
+    return {
+      ok: false,
+      log,
+      exit: connectResult.exit,
+      message: connectResult.message,
+    };
   }
   const { session } = connectResult;
   const readBackend = buildStandaloneReadBackend(session);
   if (bridge && readBackend) {
     bridge.setReadBackend(readBackend);
   }
-
-  return runStandaloneServeOrFail({
-    bridge,
-    session,
-    readBackend,
-    cfg,
-    gui,
-    log,
-    token,
-    install,
-  });
+  return { ok: true, gui, log, token, session, readBackend };
 }
 
 function buildStandaloneReadBackend(
@@ -470,6 +527,20 @@ async function cmdServeSharedStdio(cfg: McpServeConfig): Promise<number> {
     });
     announceSharedAttach(cfg, ensured.url);
     wireReadBackendFromDaemon(cfg, bridge, ensured);
+    bridge.setEndpointFailureHandler(async () => {
+      const found = await findHealthyEndpoint(
+        cfg.explicitPort ? cfg.port : undefined,
+      );
+      if (found.status !== "one") return undefined;
+      // Reset read backend before rewiring: if the new daemon has no aux
+      // endpoint, the previous HttpReadBackend would still be live and
+      // forward read-tool calls to a dead aux port.
+      if (readEnabled()) {
+        bridge.setReadBackend(undefined);
+      }
+      wireReadBackendFromDaemon(cfg, bridge, { record: found.record });
+      return McpHttpEndpoint.forConfig(found.record.port, found.record.token);
+    });
     await bridge.run(McpHttpEndpoint.forConfig(ensured.port, ensured.token));
     return EXIT_OK;
   } catch (err) {

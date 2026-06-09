@@ -346,6 +346,14 @@ export type StdioMcpBridge = {
    * forwarding to SAP. Call before run().
    */
   setReadBackend(backend: ReadObjectBackend | undefined): void;
+  /**
+   * Wire a reconnect handler. Called on network error during forwarding; should
+   * return a fresh McpHttpEndpoint to retry on, or undefined to fail the request.
+   * Call before run().
+   */
+  setEndpointFailureHandler(
+    fn: () => Promise<McpHttpEndpoint | undefined>,
+  ): void;
   /** Wait for HTTP MCP, flush queue, forward until stdin closes and forwards drain. */
   run(
     endpoint: McpHttpEndpoint,
@@ -357,6 +365,22 @@ export type StdioMcpBridge = {
   flush(): Promise<void>;
 };
 
+/** Return true for transient network failures that warrant a reconnect attempt. */
+function isNetworkError(err: unknown): boolean {
+  // AbortSignal timeout is not a network failure — the backend is alive but slow.
+  if (err instanceof DOMException) return false;
+  // fetch() throws TypeError for connection-level failures in Bun/Node.
+  if (err instanceof TypeError) return true;
+  const code = (err as NodeJS.ErrnoException | undefined)?.code;
+  return (
+    code === "ECONNREFUSED" ||
+    code === "ECONNRESET" ||
+    code === "ETIMEDOUT" ||
+    code === "ENOTFOUND" ||
+    code === "EPIPE"
+  );
+}
+
 /** Transparent stdio MCP bridge to local SAP ADT HTTP MCP. */
 export function createStdioMcpBridge(): StdioMcpBridge {
   const queue = new PendingBodyQueue(256);
@@ -364,6 +388,9 @@ export function createStdioMcpBridge(): StdioMcpBridge {
   const lifecycle = new BridgeLifecycle();
   let backend: McpHttpEndpoint | undefined;
   let readBackend: ReadObjectBackend | undefined;
+  let onEndpointFailure:
+    | (() => Promise<McpHttpEndpoint | undefined>)
+    | undefined;
 
   const decoder = new McpStdioDecoder();
   const encoder = new McpStdioEncoder();
@@ -454,30 +481,83 @@ export function createStdioMcpBridge(): StdioMcpBridge {
     if (!backend) {
       return;
     }
-    const endpoint = backend.withSessionId(chain.sessionId);
     try {
-      const result = await postMcpHttpMessage(endpoint, message);
-      chain.captureSessionId(result.sessionId);
-      if (result.messages.length === 0 && result.status >= 400) {
-        await replyError(
-          message,
-          new JsonRpcError(-32000, `MCP HTTP ${result.status}`),
-        );
-        return;
-      }
-      const hasReadBackend = readBackend !== undefined;
-      for (const msg of result.messages) {
-        const rewritten = rewriteForwardedMessage(
-          msg,
-          request,
-          injectMethod,
-          hasReadBackend,
-        );
-        await writeMcpStdioMessage(encoder, rewritten);
-      }
+      await tryPost(
+        message,
+        request,
+        injectMethod,
+        backend.withSessionId(chain.sessionId),
+      );
     } catch (err) {
+      if (isNetworkError(err) && onEndpointFailure) {
+        const handled = await reconnectAndPost(message, request, injectMethod);
+        if (handled) return;
+      }
       await handleForwardError(message, err);
     }
+  };
+
+  const tryPost = async (
+    message: McpStdioMessage,
+    request: ParsedRpc | undefined,
+    injectMethod: string | undefined,
+    ep: McpHttpEndpoint,
+  ): Promise<void> => {
+    const result = await postMcpHttpMessage(ep, message);
+    chain.captureSessionId(result.sessionId);
+    if (result.messages.length === 0 && result.status >= 400) {
+      await replyError(
+        message,
+        new JsonRpcError(-32000, `MCP HTTP ${result.status}`),
+      );
+      return;
+    }
+    const hasReadBackend = readBackend !== undefined;
+    for (const msg of result.messages) {
+      const rewritten = rewriteForwardedMessage(
+        msg,
+        request,
+        injectMethod,
+        hasReadBackend,
+      );
+      await writeMcpStdioMessage(encoder, rewritten);
+    }
+  };
+
+  const reconnectAndPost = async (
+    message: McpStdioMessage,
+    request: ParsedRpc | undefined,
+    injectMethod: string | undefined,
+  ): Promise<boolean> => {
+    if (!onEndpointFailure || !backend) return false;
+    let fresh: McpHttpEndpoint | undefined;
+    try {
+      fresh = await onEndpointFailure();
+    } catch (handlerErr) {
+      await handleForwardError(message, handlerErr);
+      return true;
+    }
+    if (!fresh) return false;
+    // Reset session: a fresh endpoint represents a new backend with its
+    // own session state. Reattaching the old `Mcp-Session-Id` would 4xx
+    // per the MCP HTTP spec and break subsequent requests.
+    const sameBackend =
+      backend.url === fresh.url && backend.token === fresh.token;
+    backend = fresh;
+    if (!sameBackend) {
+      chain.resetSessionId();
+    }
+    try {
+      await tryPost(
+        message,
+        request,
+        injectMethod,
+        fresh.withSessionId(chain.sessionId),
+      );
+    } catch (retryErr) {
+      await handleForwardError(message, retryErr);
+    }
+    return true;
   };
 
   const rewriteForwardedMessage = (
@@ -649,6 +729,9 @@ export function createStdioMcpBridge(): StdioMcpBridge {
     setReadBackend(b: ReadObjectBackend | undefined) {
       readBackend = b;
     },
+    setEndpointFailureHandler(fn: () => Promise<McpHttpEndpoint | undefined>) {
+      onEndpointFailure = fn;
+    },
     async run(
       endpoint: McpHttpEndpoint,
       options?: { waitTimeoutMs?: number; pollIntervalMs?: number },
@@ -714,6 +797,10 @@ class ForwardChain {
     if (value) {
       this.nextSessionId = value;
     }
+  }
+
+  resetSessionId(): void {
+    this.nextSessionId = undefined;
   }
 }
 
