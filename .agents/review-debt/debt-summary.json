@@ -1,8 +1,12 @@
 {
-  "generated_at": "1970-01-01T00:00:00.000Z",
-  "open_count": 0,
-  "by_area": {},
-  "by_author": {},
+  "generated_at": "2026-06-09T15:46:51.945Z",
+  "open_count": 4,
+  "by_area": {
+    ".agents/skills": 4
+  },
+  "by_author": {
+    "gemini-code-assist": 4
+  },
   "duplicate_fingerprints": [],
-  "oldest_open": null
+  "oldest_open": "2026-06-09T15:46:51.408Z"
 }
