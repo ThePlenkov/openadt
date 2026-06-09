@@ -1,0 +1,116 @@
+# Harvest unresolved review threads from merged PRs into .agents/review-debt/debt.jsonl
+# Does NOT run on every push or every /act — only on merge or manual dispatch.
+name: Review debt harvest
+
+on:
+  pull_request:
+    types: [closed]
+
+  workflow_dispatch:
+    inputs:
+      pr_numbers:
+        description: Comma-separated merged PR numbers (e.g. 72,67)
+        required: false
+        type: string
+      merged_since:
+        description: Include PRs merged on/after (YYYY-MM-DD, UTC)
+        required: false
+        type: string
+      merged_until:
+        description: Include PRs merged on/before (YYYY-MM-DD, UTC)
+        required: false
+        type: string
+      last_n:
+        description: After other filters, keep only the N most recently merged PRs (0 = no limit)
+        required: false
+        default: "0"
+        type: string
+      pr_author:
+        description: PR author login (who opened the PR)
+        required: false
+        type: string
+      labels:
+        description: Comma-separated PR labels (all must match)
+        required: false
+        type: string
+      thread_author:
+        description: Review comment author filter (substring match, e.g. codeant-ai)
+        required: false
+        type: string
+      list_only:
+        description: Only list matching PR numbers (no harvest)
+        required: false
+        default: false
+        type: boolean
+
+permissions:
+  contents: write
+  pull-requests: read
+
+jobs:
+  harvest:
+    if: |
+      github.event_name == 'workflow_dispatch' ||
+      github.event.pull_request.merged == true
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
+          persist-credentials: true
+
+      - uses: oven-sh/setup-bun@v2
+
+      - run: bun install --frozen-lockfile
+
+      - name: Harvest unresolved threads
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          OWNER="${{ github.repository_owner }}"
+          REPO="${{ github.event.repository.name }}"
+          RUN_ID="${{ github.run_id }}"
+
+          if [ "${{ github.event_name }}" = "pull_request" ]; then
+            PR="${{ github.event.pull_request.number }}"
+            SHA="${{ github.event.pull_request.merge_commit_sha }}"
+            bun .agents/skills/act/scripts/harvest-threads.ts "$OWNER" "$REPO" "$PR" \
+              --merged-sha "$SHA" \
+              --run-id "$RUN_ID"
+            exit 0
+          fi
+
+          ARGS=()
+          [ -n "${{ github.event.inputs.pr_numbers }}" ] && \
+            ARGS+=(--pr-ids "${{ github.event.inputs.pr_numbers }}")
+          [ -n "${{ github.event.inputs.merged_since }}" ] && \
+            ARGS+=(--merged-since "${{ github.event.inputs.merged_since }}")
+          [ -n "${{ github.event.inputs.merged_until }}" ] && \
+            ARGS+=(--merged-until "${{ github.event.inputs.merged_until }}")
+          [ "${{ github.event.inputs.last_n }}" != "0" ] && \
+            ARGS+=(--last "${{ github.event.inputs.last_n }}")
+          [ -n "${{ github.event.inputs.pr_author }}" ] && \
+            ARGS+=(--pr-author "${{ github.event.inputs.pr_author }}")
+          [ -n "${{ github.event.inputs.labels }}" ] && \
+            ARGS+=(--labels "${{ github.event.inputs.labels }}")
+          [ -n "${{ github.event.inputs.thread_author }}" ] && \
+            ARGS+=(--thread-author "${{ github.event.inputs.thread_author }}")
+          [ "${{ github.event.inputs.list_only }}" = "true" ] && \
+            ARGS+=(--list-only)
+
+          bun .agents/skills/act/scripts/harvest-debt-batch.ts "$OWNER" "$REPO" \
+            "${ARGS[@]}" \
+            --run-id "$RUN_ID"
+
+      - name: Commit ledger
+        if: github.event.inputs.list_only != true
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add .agents/review-debt/
+          if git diff --staged --quiet; then
+            echo "No new review debt to commit"
+            exit 0
+          fi
+          git commit -m "chore(review-debt): harvest batch from workflow_dispatch"
+          git push

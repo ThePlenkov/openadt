@@ -47,7 +47,7 @@
       "cs *": "ask",
       "csx *": "ask",
       "docker run codescene/*": "ask",
-      "bash scripts/act/*": "allow",
+      "bash .agents/skills/act/scripts/*": "allow",
       "bash scripts/ci-*": "ask"
     },
     "webfetch": "ask",

@@ -9,7 +9,7 @@ You are the **orchestrator** for the OpenADT cloud-agent workspace. Read this on
 - [`.agents/skills/openadt-sdd/SKILL.md`](../../skills/openadt-sdd/SKILL.md) — spec → test → code.
 - [`.agents/skills/openadt-codescene/SKILL.md`](../../skills/openadt-codescene/SKILL.md) — load **before** any refactor or new code.
 - [`.agents/skills/act/SKILL.md`](../../skills/act/SKILL.md) — load **before** any `/act`.
-- [`scripts/act/`](../../../scripts/act/) — use the bundled helpers; do not reinvent.
+- [`.agents/skills/act/scripts/`](../../skills/act/scripts/) — `/act` helpers (portable skill); do not reinvent.
 
 ## 1. PR head discovery (do this first, always)
 
@@ -78,7 +78,7 @@ Not: "Tell me about labels in the codebase."
 - **Linux / cloud-agent container:** `sed` / `date` (no GNU prefix needed).
 - Detect once: `uname -s` → `Darwin` ⇒ assume BSD; else ⇒ GNU.
 - **Scratch files:** always `/tmp/agent_*/` (cloud-agent pre-approved). Never the worktree root — the pre-commit `nx format:write --uncommitted && git update-index --again` hook will re-stage them.
-- **Use absolute paths** in `/tmp/agent_*/` for scratch inputs to `scripts/act/reply-threads.sh --file …`.
+- **Use absolute paths** in `/tmp/agent_*/` for scratch inputs to `.agents/skills/act/scripts/reply-threads.sh --file …`.
 
 ## 7. When the push fails or the gate won't go green
 
@@ -95,13 +95,13 @@ P5 and P6 are **required** before any merge-ready declaration. Skipping them is 
 # Orchestrator-side setup (run ONCE per /act cycle).
 # one scratch dir per /act run — never re-extract after scoring begins
 mkdir -p /tmp/agent_$$
-bun scripts/act/extract-findings.ts OWNER REPO PR > /tmp/agent_$$/findings.jsonl
+bun .agents/skills/act/scripts/extract-findings.ts OWNER REPO PR > /tmp/agent_$$/findings.jsonl
 ```
 
 ```bash
 # Subagent-side scoring (run INSIDE the spawned `general` subagent, model = haiku).
 # The orchestrator must NOT run these commands itself.
-bun scripts/act/submit-scores.ts OWNER REPO PR --evaluator <subagent-model-id> \
+bun .agents/skills/act/scripts/submit-scores.ts OWNER REPO PR --evaluator <subagent-model-id> \
   --findings /tmp/agent_$$/findings.jsonl --scores /tmp/agent_$$/scores.tsv
 ```
 
@@ -117,14 +117,14 @@ Spawn the subagent with the explicit task contract (do not execute scoring in th
 task --subagent_type general --model <evaluator-id> \
   "Read /tmp/agent_$$/findings.jsonl, score each finding 0–5 with a one-line reason,
    write /tmp/agent_$$/scores.tsv (finding_id<TAB>score<TAB>why), then run
-   `bun scripts/act/submit-scores.ts OWNER REPO PR --evaluator <evaluator-id>
+   `bun .agents/skills/act/scripts/submit-scores.ts OWNER REPO PR --evaluator <evaluator-id>
    --findings /tmp/agent_$$/findings.jsonl --scores /tmp/agent_$$/scores.tsv`.
    Do not re-run extract-findings.ts — the snapshot is already on disk."
 ```
 
 P5 scoring is mechanical judgment (0–5 per finding). Use `haiku` via a `general` subagent — do **not** burn the orchestrator's context on it.
 
-**P6 — cycle check + retrospective (see [EVALUATE.md](../../skills/act/EVALUATE.md)):**
+**P6 — cycle check + retrospective (see [EVALUATE.md](../../skills/act/references/EVALUATE.md)):**
 
 Run the checklist after P5 commits. If any cycle signal fires (reopened thread, same rule 2+ times, empty `/act` loop), stop and escalate — do not merge.
 

@@ -37,6 +37,19 @@ Before claiming “N issues fixed”: name the **source**, query it on **current
 - Per-thread reply + product fix before `resolve-open-threads.sh`.
 - Verify: `bun scripts/verify-spec-sync.ts`, `bun scripts/verify-package-docs.ts`, `./mvnw -q verify -Pdistribution`, `bun run openadt:test`.
 
+## Review debt (post-merge batch)
+
+Unresolved review threads can be **harvested after merge** into
+[`.agents/review-debt/debt.jsonl`](.agents/review-debt/debt.jsonl) and fixed in batch via
+`/act debt`. Harvest runs on **merged PR close** or
+[`workflow_dispatch`](.github/workflows/review-debt-harvest.yml) — not on every `/act` or CI run.
+
+Plan: [docs/plans/2026-06-09-review-debt-harvest.md](docs/plans/2026-06-09-review-debt-harvest.md).
+Ledger contract: [.agents/review-debt/README.md](.agents/review-debt/README.md).
+
+**Merge policy (human):** required CI green; human `CHANGES_REQUESTED` must be cleared;
+AI-only open threads may remain at merge and enter the debt ledger.
+
 ## CodeScene delta (CLI in CI + GitHub App)
 
 | Layer                                       | Role                                                                                                   | Blocks merge?                      |

@@ -1,0 +1,9 @@
+{
+  "ignore_authors": ["dependabot[bot]"],
+  "nit_authors": [
+    "coderabbitai[bot]",
+    "chatgpt-codex-connector[bot]",
+    "amazon-q-developer[bot]",
+    "gemini-code-assist[bot]"
+  ]
+}
