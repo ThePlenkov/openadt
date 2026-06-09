@@ -77,13 +77,13 @@ Use after merge when threads were **harvested** into the ledger (not for a live 
 
 | Step | What | Done when |
 | ---- | ---- | --------- |
-| **D0** | Load queue | `bun scripts/act/query-debt.ts --status open --limit N --format tsv` |
+| **D0** | Load queue | `bun run act:debt:query -- --status open --limit N --format tsv` |
 | **D1** | Thread plan | Group by `area` / file; note `source_pr` + `thread_id` per row |
 | **D2** | Branch | `cursor/review-debt-YYYY-MM-DD-f7a9` |
 | **D3** | Fix | Product code in `apps/`, `tools/`, `specs/`, … |
 | **D4** | Verify | Same verify block as PR mode where applicable |
 | **D5** | PR | Title lists source PRs; body maps themes → commits |
-| **D6** | Close loop | `bun scripts/act/update-debt-status.ts --status done --fix-pr N --threads-file …` |
+| **D6** | Close loop | `bun run act:debt:done -- --status done --fix-pr N --threads-file …` |
 | **D7** | Resolve | `resolve-open-threads.sh` on source PRs only after reply + fix |
 
 Debt PR **merge-ready:** CI green on HEAD + summary of themes fixed. Do **not**
@@ -92,11 +92,11 @@ require `open_threads=0` on source PRs before the debt PR merges.
 Query and batch helpers:
 
 ```bash
-bun scripts/act/plan-debt-batch.ts --limit 25
-bun scripts/act/query-debt.ts --duplicates
-bun scripts/act/query-debt.ts --area apps/openadt-cli
-bun scripts/act/query-debt.ts --write-summary
-bun scripts/act/update-debt-status.ts --status done --fix-pr N --thread-id PRRT_…
+bun run act:debt:plan -- --limit 25
+bun run act:debt:query -- --duplicates
+bun run act:debt:query -- --area apps/openadt-cli
+bun run act:debt:query -- --write-summary
+bun run act:debt:done -- --status done --fix-pr N --thread-id PRRT_…
 ```
 
 ## Work order — PR mode (mandatory sequence)

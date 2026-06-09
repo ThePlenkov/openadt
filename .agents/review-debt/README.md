@@ -25,29 +25,25 @@ Only threads that are **`isResolved == false` and `isOutdated == false`** are ha
 
 ## Scripts
 
+**Preferred entry points** (owner/repo default from `gh repo view` in a clone):
+
 ```bash
-# Harvest one merged PR (local; needs gh auth)
+bun run act:debt:harvest-pr -- 72 --dry-run
+bun run act:debt:harvest -- --pr-ids 72,67
+bun run act:debt:harvest -- --merged-since 2026-06-09 --last 5
+bun run act:debt:query -- --status open --limit 25 --format tsv
+bun run act:debt:plan -- --limit 25 --out /tmp/agent_$$/debt-batch-plan.md
+bun run act:debt:done -- --status done --fix-pr 99 --thread-id PRRT_…
+bun run act:debt:test
+```
+
+Nx equivalents: `nx run scripts:act-debt-query -- --status open`, etc.
+
+Underlying scripts (explicit `OWNER REPO` when not in a gh-authenticated clone):
+
+```bash
 bun scripts/act/harvest-threads.ts OWNER REPO PR --merged-sha SHA --run-id local
-
-# Batch harvest with filters (workflow_dispatch uses this)
 bun scripts/act/harvest-debt-batch.ts OWNER REPO --pr-ids 72,67
-bun scripts/act/harvest-debt-batch.ts OWNER REPO --merged-since 2026-06-09 --last 5
-bun scripts/act/harvest-debt-batch.ts OWNER REPO --pr-author ThePlenkov --labels enhancement
-bun scripts/act/harvest-debt-batch.ts OWNER REPO --last 10 --thread-author codeant-ai --list-only
-
-# Dry run
-bun scripts/act/harvest-threads.ts OWNER REPO PR --dry-run
-
-# Query open debt (agent input)
-bun scripts/act/query-debt.ts --status open --limit 25 --format tsv
-
-# Batch plan for /act debt
-bun scripts/act/plan-debt-batch.ts --limit 25 --out /tmp/agent_$$/debt-batch-plan.md
-
-# Mark done after debt PR merges
-bun scripts/act/update-debt-status.ts --status done --fix-pr 99 --thread-id PRRT_…
-
-# Hot spots and duplicates
 bun scripts/act/query-debt.ts --write-summary
 bun scripts/act/query-debt.ts --duplicates
 bun scripts/act/query-debt.ts --area scripts/act
