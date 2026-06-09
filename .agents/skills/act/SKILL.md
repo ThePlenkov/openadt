@@ -1,9 +1,10 @@
 ---
 name: act
 description: >-
-  Use when the user invokes /act on a PR/MR. Primary job: fix CI and implement
-  review feedback in product code. Resolve threads only after each item is fixed
-  or answered. Never resolve-only.
+  Use when the user invokes /act on a PR/MR or /act debt for batched review debt.
+  PR mode: fix CI and implement review feedback in product code. Debt mode: fix
+  harvested threads from .agents/review-debt/debt.jsonl in one batch PR. Resolve
+  threads only after each item is fixed or answered. Never resolve-only.
 disable-model-invocation: true
 ---
 
@@ -14,9 +15,30 @@ disable-model-invocation: true
 The main work is **P0–P3**: read each review thread, change **product code** (or post a substantive in-thread reply), commit, then close threads.  
 Running the resolve script **without** doing that first is **wrong** — same as clicking “Resolve conversation” on every thread with no code changes.
 
-Applies to `/act`, `@claude /act`, `@codex /act`, `@copilot /act`.
+Applies to `/act`, `/act debt`, `/act all`, `@claude /act`, `@codex /act`, `@copilot /act`.
 
 **No Playwright** for GitHub PR UI.
+
+## Modes
+
+| Command | Mode | Target |
+| ------- | ---- | ------ |
+| `/act` | **PR** (default when a PR is in context) | Current PR — P0–P6 below |
+| `/act 42` | **PR** | PR `#42` |
+| `/act debt` | **Debt** | Open rows in [`.agents/review-debt/debt.jsonl`](../../../.agents/review-debt/debt.jsonl) → **new batch PR** |
+| `/act debt --limit 25` | **Debt** | Cap batch size (suggested default: 25) |
+| `/act all` | **Debt** | Same as `/act debt` when no PR is in context |
+
+**Harvest is not part of `/act`.** Unresolved threads are collected by
+[`harvest-threads.ts`](../../../scripts/act/harvest-threads.ts) on **PR merge** or
+[`workflow_dispatch`](../../../.github/workflows/review-debt-harvest.yml) only.
+See [docs/plans/2026-06-09-review-debt-harvest.md](../../../docs/plans/2026-06-09-review-debt-harvest.md).
+
+**PR mode** — pre-merge: all open threads on the PR should be fixed or answered
+before merge-ready (unless the user explicitly ships with debt and relies on harvest).
+
+**Debt mode** — post-merge batch: fix many harvested threads in one PR; source PR
+threads may be replied/resolved after the debt PR lands.
 
 ## Wrong vs right
 
@@ -49,7 +71,33 @@ Thread 2 …
 
 Do not start the resolve script until every open thread has a planned action and you have executed P0–P3.
 
-## Work order (mandatory sequence)
+## Debt mode (`/act debt`, `/act all`)
+
+Use after merge when threads were **harvested** into the ledger (not for a live PR loop).
+
+| Step | What | Done when |
+| ---- | ---- | --------- |
+| **D0** | Load queue | `bun scripts/act/query-debt.ts --status open --limit N --format tsv` |
+| **D1** | Thread plan | Group by `area` / file; note `source_pr` + `thread_id` per row |
+| **D2** | Branch | `cursor/review-debt-YYYY-MM-DD-f7a9` |
+| **D3** | Fix | Product code in `apps/`, `tools/`, `specs/`, … |
+| **D4** | Verify | Same verify block as PR mode where applicable |
+| **D5** | PR | Title lists source PRs; body maps themes → commits |
+| **D6** | Close loop | Phase 2: `update-debt-status.ts`; optional `reply-threads.sh` on source PRs |
+| **D7** | Resolve | `resolve-open-threads.sh` on source PRs only after reply + fix |
+
+Debt PR **merge-ready:** CI green on HEAD + summary of themes fixed. Do **not**
+require `open_threads=0` on source PRs before the debt PR merges.
+
+Query helpers:
+
+```bash
+bun scripts/act/query-debt.ts --duplicates
+bun scripts/act/query-debt.ts --area apps/openadt-cli
+bun scripts/act/query-debt.ts --write-summary
+```
+
+## Work order — PR mode (mandatory sequence)
 
 | Step | What | Done when |
 |------|------|-----------|
@@ -202,6 +250,8 @@ ad-hoc `gh` calls. They collapse the typical 30+ tool calls per `/act` into ~10.
 | **Resolve open threads (P4)**| `bash .agents/skills/act/resolve-open-threads.sh OWNER REPO PR` | unchanged                             |
 | **Extract findings (P5)**    | `bun scripts/act/extract-findings.ts OWNER REPO PR`       | N × `gh api` check-runs/annotations/comments reads |
 | **Submit scores (P5)**       | `bun scripts/act/submit-scores.ts … --findings F --scores S` | per-finding parse + CSV writes (local, no API) |
+| **Harvest debt (on merge)**  | `bun scripts/act/harvest-threads.ts OWNER REPO PR`        | Not during `/act`; CI workflow or manual dispatch |
+| **Query debt (D0)**          | `bun scripts/act/query-debt.ts --status open --format tsv` | Reading `debt.jsonl` by hand |
 
 **Scratch artifacts (e.g. `replies.tsv`) MUST live outside the worktree** —
 use an absolute path under the cloud-agent pre-approved `/tmp/agent_*/`. The
