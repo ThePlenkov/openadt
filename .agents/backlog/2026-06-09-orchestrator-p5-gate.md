@@ -33,6 +33,11 @@ merge-ready checklist cannot be satisfied without:
 1. `bun scripts/act/extract-findings.ts OWNER REPO PR` run
 2. `review_scores.csv` upserted via `submit-scores.ts`
 3. Retrospective (or explicit "no retrospective needed" reason) recorded
+4. **All three artifacts verified to be committed** (`git log -- .agents/act/review_scores.csv
+   .agents/memory/experience/ .agents/backlog/` shows a commit on the current branch). The user
+   on PR #77 had to commit the artifacts themselves because the orchestrator's final "merge-ready"
+   message did not check `git status` / `git log` for persistence — this is the most important
+   bullet: a write that isn't pushed is invisible to the next session.
 
 Concrete patch for `.kilo/rules/openadt-orchestrator.md` (near the merge-ready section, around
 "Verify block — run before any commit"):
