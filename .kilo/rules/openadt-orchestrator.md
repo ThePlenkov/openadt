@@ -85,7 +85,31 @@ Not: "Tell me about labels in the codebase."
 - **Don't re-author commits** if you can't push. Stop, report the failure with the actual `gh pr checks N` output, and let the user decide.
 - After 3 pushes on the same branch per `/act` cycle, stop and report back. The 3-push rule is from `.agents/memory/experience/2026-06-05-codescene-pay-down-debt.md`.
 
-## 8. Compact proactively on long tasks
+## 8. P5 + P6 gate — mandatory before merge-ready
+
+P5 and P6 are **required** before any merge-ready declaration. Skipping them is the most common way to miss high-signal findings (see `.agents/memory/experience/2026-06-09-act-p5-skipped.md`).
+
+**P5 — delegate to a `general` subagent (not inline):**
+
+```bash
+# one scratch dir per /act run — never re-extract after scoring begins
+mkdir -p /tmp/agent_$$
+bun scripts/act/extract-findings.ts OWNER REPO PR > /tmp/agent_$$/findings.jsonl
+# pass findings.jsonl to a general subagent: "read findings, write scores.tsv, run submit-scores.ts"
+# subagent model name = --evaluator value (e.g. claude-haiku-4-5)
+bun scripts/act/submit-scores.ts OWNER REPO PR --evaluator <subagent-model-id> \
+  --findings /tmp/agent_$$/findings.jsonl --scores /tmp/agent_$$/scores.tsv
+# verify the CSV was committed (git add + git commit on current branch)
+git log --oneline -1 -- .agents/act/review_scores.csv
+```
+
+P5 scoring is mechanical judgment (0–5 per finding). Use `haiku` via a `general` subagent — do **not** burn the orchestrator's context on it.
+
+**P6 — cycle check + retrospective (see [EVALUATE.md](../../agents/skills/act/EVALUATE.md)):**
+
+Run the checklist after P5 commits. If any cycle signal fires (reopened thread, same rule 2+ times, empty `/act` loop), stop and escalate — do not merge.
+
+## 9. Compact proactively on long tasks
 
 When the context window is > 60% full on a long orchestration task, delegate summarization to the `compaction` subagent. The orchestrator's mental state matters more than raw history.
 
