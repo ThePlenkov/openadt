@@ -42,7 +42,7 @@ describe("update-debt-status", () => {
     const proc = Bun.spawnSync(
       [
         "bun",
-        "scripts/act/update-debt-status.ts",
+        join(import.meta.dir, "update-debt-status.ts"),
         "--thread-id",
         "PRRT_test",
         "--status",
@@ -51,7 +51,7 @@ describe("update-debt-status", () => {
         "99",
       ],
       {
-        cwd: join(import.meta.dir, "../.."),
+        cwd: join(import.meta.dir, "../../../.."),
         env: {
           ...process.env,
           OPENADT_DEBT_FILE: debtPath,

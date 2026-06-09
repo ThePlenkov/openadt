@@ -5,7 +5,8 @@ import { createHash } from "node:crypto";
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { dirname, join } from "node:path";
 
-export const DEBT_DIR = join(import.meta.dir, "../../.agents/review-debt");
+/** Repo-relative when skill lives under `.agents/skills/act/`; override via env in tests. */
+export const DEBT_DIR = join(import.meta.dir, "../../../review-debt");
 export const DEBT_FILE =
   process.env.OPENADT_DEBT_FILE ?? join(DEBT_DIR, "debt.jsonl");
 export const SUMMARY_FILE =

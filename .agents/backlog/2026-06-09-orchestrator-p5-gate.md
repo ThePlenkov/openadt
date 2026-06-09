@@ -30,7 +30,7 @@ it earlier as a "5" rating and forced a re-read of the diff.
 Add an explicit P5 + P6 gate to `openadt-orchestrator.md` (and the cloud-agent baseline) so the
 merge-ready checklist cannot be satisfied without:
 
-1. `bun scripts/act/extract-findings.ts OWNER REPO PR` run
+1. `bun .agents/skills/act/scripts/extract-findings.ts OWNER REPO PR` run
 2. `review_scores.csv` upserted via `submit-scores.ts`
 3. Retrospective (or explicit "no retrospective needed" reason) recorded
 4. **All three artifacts verified to be committed** (`git log -- .agents/act/review_scores.csv
@@ -51,9 +51,9 @@ merge-ready until:
 ```bash
 # P5: rate every check-run + review finding 0–5 into review_scores.csv
 mkdir -p /tmp/agent_$$ && cd /workspace/<repo>
-bun scripts/act/extract-findings.ts OWNER REPO PR > /tmp/agent_$$/findings.jsonl
+bun .agents/skills/act/scripts/extract-findings.ts OWNER REPO PR > /tmp/agent_$$/findings.jsonl
 # write /tmp/agent_$$/scores.tsv (finding_id<TAB>0-5<TAB>why)
-bun scripts/act/submit-scores.ts OWNER REPO PR --evaluator <model-id> \
+bun .agents/skills/act/scripts/submit-scores.ts OWNER REPO PR --evaluator <model-id> \
   --findings /tmp/agent_$$/findings.jsonl --scores /tmp/agent_$$/scores.tsv
 ```
 

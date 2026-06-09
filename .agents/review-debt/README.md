@@ -37,16 +37,16 @@ bun run act:debt:done -- --status done --fix-pr 99 --thread-id PRRT_…
 bun run act:debt:test
 ```
 
-Nx equivalents: `nx run scripts:act-debt-query -- --status open`, etc.
+Nx equivalents: `bunx nx run act-skill:act-debt-query -- --status open`, etc.
 
-Underlying scripts (explicit `OWNER REPO` when not in a gh-authenticated clone):
+Ledger scripts live in [`.agents/skills/act/scripts/`](../skills/act/scripts/) (portable skill). Explicit `OWNER REPO` when not in a gh-authenticated clone:
 
 ```bash
-bun scripts/act/harvest-threads.ts OWNER REPO PR --merged-sha SHA --run-id local
-bun scripts/act/harvest-debt-batch.ts OWNER REPO --pr-ids 72,67
-bun scripts/act/query-debt.ts --write-summary
-bun scripts/act/query-debt.ts --duplicates
-bun scripts/act/query-debt.ts --area scripts/act
+bun .agents/skills/act/scripts/harvest-threads.ts OWNER REPO PR --merged-sha SHA --run-id local
+bun .agents/skills/act/scripts/harvest-debt-batch.ts OWNER REPO --pr-ids 72,67
+bun run act:debt:query -- --write-summary
+bun run act:debt:query -- --duplicates
+bun run act:debt:query -- --area apps/openadt-cli
 ```
 
 ## Agent workflow (`/act debt`)

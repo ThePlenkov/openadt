@@ -6,9 +6,9 @@
  * Not part of /act — run only on merge or manual backfill.
  *
  * Usage:
- *   bun scripts/act/harvest-threads.ts OWNER REPO PR_NUMBER \
- *     --merged-sha SHA --run-id RUN_ID
- *   bun scripts/act/harvest-threads.ts abapify openadt 81 --dry-run
+ *   bun run act:debt:harvest-pr -- PR --merged-sha SHA --run-id RUN_ID
+ *   bun run act:debt:harvest-pr -- 81 --dry-run
+ *   bun .agents/skills/act/scripts/harvest-threads.ts OWNER REPO PR --merged-sha SHA
  */
 import {
   bodyPreview,

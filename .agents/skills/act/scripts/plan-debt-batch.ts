@@ -3,9 +3,9 @@
  * Build a grouped batch plan for /act debt from the open ledger.
  *
  * Usage:
- *   bun scripts/act/plan-debt-batch.ts
- *   bun scripts/act/plan-debt-batch.ts --limit 25 --area scripts/act
- *   bun scripts/act/plan-debt-batch.ts --out /tmp/agent_$$/debt-batch-plan.md
+ *   bun run act:debt:plan
+ *   bun run act:debt:plan -- --limit 25 --area apps/openadt-cli
+ *   bun run act:debt:plan -- --out /tmp/agent_$$/debt-batch-plan.md
  */
 import { writeFileSync } from "node:fs";
 import { readDebtRecords, type DebtRecord } from "./review-debt-lib.ts";
@@ -112,7 +112,7 @@ function renderPlan(rows: DebtRecord[], args: PlanArgs): string {
   lines.push("2. Fix by area (commits grouped by theme)");
   lines.push("3. Open PR listing source PR numbers + thread ids above");
   lines.push(
-    "4. After merge: `bun scripts/act/update-debt-status.ts --status done --fix-pr N --threads-file …`",
+    "4. After merge: `bun run act:debt:done -- --status done --fix-pr N --threads-file …`",
   );
 
   return `${lines.join("\n")}\n`;

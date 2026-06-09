@@ -1,48 +1,48 @@
 {
-  "name": "scripts",
-  "root": "scripts",
+  "name": "act-skill",
+  "root": ".agents/skills/act",
   "projectType": "library",
   "targets": {
     "act-debt": {
       "executor": "nx:run-commands",
       "options": {
-        "command": "bun scripts/act/review-debt-cli.ts"
+        "command": "bun .agents/skills/act/scripts/review-debt-cli.ts"
       }
     },
     "act-debt-harvest": {
       "executor": "nx:run-commands",
       "options": {
-        "command": "bun scripts/act/review-debt-cli.ts harvest"
+        "command": "bun .agents/skills/act/scripts/review-debt-cli.ts harvest"
       }
     },
     "act-debt-harvest-pr": {
       "executor": "nx:run-commands",
       "options": {
-        "command": "bun scripts/act/review-debt-cli.ts harvest-pr"
+        "command": "bun .agents/skills/act/scripts/review-debt-cli.ts harvest-pr"
       }
     },
     "act-debt-query": {
       "executor": "nx:run-commands",
       "options": {
-        "command": "bun scripts/act/review-debt-cli.ts query"
+        "command": "bun .agents/skills/act/scripts/review-debt-cli.ts query"
       }
     },
     "act-debt-plan": {
       "executor": "nx:run-commands",
       "options": {
-        "command": "bun scripts/act/review-debt-cli.ts plan"
+        "command": "bun .agents/skills/act/scripts/review-debt-cli.ts plan"
       }
     },
     "act-debt-done": {
       "executor": "nx:run-commands",
       "options": {
-        "command": "bun scripts/act/review-debt-cli.ts done"
+        "command": "bun .agents/skills/act/scripts/review-debt-cli.ts done"
       }
     },
     "act-debt-test": {
       "executor": "nx:run-commands",
       "options": {
-        "command": "bun scripts/act/review-debt-cli.ts test"
+        "command": "bun .agents/skills/act/scripts/review-debt-cli.ts test"
       }
     }
   }

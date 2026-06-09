@@ -72,9 +72,9 @@ Do **not** harvest on: every `/act`, every CI run, generic push to `main`.
 
 ## Phase 1 (this PR)
 
-- [x] `scripts/act/review-debt-lib.ts`
-- [x] `scripts/act/harvest-threads.ts`
-- [x] `scripts/act/query-debt.ts`
+- [x] `.agents/skills/act/scripts/review-debt-lib.ts`
+- [x] `.agents/skills/act/scripts/harvest-threads.ts`
+- [x] `.agents/skills/act/scripts/query-debt.ts`
 - [x] `.agents/review-debt/*`
 - [x] `.github/workflows/review-debt-harvest.yml`
 - [x] ACT skill — debt mode section

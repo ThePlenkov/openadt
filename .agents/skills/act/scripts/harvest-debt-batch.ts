@@ -3,10 +3,10 @@
  * Harvest review debt from multiple merged PRs matching filters.
  *
  * Usage:
- *   bun scripts/act/harvest-debt-batch.ts abapify openadt --pr-ids 72,67
- *   bun scripts/act/harvest-debt-batch.ts abapify openadt --merged-since 2026-06-09 --last 5
- *   bun scripts/act/harvest-debt-batch.ts abapify openadt --pr-author cursor --label enhancement
- *   bun scripts/act/harvest-debt-batch.ts abapify openadt --last 10 --thread-author codeant-ai --dry-run
+ *   bun run act:debt:harvest -- --pr-ids 72,67
+ *   bun run act:debt:harvest -- --merged-since 2026-06-09 --last 5
+ *   bun run act:debt:harvest -- --pr-author cursor --labels enhancement
+ *   bun run act:debt:harvest -- --last 10 --thread-author codeant-ai --dry-run
  */
 import {
   buildSummary,

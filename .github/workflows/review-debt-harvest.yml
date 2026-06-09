@@ -74,7 +74,7 @@ jobs:
           if [ "${{ github.event_name }}" = "pull_request" ]; then
             PR="${{ github.event.pull_request.number }}"
             SHA="${{ github.event.pull_request.merge_commit_sha }}"
-            bun scripts/act/harvest-threads.ts "$OWNER" "$REPO" "$PR" \
+            bun .agents/skills/act/scripts/harvest-threads.ts "$OWNER" "$REPO" "$PR" \
               --merged-sha "$SHA" \
               --run-id "$RUN_ID"
             exit 0
@@ -98,7 +98,7 @@ jobs:
           [ "${{ github.event.inputs.list_only }}" = "true" ] && \
             ARGS+=(--list-only)
 
-          bun scripts/act/harvest-debt-batch.ts "$OWNER" "$REPO" \
+          bun .agents/skills/act/scripts/harvest-debt-batch.ts "$OWNER" "$REPO" \
             "${ARGS[@]}" \
             --run-id "$RUN_ID"
 

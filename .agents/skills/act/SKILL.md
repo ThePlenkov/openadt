@@ -6,9 +6,12 @@ description: >-
   harvested threads from .agents/review-debt/debt.jsonl in one batch PR. Resolve
   threads only after each item is fixed or answered. Never resolve-only.
 disable-model-invocation: true
+compatibility: Requires gh, jq, bun; optional ledger at .agents/review-debt/ (override OPENADT_DEBT_FILE).
 ---
 
 # /act
+
+Portable skill layout ([agentskills.io](https://agentskills.io/specification)): `scripts/` (helpers), `references/` (EVALUATE, RATING_FLOW). Copy `.agents/skills/act/` to relocate; wire `bun run act:debt:*` or call `scripts/*` directly.
 
 **`/act` means fix the PR, not hide review comments.**
 
@@ -30,7 +33,7 @@ Applies to `/act`, `/act debt`, `/act all`, `@claude /act`, `@codex /act`, `@cop
 | `/act all` | **Debt** | Same as `/act debt` when no PR is in context |
 
 **Harvest is not part of `/act`.** Unresolved threads are collected by
-[`harvest-threads.ts`](../../../scripts/act/harvest-threads.ts) on **PR merge** or
+[`scripts/harvest-threads.ts`](scripts/harvest-threads.ts) on **PR merge** or
 [`workflow_dispatch`](../../../.github/workflows/review-debt-harvest.yml) only.
 See [docs/plans/2026-06-09-review-debt-harvest.md](../../../docs/plans/2026-06-09-review-debt-harvest.md).
 
@@ -108,7 +111,7 @@ bun run act:debt:done -- --status done --fix-pr N --thread-id PRRT_…
 | **P2** | Nits, questions, style | **Fix or answer in thread** (not silent) |
 | **P3** | Inline suggestions | **Applied in code** or declined with reason **in thread** |
 | **P4** | Resolve pass | Only after P0–P3 for **all** open threads |
-| **P5** | Rate findings (research) | Every check-run + review finding scored 0–5 in `review_scores.csv` ([RATING_FLOW.md](../../../scripts/act/RATING_FLOW.md)) |
+| **P5** | Rate findings (research) | Every check-run + review finding scored 0–5 in `review_scores.csv` ([RATING_FLOW.md](references/RATING_FLOW.md)) |
 | **P6** | Evaluation | Retrospect, update durable knowledge, cycle check — **before** merge-ready |
 
 ### P0 — when CI is red, run linters locally first
@@ -120,7 +123,7 @@ reproduce the same checks locally and fix in one round trip:
 
 | Signal in `pr-state.sh` / `gh pr checks`                                | Reproduce locally                                  |
 | ----------------------------------------------------------------------- | -------------------------------------------------- |
-| `Codacy Static Code Analysis` fail / action_required                    | `shellcheck scripts/act/*.sh` + `bunx tsc --noEmit scripts/derive-cli-surface.ts` (ESLint/TS) |
+| `Codacy Static Code Analysis` fail / action_required                    | `shellcheck .agents/skills/act/scripts/*.sh` + `bunx tsc --noEmit scripts/derive-cli-surface.ts` (ESLint/TS) |
 | `Opengrep OSS` / `OpenGrep` fail                                        | `opengrep --config .semgrep.yaml <changed-paths>`   |
 | `SonarCloud Code Analysis` fail                                        | `sonar-scanner` (or read [REVIEW.md](../../../REVIEW.md) for Sonar rules) |
 | `CodeQL` fail                                                           | Re-run workflow job; SARIF details in artifacts     |
@@ -131,7 +134,7 @@ the linter, run it, fix what it reports, push. Do not file the issue as
 "unclear" without reproducing locally.
 
 **Resolve is step P4, not step 1.**  
-**P6 is mandatory before merge-ready** on every `/act` (cycle check + checklist); the **retrospective** portion is required only when something went wrong during the session (see [EVALUATE.md](EVALUATE.md)).  
+**P6 is mandatory before merge-ready** on every `/act` (cycle check + checklist); the **retrospective** portion is required only when something went wrong during the session (see [EVALUATE.md](references/EVALUATE.md)).  
 If you cannot fix something in-repo, say so **in that thread**; do not resolve it without a visible reply.
 
 ## Per-thread loop (repeat for each open thread)
@@ -161,10 +164,10 @@ Skipping steps 2–4 and only running the batch resolve script **violates `/act`
 - `gh auth status` succeeds.
 
 ```bash
-bash -n .agents/skills/act/resolve-open-threads.sh
-bash .agents/skills/act/resolve-open-threads.sh --dry-run OWNER REPO NUMBER
-bash .agents/skills/act/resolve-open-threads.sh OWNER REPO NUMBER
-bash .agents/skills/act/resolve-open-threads.sh --dry-run OWNER REPO NUMBER
+bash -n scripts/resolve-open-threads.sh
+bash scripts/resolve-open-threads.sh --dry-run OWNER REPO NUMBER
+bash scripts/resolve-open-threads.sh OWNER REPO NUMBER
+bash scripts/resolve-open-threads.sh --dry-run OWNER REPO NUMBER
 ```
 
 The script only clicks “Resolve conversation” in GitHub — it does **not** implement review fixes.  
@@ -175,17 +178,17 @@ Resolve outdated threads too, but only after the underlying comment was handled 
 After P4, score every tool finding (check-run annotations + inline review
 comments) 0–5 so we can measure which review tools earn their slot. The agent
 only judges; the scripts do the fetch/join/CSV work in two tool calls. Full
-contract: [RATING_FLOW.md](../../../scripts/act/RATING_FLOW.md).
+contract: [RATING_FLOW.md](references/RATING_FLOW.md).
 
 ```bash
 # prepare scratch dir once
 mkdir -p /tmp/agent_$$
 
 # 1. one call — dump every finding with full metadata
-bun scripts/act/extract-findings.ts OWNER REPO PR > /tmp/agent_$$/findings.jsonl
+bun scripts/extract-findings.ts OWNER REPO PR > /tmp/agent_$$/findings.jsonl
 # 2. read findings, write /tmp/agent_$$/scores.tsv  (finding_id<TAB>0-5<TAB>why)
 # 3. one call — join + upsert review_scores.csv (no GitHub writes)
-bun scripts/act/submit-scores.ts OWNER REPO PR --evaluator <model-id> \
+bun scripts/submit-scores.ts OWNER REPO PR --evaluator <model-id> \
   --findings /tmp/agent_$$/findings.jsonl --scores /tmp/agent_$$/scores.tsv
 ```
 
@@ -195,7 +198,7 @@ not duplicate rows.
 
 ## Evaluation (P6 — after P5, before merge-ready)
 
-Follow [EVALUATE.md](EVALUATE.md). Durable sinks: [REVIEW.md](../../../REVIEW.md).
+Follow [EVALUATE.md](references/EVALUATE.md). Durable sinks: [REVIEW.md](../../../REVIEW.md).
 
 1. **Retain** — record what happened using the [memory-bank skill](../memory-bank/SKILL.md):
    - Mistake or debugging session → `.agents/memory/experience/`
@@ -241,21 +244,22 @@ If feedback is already fixed on HEAD and threads are closed → short “already
 
 ## Token-rationalized workflow
 
-Use the helpers under [`scripts/act/`](../../../scripts/act/) instead of issuing
-ad-hoc `gh` calls. They collapse the typical 30+ tool calls per `/act` into ~10.
+Use the helpers under [`scripts/`](scripts/) instead of issuing ad-hoc `gh` calls.
+They collapse the typical 30+ tool calls per `/act` into ~10. From repo root,
+prefix paths with `.agents/skills/act/` (or use `bun run act:debt:*` for ledger ops).
 
 | Step                         | Use                                                       | Replaces                                    |
 | ---------------------------- | --------------------------------------------------------- | ------------------------------------------- |
-| **PR state + open threads**  | `bash scripts/act/pr-state.sh OWNER REPO PR`              | `gh pr view --json ...` ×4 + `gh pr checks` |
+| **PR state + open threads**  | `bash scripts/pr-state.sh OWNER REPO PR`                  | `gh pr view --json ...` ×4 + `gh pr checks` |
 | **Verify a CLI claim**       | `bun scripts/derive-cli-surface.ts --check "openadt X"`   | `grep` across `apps/**.java` + reads        |
-| **Post N thread replies**    | `bash scripts/act/reply-threads.sh --file /tmp/agent_*/replies.tsv` | N × `gh api graphql addPullRequestReview…` |
-| **Resolve open threads (P4)**| `bash .agents/skills/act/resolve-open-threads.sh OWNER REPO PR` | unchanged                             |
-| **Extract findings (P5)**    | `bun scripts/act/extract-findings.ts OWNER REPO PR`       | N × `gh api` check-runs/annotations/comments reads |
-| **Submit scores (P5)**       | `bun scripts/act/submit-scores.ts … --findings F --scores S` | per-finding parse + CSV writes (local, no API) |
-| **Harvest debt (on merge)**  | `bun scripts/act/harvest-threads.ts OWNER REPO PR`        | Not during `/act`; CI workflow or manual dispatch |
-| **Query debt (D0)**          | `bun scripts/act/query-debt.ts --status open --format tsv` | Reading `debt.jsonl` by hand |
-| **Plan debt batch (D1)**     | `bun scripts/act/plan-debt-batch.ts --limit 25`            | Hand-grouping ledger rows |
-| **Mark debt done (D6)**      | `bun scripts/act/update-debt-status.ts --status done …`    | Editing `debt.jsonl` by hand |
+| **Post N thread replies**    | `bash scripts/reply-threads.sh --file /tmp/agent_*/replies.tsv` | N × `gh api graphql addPullRequestReview…` |
+| **Resolve open threads (P4)**| `bash scripts/resolve-open-threads.sh OWNER REPO PR`      | unchanged                                   |
+| **Extract findings (P5)**    | `bun scripts/extract-findings.ts OWNER REPO PR`           | N × `gh api` check-runs/annotations/comments reads |
+| **Submit scores (P5)**       | `bun scripts/submit-scores.ts … --findings F --scores S`   | per-finding parse + CSV writes (local, no API) |
+| **Harvest debt (on merge)**  | `bun run act:debt:harvest-pr -- PR`                       | Not during `/act`; CI workflow or manual dispatch |
+| **Query debt (D0)**          | `bun run act:debt:query -- --status open --format tsv`    | Reading `debt.jsonl` by hand |
+| **Plan debt batch (D1)**     | `bun run act:debt:plan -- --limit 25`                     | Hand-grouping ledger rows |
+| **Mark debt done (D6)**      | `bun run act:debt:done -- --status done …`                | Editing `debt.jsonl` by hand |
 
 **Scratch artifacts (e.g. `replies.tsv`) MUST live outside the worktree** —
 use an absolute path under the cloud-agent pre-approved `/tmp/agent_*/`. The

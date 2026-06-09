@@ -3,11 +3,11 @@
  * Query the review-debt ledger for agents and humans.
  *
  * Usage:
- *   bun scripts/act/query-debt.ts --status open
- *   bun scripts/act/query-debt.ts --area apps/openadt-cli
- *   bun scripts/act/query-debt.ts --duplicates
- *   bun scripts/act/query-debt.ts --limit 25 --format tsv
- *   bun scripts/act/query-debt.ts --write-summary
+ *   bun run act:debt:query -- --status open
+ *   bun run act:debt:query -- --area apps/openadt-cli
+ *   bun run act:debt:query -- --duplicates
+ *   bun run act:debt:query -- --limit 25 --format tsv
+ *   bun run act:debt:query -- --write-summary
  */
 import {
   buildSummary,

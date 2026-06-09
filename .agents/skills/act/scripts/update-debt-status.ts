@@ -3,9 +3,9 @@
  * Update review-debt ledger row status (after /act debt batch PR).
  *
  * Usage:
- *   bun scripts/act/update-debt-status.ts --thread-id PRRT_… --status done --fix-pr 99
- *   bun scripts/act/update-debt-status.ts --fix-pr 99 --status done --threads-file /tmp/agent/threads.txt
- *   bun scripts/act/update-debt-status.ts --status wontfix --thread-id PRRT_… --notes "out of scope"
+ *   bun run act:debt:done -- --thread-id PRRT_… --status done --fix-pr 99
+ *   bun run act:debt:done -- --fix-pr 99 --status done --threads-file /tmp/agent/threads.txt
+ *   bun run act:debt:done -- --status wontfix --thread-id PRRT_… --notes "out of scope"
  */
 import { readFileSync } from "node:fs";
 import {

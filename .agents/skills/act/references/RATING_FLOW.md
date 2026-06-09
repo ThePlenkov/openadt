@@ -18,7 +18,7 @@ scripts. The agent never re-echoes data a script already holds. See
 ### 1. Extract — 1 tool call (max context, zero reasoning)
 
 ```bash
-bun scripts/act/extract-findings.ts OWNER REPO PR > /tmp/agent_xyz/findings.jsonl
+bun scripts/extract-findings.ts OWNER REPO PR > /tmp/agent_xyz/findings.jsonl
 ```
 
 Emits one finding per line — check-run annotations (`code_scan`) and top-level
@@ -62,7 +62,7 @@ submit step joins all of that. Write to `/tmp/agent_xyz/scores.tsv`.
 ### 3. Submit — 1 tool call (join + upsert, no network)
 
 ```bash
-bun scripts/act/submit-scores.ts OWNER REPO PR \
+bun scripts/submit-scores.ts OWNER REPO PR \
   --evaluator claude-opus-4.8 \
   --findings /tmp/agent_xyz/findings.jsonl \
   --scores  /tmp/agent_xyz/scores.tsv

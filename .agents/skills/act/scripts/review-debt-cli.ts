@@ -1,6 +1,6 @@
 #!/usr/bin/env bun
 /**
- * Entry point for review-debt scripts (`bun run act:debt:*` / `nx run scripts:act-debt-*`).
+ * Entry point for review-debt scripts (`bun run act:debt:*` / `nx run act-skill:act-debt-*`).
  *
  * Usage:
  *   bun run act:debt:query -- --status open --format tsv

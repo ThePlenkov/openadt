@@ -1,7 +1,7 @@
 ---
 date: 2026-06-08
 tags: [act, github, suggestions, metrics]
-source: scripts/act/RATING_FLOW.md
+source: .agents/skills/act/scripts/RATING_FLOW.md
 ---
 
 ## Problem
@@ -17,7 +17,7 @@ finding came with a ready-to-apply diff.
 1. In `extract-findings.ts`, detect ```` ```suggestion ```` fences in review
    comment bodies and emit `has_suggestion: true` + the suggested replacement on
    the finding.
-2. Add a `scripts/act/apply-suggestions.sh` (or extend submit) that, for
+2. Add a `.agents/skills/act/scripts/apply-suggestions.sh` (or extend submit) that, for
    accepted suggestions, applies the fenced replacement to the file at the
    comment's `path`/`line` and commits — the scriptable equivalent of GitHub's
    "Commit suggestion" button (one tool call, per [AGENTS.md → Script over

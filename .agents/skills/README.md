@@ -2,7 +2,7 @@
 
 | Skill | Trigger |
 | --- | --- |
-| [act](act/SKILL.md) | `/act` on PR; `/act debt` for batched review debt |
+| [act](act/SKILL.md) | `/act` on PR; `/act debt` for batched review debt ([portable `scripts/`](act/scripts/)) |
 | [codescene](codescene/SKILL.md) | CodeScene CI, local CLI, CS_ACCESS_TOKEN, Docker, troubleshooting |
 | [memory-bank](memory-bank/SKILL.md) | `/remember` — unified agent memory (`.agents/memory/`) |
 | [retrospect](retrospect/SKILL.md) | `/retrospect` — reflect, record experience, create backlog items |
