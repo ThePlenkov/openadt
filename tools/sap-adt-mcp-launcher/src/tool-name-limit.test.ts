@@ -53,7 +53,12 @@ describe("shortenToolsInListResponse", () => {
         tools: [{ name: long }, { name: "abap_transport-get" }],
       },
     });
-    const out = shortenToolsInListResponse(body, 2, "tools/list", registry);
+    const out = shortenToolsInListResponse({
+      body,
+      reqId: 2,
+      method: "tools/list",
+      registry,
+    });
     const parsed = JSON.parse(out) as {
       result: { tools: Array<{ name: string }> };
     };
@@ -64,9 +69,14 @@ describe("shortenToolsInListResponse", () => {
   test("ignores non tools/list responses", () => {
     const registry = new ToolNameRegistry(45);
     const body = '{"jsonrpc":"2.0","id":1,"result":{}}';
-    expect(shortenToolsInListResponse(body, 1, "initialize", registry)).toBe(
-      body,
-    );
+    expect(
+      shortenToolsInListResponse({
+        body,
+        reqId: 1,
+        method: "initialize",
+        registry,
+      }),
+    ).toBe(body);
   });
 });
 
@@ -81,7 +91,7 @@ describe("rewriteToolsCallRequest", () => {
       method: "tools/call",
       params: { name: alias, arguments: { binding: "ZTEST" } },
     });
-    const out = rewriteToolsCallRequest(body, registry);
+    const out = rewriteToolsCallRequest({ body, registry });
     const parsed = JSON.parse(out) as {
       params: { name: string; arguments: { binding: string } };
     };

@@ -72,27 +72,34 @@ export class ToolNameRegistry {
   }
 }
 
+type ParsedRpcId = string | number | null | undefined;
+
+export type ListResponseContext = {
+  body: string;
+  reqId: ParsedRpcId;
+  method: string | undefined;
+  registry: ToolNameRegistry;
+};
+
 /** Shorten tool names in a backend `tools/list` JSON-RPC response body. */
 export function shortenToolsInListResponse(
-  msg: string,
-  reqId: ParsedRpcId,
-  method: string | undefined,
-  registry: ToolNameRegistry,
+  context: ListResponseContext,
 ): string {
+  const { body, reqId, method, registry } = context;
   if (method !== "tools/list") {
-    return msg;
+    return body;
   }
   let parsed: { id?: unknown; result?: { tools?: unknown } };
   try {
-    parsed = JSON.parse(msg);
+    parsed = JSON.parse(body);
   } catch {
-    return msg;
+    return body;
   }
   if (parsed.id !== reqId || !parsed.result) {
-    return msg;
+    return body;
   }
   if (!Array.isArray(parsed.result.tools)) {
-    return msg;
+    return body;
   }
   parsed.result.tools = parsed.result.tools.map((tool) => {
     if (!tool || typeof tool !== "object") {
@@ -107,13 +114,14 @@ export function shortenToolsInListResponse(
   return JSON.stringify(parsed);
 }
 
-type ParsedRpcId = string | number | null | undefined;
+export type CallRequestContext = {
+  body: string;
+  registry: ToolNameRegistry;
+};
 
 /** Rewrite a `tools/call` request body to use the backend SAP tool name. */
-export function rewriteToolsCallRequest(
-  body: string,
-  registry: ToolNameRegistry,
-): string {
+export function rewriteToolsCallRequest(context: CallRequestContext): string {
+  const { body, registry } = context;
   let parsed: {
     method?: unknown;
     params?: { name?: unknown; arguments?: unknown };

@@ -411,7 +411,7 @@ export function createStdioMcpBridge(): StdioMcpBridge {
     const injectMethod = guidanceEnabled() ? request?.method : undefined;
 
     const outbound = new McpStdioMessage(
-      rewriteToolsCallRequest(message.body, toolNames),
+      rewriteToolsCallRequest({ body: message.body, registry: toolNames }),
     );
     chain.append(() => forwardToBackend(outbound, request, injectMethod));
   };
