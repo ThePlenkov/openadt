@@ -76,24 +76,36 @@ export class ToolNameRegistry {
 
   private uniqueAlias(original: string): string {
     const baseAlias = this.makeAlias(original);
-    if (this.canClaim(baseAlias, original)) {
+    if (this.canClaim({ candidate: baseAlias, original })) {
       return baseAlias;
     }
     for (let attempt = 1; attempt < 0x100; attempt++) {
-      const candidate = this.attemptedAlias(baseAlias, attempt);
-      if (this.canClaim(candidate, original)) {
+      const candidate = this.attemptedAlias({ baseAlias, attempt });
+      if (this.canClaim({ candidate, original })) {
         return candidate;
       }
     }
     throw new Error(`ToolNameRegistry: alias space exhausted for ${original}`);
   }
 
-  private attemptedAlias(baseAlias: string, attempt: number): string {
+  private attemptedAlias({
+    baseAlias,
+    attempt,
+  }: {
+    baseAlias: string;
+    attempt: number;
+  }): string {
     const suffix = attempt.toString(16).padStart(2, "0");
     return `${baseAlias.slice(0, this.maxLen - suffix.length)}${suffix}`;
   }
 
-  private canClaim(candidate: string, original: string): boolean {
+  private canClaim({
+    candidate,
+    original,
+  }: {
+    candidate: string;
+    original: string;
+  }): boolean {
     if (this.fromAlias.get(candidate) === original) {
       return true;
     }
