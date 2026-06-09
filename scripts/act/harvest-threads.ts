@@ -184,6 +184,47 @@ function toDebtRecord(opts: {
   };
 }
 
+function collectHarvestRows(opts: {
+  threads: Awaited<ReturnType<typeof fetchReviewThreads>>;
+  config: ReturnType<typeof loadConfig>;
+  meta: ReturnType<typeof fetchPrMeta>;
+  pr: number;
+  runId: string;
+  harvestedAt: string;
+}): { incoming: DebtRecord[]; skipped: number; skippedOutdated: number } {
+  const incoming: DebtRecord[] = [];
+  let skipped = 0;
+  let skippedOutdated = 0;
+
+  for (const thread of opts.threads) {
+    if (thread.isResolved) {
+      continue;
+    }
+    if (thread.isOutdated) {
+      skippedOutdated += 1;
+      continue;
+    }
+    const author = thread.comments.nodes[0]?.author?.login ?? "unknown";
+    const classification = classifyThread({ author, config: opts.config });
+    if (!classification.harvest) {
+      skipped += 1;
+      continue;
+    }
+    incoming.push(
+      toDebtRecord({
+        thread,
+        meta: opts.meta,
+        pr: opts.pr,
+        runId: opts.runId,
+        harvestedAt: opts.harvestedAt,
+        classification,
+      }),
+    );
+  }
+
+  return { incoming, skipped, skippedOutdated };
+}
+
 async function main(): Promise<void> {
   const args = parseArgs(process.argv.slice(2));
   ensureGhAuth();
@@ -198,33 +239,18 @@ async function main(): Promise<void> {
     pr: args.pr,
   });
 
-  const incoming: DebtRecord[] = [];
-  let skipped = 0;
-
-  for (const thread of threads) {
-    if (thread.isResolved) {
-      continue;
-    }
-    const author = thread.comments.nodes[0]?.author?.login ?? "unknown";
-    const classification = classifyThread({ author, config });
-    if (!classification.harvest) {
-      skipped += 1;
-      continue;
-    }
-    incoming.push(
-      toDebtRecord({
-        thread,
-        meta,
-        pr: args.pr,
-        runId: args.runId,
-        harvestedAt,
-        classification,
-      }),
-    );
-  }
+  const { incoming, skipped, skippedOutdated } = collectHarvestRows({
+    threads,
+    config,
+    meta,
+    pr: args.pr,
+    runId: args.runId,
+    harvestedAt,
+  });
 
   console.error(
-    `harvest: PR #${args.pr} — ${incoming.length} thread(s) harvested, ${skipped} skipped`,
+    `harvest: PR #${args.pr} — ${incoming.length} thread(s) harvested, ` +
+      `${skipped} ignored (config), ${skippedOutdated} skipped (outdated)`,
   );
 
   if (args.dryRun) {

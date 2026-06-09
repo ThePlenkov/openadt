@@ -21,6 +21,8 @@ Queryable queue of **unresolved PR review threads** harvested **after merge** (o
 
 Harvest does **not** run on every `/act`, every CI run, or every push to `main`.
 
+Only threads that are **`isResolved == false` and `isOutdated == false`** are harvested.
+
 ## Scripts
 
 ```bash

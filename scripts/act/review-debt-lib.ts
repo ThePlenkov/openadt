@@ -57,6 +57,7 @@ export interface ReviewThreadComment {
 export interface ReviewThreadNode {
   id: string;
   isResolved: boolean;
+  isOutdated: boolean;
   comments: { nodes: ReviewThreadComment[] };
 }
 
@@ -262,6 +263,7 @@ export async function fetchReviewThreads(opts: {
               nodes {
                 id
                 isResolved
+                isOutdated
                 comments(first: 1) {
                   nodes { author { login } path line body }
                 }
