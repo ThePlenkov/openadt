@@ -33,6 +33,12 @@ bun scripts/act/harvest-threads.ts OWNER REPO PR --dry-run
 # Query open debt (agent input)
 bun scripts/act/query-debt.ts --status open --limit 25 --format tsv
 
+# Batch plan for /act debt
+bun scripts/act/plan-debt-batch.ts --limit 25 --out /tmp/agent_$$/debt-batch-plan.md
+
+# Mark done after debt PR merges
+bun scripts/act/update-debt-status.ts --status done --fix-pr 99 --thread-id PRRT_…
+
 # Hot spots and duplicates
 bun scripts/act/query-debt.ts --write-summary
 bun scripts/act/query-debt.ts --duplicates
@@ -46,7 +52,7 @@ See [.agents/skills/act/SKILL.md](../skills/act/SKILL.md) § Debt mode.
 1. `query-debt.ts --status open --limit N --format tsv`
 2. Fix in product code on branch `cursor/review-debt-YYYY-MM-DD-f7a9`
 3. Open batch PR; link source PR numbers + thread ids
-4. After merge: mark rows `done` (Phase 2: `update-debt-status.ts`)
+4. After merge: `update-debt-status.ts --status done --fix-pr N --threads-file …`
 5. Optional: `reply-threads.sh` + `resolve-open-threads.sh` on source PRs
 
 ## Row schema

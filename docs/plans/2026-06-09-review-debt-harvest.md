@@ -66,13 +66,14 @@ Do **not** harvest on: every `/act`, every CI run, generic push to `main`.
 - [x] `.agents/review-debt/*`
 - [x] `.github/workflows/review-debt-harvest.yml`
 - [x] ACT skill — debt mode section
-- [ ] **Implementing agent:** run eslint, dry-run harvest on a merged PR, tune `config.json` bot list
-- [ ] **Implementing agent:** merge policy note in `REVIEW.md` / branch protection checklist
+- [x] `REVIEW.md` merge-policy note
+- [ ] Tune `config.json` bot list on first real harvest
+- [ ] Confirm `github-actions[bot]` can push ledger to `main`
 
 ## Phase 2
 
-- [ ] `update-debt-status.ts` (`done` / `wontfix` after debt PR merge)
-- [ ] `plan-debt-batch.ts` — group by `area` / fingerprint
+- [x] `update-debt-status.ts` (`done` / `wontfix` after debt PR merge)
+- [x] `plan-debt-batch.ts` — group by `area`
 - [ ] Auto-reply on source PRs via `reply-threads.sh`
 - [ ] Optional: harvest `extract-findings.ts` scan rows as `priority: scan`
 

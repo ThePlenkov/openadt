@@ -83,18 +83,20 @@ Use after merge when threads were **harvested** into the ledger (not for a live 
 | **D3** | Fix | Product code in `apps/`, `tools/`, `specs/`, … |
 | **D4** | Verify | Same verify block as PR mode where applicable |
 | **D5** | PR | Title lists source PRs; body maps themes → commits |
-| **D6** | Close loop | Phase 2: `update-debt-status.ts`; optional `reply-threads.sh` on source PRs |
+| **D6** | Close loop | `bun scripts/act/update-debt-status.ts --status done --fix-pr N --threads-file …` |
 | **D7** | Resolve | `resolve-open-threads.sh` on source PRs only after reply + fix |
 
 Debt PR **merge-ready:** CI green on HEAD + summary of themes fixed. Do **not**
 require `open_threads=0` on source PRs before the debt PR merges.
 
-Query helpers:
+Query and batch helpers:
 
 ```bash
+bun scripts/act/plan-debt-batch.ts --limit 25
 bun scripts/act/query-debt.ts --duplicates
 bun scripts/act/query-debt.ts --area apps/openadt-cli
 bun scripts/act/query-debt.ts --write-summary
+bun scripts/act/update-debt-status.ts --status done --fix-pr N --thread-id PRRT_…
 ```
 
 ## Work order — PR mode (mandatory sequence)
@@ -252,6 +254,8 @@ ad-hoc `gh` calls. They collapse the typical 30+ tool calls per `/act` into ~10.
 | **Submit scores (P5)**       | `bun scripts/act/submit-scores.ts … --findings F --scores S` | per-finding parse + CSV writes (local, no API) |
 | **Harvest debt (on merge)**  | `bun scripts/act/harvest-threads.ts OWNER REPO PR`        | Not during `/act`; CI workflow or manual dispatch |
 | **Query debt (D0)**          | `bun scripts/act/query-debt.ts --status open --format tsv` | Reading `debt.jsonl` by hand |
+| **Plan debt batch (D1)**     | `bun scripts/act/plan-debt-batch.ts --limit 25`            | Hand-grouping ledger rows |
+| **Mark debt done (D6)**      | `bun scripts/act/update-debt-status.ts --status done …`    | Editing `debt.jsonl` by hand |
 
 **Scratch artifacts (e.g. `replies.tsv`) MUST live outside the worktree** —
 use an absolute path under the cloud-agent pre-approved `/tmp/agent_*/`. The

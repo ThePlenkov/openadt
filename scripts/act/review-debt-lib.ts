@@ -6,8 +6,10 @@ import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { dirname, join } from "node:path";
 
 export const DEBT_DIR = join(import.meta.dir, "../../.agents/review-debt");
-export const DEBT_FILE = join(DEBT_DIR, "debt.jsonl");
-export const SUMMARY_FILE = join(DEBT_DIR, "debt-summary.json");
+export const DEBT_FILE =
+  process.env.OPENADT_DEBT_FILE ?? join(DEBT_DIR, "debt.jsonl");
+export const SUMMARY_FILE =
+  process.env.OPENADT_DEBT_SUMMARY ?? join(DEBT_DIR, "debt-summary.json");
 export const CONFIG_FILE = join(DEBT_DIR, "config.json");
 
 export type DebtStatus = "open" | "claimed" | "done" | "wontfix" | "duplicate";
