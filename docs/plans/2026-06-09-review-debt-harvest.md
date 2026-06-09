@@ -31,12 +31,24 @@ flowchart LR
 
 ## Triggers
 
-| Trigger                            | When       | Scope             |
-| ---------------------------------- | ---------- | ----------------- |
-| `pull_request` `closed` + `merged` | Each merge | That PR only      |
-| `workflow_dispatch`                | Manual     | `pr_number` input |
+| Trigger                            | When       | Scope                  |
+| ---------------------------------- | ---------- | ---------------------- |
+| `pull_request` `closed` + `merged` | Each merge | That PR only           |
+| `workflow_dispatch`                | Manual     | PR filters (see below) |
 
 Do **not** harvest on: every `/act`, every CI run, generic push to `main`.
+
+### `workflow_dispatch` filters
+
+| Input                           | Meaning                                              |
+| ------------------------------- | ---------------------------------------------------- |
+| `pr_numbers`                    | Comma-separated merged PR ids (`72,67`)              |
+| `merged_since` / `merged_until` | UTC date range (inclusive days)                      |
+| `last_n`                        | After filters, keep N most recently merged           |
+| `pr_author`                     | Who opened the PR                                    |
+| `labels`                        | Comma-separated; **all** must match                  |
+| `thread_author`                 | Review comment author (substring, e.g. `codeant-ai`) |
+| `list_only`                     | Print matching PRs without harvesting                |
 
 ## Ledger (why not issues)
 

@@ -29,6 +29,12 @@ Only threads that are **`isResolved == false` and `isOutdated == false`** are ha
 # Harvest one merged PR (local; needs gh auth)
 bun scripts/act/harvest-threads.ts OWNER REPO PR --merged-sha SHA --run-id local
 
+# Batch harvest with filters (workflow_dispatch uses this)
+bun scripts/act/harvest-debt-batch.ts OWNER REPO --pr-ids 72,67
+bun scripts/act/harvest-debt-batch.ts OWNER REPO --merged-since 2026-06-09 --last 5
+bun scripts/act/harvest-debt-batch.ts OWNER REPO --pr-author ThePlenkov --labels enhancement
+bun scripts/act/harvest-debt-batch.ts OWNER REPO --last 10 --thread-author codeant-ai --list-only
+
 # Dry run
 bun scripts/act/harvest-threads.ts OWNER REPO PR --dry-run
 
