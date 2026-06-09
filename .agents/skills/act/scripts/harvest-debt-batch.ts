@@ -11,8 +11,7 @@
 import {
   buildSummary,
   readDebtRecords,
-  upsertRecords,
-  writeDebtRecords,
+  writeHarvestFile,
   writeSummary,
 } from "./review-debt-lib.ts";
 import { ensureGhAuth } from "./review-debt-gh.ts";
@@ -167,7 +166,6 @@ async function harvestPrList(
   args: BatchArgs,
   prs: { number: number }[],
 ): Promise<number> {
-  let ledger = readDebtRecords();
   let totalRows = 0;
 
   for (const pr of prs) {
@@ -181,13 +179,20 @@ async function harvestPrList(
       }
       continue;
     }
-    ledger = upsertRecords(ledger, result.incoming);
+    if (result.incoming.length === 0) {
+      continue;
+    }
+    writeHarvestFile({
+      pr: result.pr,
+      runId: args.runId,
+      harvestedAt: result.incoming[0]!.harvested_at,
+      records: result.incoming,
+    });
     totalRows += result.incoming.length;
   }
 
-  if (!args.dryRun) {
-    writeDebtRecords(ledger);
-    writeSummary(buildSummary(ledger));
+  if (!args.dryRun && totalRows > 0) {
+    writeSummary(buildSummary(readDebtRecords()));
   }
   return totalRows;
 }

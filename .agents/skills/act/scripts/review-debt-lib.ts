@@ -1,18 +1,52 @@
 /**
  * Shared types and helpers for review-debt harvest + query scripts.
  */
-import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
+import {
+  existsSync,
+  mkdirSync,
+  readdirSync,
+  readFileSync,
+  writeFileSync,
+} from "node:fs";
 import { dirname, join } from "node:path";
 
 /** Repo-relative when skill lives under `.agents/skills/act/`; override via env in tests. */
-export const DEBT_DIR = join(import.meta.dir, "../../../review-debt");
-export const DEBT_FILE =
-  process.env.OPENADT_DEBT_FILE ?? join(DEBT_DIR, "debt.jsonl");
-export const SUMMARY_FILE =
-  process.env.OPENADT_DEBT_SUMMARY ?? join(DEBT_DIR, "debt-summary.json");
-export const CONFIG_FILE = join(DEBT_DIR, "config.json");
+function debtDir(): string {
+  return (
+    process.env.OPENADT_DEBT_DIR ?? join(import.meta.dir, "../../../review-debt")
+  );
+}
+
+function harvestDir(): string {
+  return join(debtDir(), "harvests");
+}
+
+/** Legacy monolithic ledger (read-only merge); new harvests go to `harvests/`. */
+function debtFile(): string {
+  return process.env.OPENADT_DEBT_FILE ?? join(debtDir(), "debt.jsonl");
+}
+
+function ledgerFile(): string {
+  return process.env.OPENADT_LEDGER_FILE ?? join(debtDir(), "ledger.jsonl");
+}
+
+function summaryFile(): string {
+  return process.env.OPENADT_DEBT_SUMMARY ?? join(debtDir(), "debt-summary.json");
+}
+
+function configFile(): string {
+  return join(debtDir(), "config.json");
+}
 
 export type DebtStatus = "open" | "claimed" | "done" | "wontfix" | "duplicate";
+
+export interface LedgerOverlay {
+  thread_id: string;
+  status: DebtStatus;
+  fix_pr: number | null;
+  fixed_at: string | null;
+  notes: string | null;
+}
 export type DebtPriority = "blocking" | "human" | "nit" | "scan" | "noise";
 export type DebtNeeds = "code_change" | "reply_only" | "skip";
 
@@ -76,11 +110,11 @@ export interface DebtSummary {
 
 export function loadConfig(): DebtConfig {
   const fallback: DebtConfig = { ignore_authors: [], nit_authors: [] };
-  if (!existsSync(CONFIG_FILE)) {
+  if (!existsSync(configFile())) {
     return fallback;
   }
   try {
-    const parsed = JSON.parse(readFileSync(CONFIG_FILE, "utf8")) as DebtConfig;
+    const parsed = JSON.parse(readFileSync(configFile(), "utf8")) as DebtConfig;
     return {
       ignore_authors: parsed.ignore_authors ?? [],
       nit_authors: parsed.nit_authors ?? [],
@@ -90,21 +124,131 @@ export function loadConfig(): DebtConfig {
   }
 }
 
-export function readDebtRecords(): DebtRecord[] {
-  if (!existsSync(DEBT_FILE)) {
+function readJsonlLines<T>(path: string): T[] {
+  if (!existsSync(path)) {
     return [];
   }
-  return readFileSync(DEBT_FILE, "utf8")
+  return readFileSync(path, "utf8")
     .split("\n")
     .map((line) => line.trim())
     .filter((line) => line.length > 0)
-    .map((line) => JSON.parse(line) as DebtRecord);
+    .map((line) => JSON.parse(line) as T);
 }
 
+function listHarvestFiles(): string[] {
+  const dir = harvestDir();
+  if (!existsSync(dir)) {
+    return [];
+  }
+  return readdirSync(dir)
+    .filter((name) => name.endsWith(".jsonl"))
+    .sort()
+    .map((name) => join(dir, name));
+}
+
+export function harvestFilename(opts: {
+  harvestedAt: string;
+  pr: number;
+  runId: string;
+}): string {
+  const d = new Date(opts.harvestedAt);
+  const pad = (n: number): string => String(n).padStart(2, "0");
+  const ts =
+    `${d.getUTCFullYear()}-${pad(d.getUTCMonth() + 1)}-${pad(d.getUTCDate())}` +
+    `T${pad(d.getUTCHours())}${pad(d.getUTCMinutes())}${pad(d.getUTCSeconds())}Z`;
+  return `${ts}-pr-${opts.pr}-run-${opts.runId}.jsonl`;
+}
+
+/** Append-only harvest snapshot (one new file per PR per run — no merge conflicts). */
+export function writeHarvestFile(opts: {
+  pr: number;
+  runId: string;
+  harvestedAt: string;
+  records: DebtRecord[];
+}): string {
+  if (opts.records.length === 0) {
+    throw new Error("writeHarvestFile: no records to write");
+  }
+  const dir = harvestDir();
+  const path = join(
+    dir,
+    harvestFilename({
+      harvestedAt: opts.harvestedAt,
+      pr: opts.pr,
+      runId: opts.runId,
+    }),
+  );
+  mkdirSync(dir, { recursive: true });
+  const lines = opts.records.map((r) => JSON.stringify(r)).join("\n");
+  writeFileSync(path, `${lines}\n`, "utf8");
+  return path;
+}
+
+export function readLedgerOverlays(): Map<string, LedgerOverlay> {
+  const map = new Map<string, LedgerOverlay>();
+  for (const row of readJsonlLines<LedgerOverlay>(ledgerFile())) {
+    map.set(row.thread_id, row);
+  }
+  return map;
+}
+
+export function upsertLedgerOverlays(
+  updates: LedgerOverlay[],
+): Map<string, LedgerOverlay> {
+  const map = readLedgerOverlays();
+  for (const row of updates) {
+    map.set(row.thread_id, row);
+  }
+  const path = ledgerFile();
+  mkdirSync(dirname(path), { recursive: true });
+  const lines = [...map.values()]
+    .sort((a, b) => a.thread_id.localeCompare(b.thread_id))
+    .map((r) => JSON.stringify(r))
+    .join("\n");
+  writeFileSync(path, lines.length > 0 ? `${lines}\n` : "", "utf8");
+  return map;
+}
+
+function applyLedgerOverlays(records: DebtRecord[]): DebtRecord[] {
+  const overlays = readLedgerOverlays();
+  if (overlays.size === 0) {
+    return records;
+  }
+  return records.map((row) => {
+    const overlay = overlays.get(row.thread_id);
+    if (!overlay) {
+      return row;
+    }
+    return {
+      ...row,
+      status: overlay.status,
+      fix_pr: overlay.fix_pr,
+      fixed_at: overlay.fixed_at,
+      notes: overlay.notes,
+    };
+  });
+}
+
+export function readDebtRecords(): DebtRecord[] {
+  const sources = [...listHarvestFiles()];
+  const legacy = debtFile();
+  if (existsSync(legacy)) {
+    sources.push(legacy);
+  }
+
+  let merged: DebtRecord[] = [];
+  for (const file of sources) {
+    merged = upsertRecords(merged, readJsonlLines<DebtRecord>(file));
+  }
+  return applyLedgerOverlays(merged);
+}
+
+/** @deprecated Harvest uses writeHarvestFile; status uses ledger.jsonl. */
 export function writeDebtRecords(records: DebtRecord[]): void {
-  mkdirSync(dirname(DEBT_FILE), { recursive: true });
+  const path = debtFile();
+  mkdirSync(dirname(path), { recursive: true });
   const lines = records.map((r) => JSON.stringify(r)).join("\n");
-  writeFileSync(DEBT_FILE, lines.length > 0 ? `${lines}\n` : "", "utf8");
+  writeFileSync(path, lines.length > 0 ? `${lines}\n` : "", "utf8");
 }
 
 export function upsertRecords(
@@ -194,8 +338,9 @@ function oldestOpenHarvest(open: DebtRecord[]): string | null {
 }
 
 export function writeSummary(summary: DebtSummary): void {
-  mkdirSync(dirname(SUMMARY_FILE), { recursive: true });
-  writeFileSync(SUMMARY_FILE, `${JSON.stringify(summary, null, 2)}\n`, "utf8");
+  const path = summaryFile();
+  mkdirSync(dirname(path), { recursive: true });
+  writeFileSync(path, `${JSON.stringify(summary, null, 2)}\n`, "utf8");
 }
 
 export function classifyThread(opts: { author: string; config: DebtConfig }): {

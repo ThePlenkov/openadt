@@ -11,10 +11,10 @@ import { readFileSync } from "node:fs";
 import {
   buildSummary,
   readDebtRecords,
-  writeDebtRecords,
+  upsertLedgerOverlays,
   writeSummary,
-  type DebtRecord,
   type DebtStatus,
+  type LedgerOverlay,
 } from "./review-debt-lib.ts";
 
 interface StatusArgs {
@@ -131,39 +131,37 @@ function isTerminalStatus(status: DebtStatus): boolean {
 }
 
 function applyStatus(
-  records: DebtRecord[],
   args: StatusArgs,
 ): { updated: number; missing: string[] } {
-  const wanted = new Set(args.threadIds);
-  const missing = new Set(args.threadIds);
+  const records = readDebtRecords();
+  const byId = new Map(records.map((r) => [r.thread_id, r]));
+  const missing = args.threadIds.filter((id) => !byId.has(id));
   const now = new Date().toISOString();
-  let updated = 0;
 
-  const next = records.map((row) => {
-    if (!wanted.has(row.thread_id)) {
-      return row;
-    }
-    missing.delete(row.thread_id);
-    updated += 1;
-    return {
-      ...row,
-      status: args.status,
-      fix_pr: isTerminalStatus(args.status) ? (args.fixPr ?? row.fix_pr) : null,
-      fixed_at: isTerminalStatus(args.status) ? now : null,
-      notes: args.notes ?? row.notes,
-    };
-  });
+  const updates: LedgerOverlay[] = args.threadIds
+    .filter((id) => byId.has(id))
+    .map((thread_id) => {
+      const prev = byId.get(thread_id)!;
+      return {
+        thread_id,
+        status: args.status,
+        fix_pr: isTerminalStatus(args.status)
+          ? (args.fixPr ?? prev.fix_pr)
+          : null,
+        fixed_at: isTerminalStatus(args.status) ? now : null,
+        notes: args.notes ?? prev.notes,
+      };
+    });
 
-  writeDebtRecords(next);
-  writeSummary(buildSummary(next));
+  upsertLedgerOverlays(updates);
+  writeSummary(buildSummary(readDebtRecords()));
 
-  return { updated, missing: [...missing] };
+  return { updated: updates.length, missing };
 }
 
 function main(): void {
   const args = parseArgs(process.argv.slice(2));
-  const records = readDebtRecords();
-  const result = applyStatus(records, args);
+  const result = applyStatus(args);
 
   console.error(
     `update-debt-status: ${result.updated} row(s) → ${args.status}`,

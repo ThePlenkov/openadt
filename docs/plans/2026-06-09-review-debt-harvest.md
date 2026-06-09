@@ -80,7 +80,8 @@ Do **not** harvest on: every `/act`, every CI run, generic push to `main`.
 - [x] ACT skill — debt mode section
 - [x] `REVIEW.md` merge-policy note
 - [ ] Tune `config.json` bot list on first real harvest
-- [ ] Confirm `github-actions[bot]` can push ledger to `main`
+- [x] Harvest → append-only `harvests/{timestamp}-pr-{N}-run-{id}.jsonl` + bot PR to `main` (not direct push)
+- [x] Status updates → `ledger.jsonl` overlays (`update-debt-status.ts`)
 
 ## Phase 2
 
@@ -93,10 +94,10 @@ Do **not** harvest on: every `/act`, every CI run, generic push to `main`.
 
 - [ ] Join P5 `review_scores.csv` → auto-`wontfix` for score 0–1
 - [ ] Archive `done` rows to `debt-archive-YYYY.jsonl`
-- [ ] Ledger update via bot PR instead of direct push to `main` (if noise)
+- [x] Ledger harvest via bot PR (append-only files under `harvests/`)
 
 ## Open decisions
 
-1. Direct push of ledger to `main` vs bot PR per harvest (MVP: direct push).
+1. ~~Direct push of ledger to `main`~~ → **append-only harvest files + bot PR** (MVP).
 2. Default batch size for `/act debt` (suggest 25).
 3. Expand `ignore_authors` / `nit_authors` from your reviewer fleet.
