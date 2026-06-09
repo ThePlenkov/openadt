@@ -31,10 +31,11 @@ flowchart LR
 
 ## Triggers
 
-| Trigger                            | When       | Scope                  |
-| ---------------------------------- | ---------- | ---------------------- |
-| `pull_request` `closed` + `merged` | Each merge | That PR only           |
-| `workflow_dispatch`                | Manual     | PR filters (see below) |
+| Trigger                                           | When           | Scope                                      |
+| ------------------------------------------------- | -------------- | ------------------------------------------ |
+| `pull_request` `closed` + `merged`                | Each merge     | That PR only (immediate)                   |
+| `workflow_run` `CI` `completed` on `pull_request` | PR CI finishes | Merged PR only (deferred; merge-before-CI) |
+| `workflow_dispatch`                               | Manual         | PR filters (see below)                     |
 
 Do **not** harvest on: every `/act`, every CI run, generic push to `main`.
 

@@ -18,7 +18,8 @@ Queryable queue of **unresolved PR review threads** harvested **after merge** (o
 
 | Trigger | Scope |
 | ------- | ----- |
-| `pull_request` **closed** + merged | That PR only |
+| `pull_request` **closed** + merged | That PR only (immediate) |
+| `workflow_run` **CI** completed on `pull_request` | Same merged PR after PR CI finishes (late bot comments) |
 | `workflow_dispatch` | Filtered batch (see workflow inputs) |
 
 **CI:** each harvest adds **new files** under `harvests/` and opens a **bot PR to `main`** (no direct push, no merge conflicts on a shared ledger file).

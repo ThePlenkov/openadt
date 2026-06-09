@@ -88,6 +88,7 @@ function runTests(): number {
   const tests = [
     "review-debt-lib.test.ts",
     "resolve-harvest-prs.test.ts",
+    "resolve-harvest-target.test.ts",
     "update-debt-status.test.ts",
   ];
   const paths = tests.map((t) => `${SCRIPT_DIR}/${t}`);
