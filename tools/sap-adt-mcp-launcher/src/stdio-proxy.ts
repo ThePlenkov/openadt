@@ -19,6 +19,12 @@ import {
   readToolDefs,
   type ReadObjectBackend,
 } from "./read-object.ts";
+import {
+  maxMcpToolNameLenFromEnv,
+  rewriteToolsCallRequest,
+  shortenToolsInListResponse,
+  ToolNameRegistry,
+} from "./tool-name-limit.ts";
 
 /** Parse MCP HTTP response body (JSON or SSE `data:` lines). */
 export function parseMcpHttpResponseBody({
@@ -391,6 +397,7 @@ export function createStdioMcpBridge(): StdioMcpBridge {
   let onEndpointFailure:
     | (() => Promise<McpHttpEndpoint | undefined>)
     | undefined;
+  const toolNames = new ToolNameRegistry(maxMcpToolNameLenFromEnv());
 
   const decoder = new McpStdioDecoder();
   const encoder = new McpStdioEncoder();
@@ -470,7 +477,10 @@ export function createStdioMcpBridge(): StdioMcpBridge {
     // Methods whose backend response we rewrite to inject guidance.
     const injectMethod = guidanceEnabled() ? request?.method : undefined;
 
-    chain.append(() => forwardToBackend(message, request, injectMethod));
+    const outbound = new McpStdioMessage(
+      rewriteToolsCallRequest(message.body, toolNames),
+    );
+    chain.append(() => forwardToBackend(outbound, request, injectMethod));
   };
 
   const forwardToBackend = async (
@@ -567,11 +577,17 @@ export function createStdioMcpBridge(): StdioMcpBridge {
     hasReadBackend: boolean,
   ): string => {
     const withGuidance = injectGuidance(msg, request?.id, injectMethod);
-    return injectReadTools(
+    const withReadTools = injectReadTools(
       withGuidance,
       request?.id,
       request?.method,
       hasReadBackend,
+    );
+    return shortenToolsInListResponse(
+      withReadTools,
+      request?.id,
+      request?.method,
+      toolNames,
     );
   };
 

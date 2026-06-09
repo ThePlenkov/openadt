@@ -1,6 +1,6 @@
 {
   "mcpServers": {
-    "sap-adt-dev": {
+    "sap-adt": {
       "command": "bun",
       "args": ["run", "mcp:stdio"]
     }
