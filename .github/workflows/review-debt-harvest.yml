@@ -1,6 +1,6 @@
 # Harvest unresolved review threads into .agents/review-debt/harvests/*.jsonl
 # Does NOT run on every push or every /act — only on merge, after PR CI, or manual dispatch.
-# New harvest files land on main via bot PR (append-only — no ledger merge conflicts).
+# New harvest files land on main as append-only paths (unique per run — no ledger conflicts).
 name: Review debt harvest
 
 on:
@@ -52,7 +52,11 @@ on:
 permissions:
   actions: read
   contents: write
-  pull-requests: write
+  pull-requests: read
+
+concurrency:
+  group: review-debt-land-main
+  cancel-in-progress: false
 
 jobs:
   harvest:
@@ -125,7 +129,7 @@ jobs:
             "${ARGS[@]}" \
             --run-id "$RUN_ID"
 
-      - name: Open PR with new harvest files
+      - name: Land harvest files on main
         if: |
           (github.event_name == 'pull_request' || github.event_name == 'workflow_run') &&
           steps.target.outputs.should_harvest == 'true' ||
@@ -133,29 +137,11 @@ jobs:
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          set -euo pipefail
-          if [ -z "$(git status --porcelain .agents/review-debt/harvests/ 2>/dev/null)" ]; then
-            echo "No new harvest files"
-            exit 0
-          fi
-
-          BRANCH="review-debt/harvest-${GITHUB_RUN_ID}"
-          git config user.name "github-actions[bot]"
-          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git checkout -b "$BRANCH"
-          git add .agents/review-debt/harvests/
-
           if [ "${{ github.event_name }}" = "pull_request" ]; then
             TITLE="chore(review-debt): harvest PR #${{ github.event.pull_request.number }}"
-            BODY="Append-only harvest files under .agents/review-debt/harvests/ (timestamp-pr-run). Merge to add to main without ledger conflicts."
           elif [ "${{ github.event_name }}" = "workflow_run" ]; then
             TITLE="chore(review-debt): harvest PR #${{ steps.target.outputs.pr_number }} (after PR CI)"
-            BODY="Deferred harvest after CI completed on a merged PR (merge-before-CI case). Append-only files under harvests/."
           else
             TITLE="chore(review-debt): harvest batch (run ${{ github.run_id }})"
-            BODY="Append-only harvest files from workflow_dispatch run ${{ github.run_id }}. Merge to add to main."
           fi
-
-          git commit -m "$TITLE"
-          git push -u origin "$BRANCH"
-          gh pr create --base main --head "$BRANCH" --title "$TITLE" --body "$BODY"
+          bash .agents/skills/act/scripts/land-harvest-files.sh "$TITLE"
