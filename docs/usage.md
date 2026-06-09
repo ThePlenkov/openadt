@@ -441,6 +441,8 @@ openadt mcp print-config --port 2236  # print agent-ready HTTP client config
 | `adt discover` ClassNotFoundError | SDK runtime not built                | `openadt config build`                                            |
 | Discovery empty                   | Not logged on                        | `openadt auth login DEV` first                                    |
 
+<a id="mcp-troubleshooting"></a>
+
 ### MCP troubleshooting
 
 **MCP Inspector shows a reconnect loop on `openadt-mcp serve --stdio`** — the cold-start shared backend was unable to spawn in 1.3.16. Upgrade to **`openadt-mcp ≥ 1.3.17`** (the fix re-execs the binary via `process.execPath` instead of looking for `bun main.ts` on disk). Workarounds for the broken release:
@@ -475,6 +477,16 @@ Remove-Item "$env:USERPROFILE\.openadt\mcp\endpoints\*.json" -Force -ErrorAction
 ```bash
 openadt mcp stop --port 2236   # or: openadt-mcp stop --port 2236
 ```
+
+**Claude Code fails at startup with `ValidationException` / tool name length ≤ 64** — Claude prefixes MCP tools as `mcp__<serverKey>__<toolName>` before AWS Bedrock Converse. Long server keys (for example `sap-adt-dev`) plus long SAP tool names exceed the 64-character limit.
+
+Fix:
+
+1. Use a **short server key** in `.mcp.json` (Claude Code) or `.cursor/mcp.json` (Cursor): `"sap-adt"` or `"adt"`, not `"sap-adt-dev"`.
+2. Restart the agent / reload MCP after editing the config.
+3. If you need a longer server key, set `OPENADT_MCP_MAX_TOOL_NAME` to `clamp(57 - len(serverKey), 16, 57)` in the MCP spawn environment. Values outside the 16..57 range silently fall back to the default, so the clamp is required.
+
+The stdio proxy also shortens SAP tool names longer than 45 characters by default. Full contract: [specs/mcp.md — Agent backend tool name limits](../specs/mcp.md#agent-backend-tool-name-limits-claude--aws-bedrock).
 
 <a id="security"></a>
 

@@ -19,6 +19,11 @@ import {
   readToolDefs,
   type ReadObjectBackend,
 } from "./read-object.ts";
+import {
+  maxMcpToolNameLenFromEnv,
+  rewriteToolsCallRequest,
+  ToolNameRegistry,
+} from "./tool-name-limit.ts";
 
 /** Parse MCP HTTP response body (JSON or SSE `data:` lines). */
 export function parseMcpHttpResponseBody({
@@ -156,42 +161,6 @@ function promptGetParams(params: Record<string, unknown>): {
   return { name, args };
 }
 
-/**
- * Inject launcher guidance into a backend response: append the workflow
- * cheat-sheet to `initialize.instructions`, and merge our prompts into
- * `prompts/list`. Returns the (possibly rewritten) message body. Untouched
- * for any other method, or when the response id does not match the request.
- */
-function injectGuidance(
-  msg: string,
-  reqId: ParsedRpc["id"],
-  method: string | undefined,
-): string {
-  if (!method || (method !== "initialize" && method !== "prompts/list")) {
-    return msg;
-  }
-  let parsed: { id?: unknown; result?: Record<string, unknown> };
-  try {
-    parsed = JSON.parse(msg);
-  } catch {
-    return msg;
-  }
-  if (parsed.id !== reqId || !parsed.result) {
-    return msg;
-  }
-  if (method === "initialize") {
-    parsed.result.instructions = augmentInstructions(
-      parsed.result.instructions as string | undefined,
-    );
-  } else {
-    const existing = Array.isArray(parsed.result.prompts)
-      ? parsed.result.prompts
-      : [];
-    parsed.result.prompts = [...existing, ...guidancePromptDefs()];
-  }
-  return JSON.stringify(parsed);
-}
-
 /** Extract `name` + `arguments` object from a tools/call request. */
 function toolCallParams(params: Record<string, unknown>): {
   name: string;
@@ -225,36 +194,6 @@ function isReadToolRequest(
     request?.method === "tools/call" &&
     request.id !== undefined
   );
-}
-
-/**
- * Merge our read tools into a backend `tools/list` response. No-op for any other
- * method, when read is disabled, when no read backend is wired, or when the
- * response id does not match the request.
- */
-function injectReadTools(
-  msg: string,
-  reqId: ParsedRpc["id"],
-  method: string | undefined,
-  hasBackend: boolean,
-): string {
-  if (!hasBackend || !readEnabled() || method !== "tools/list") {
-    return msg;
-  }
-  let parsed: { id?: unknown; result?: Record<string, unknown> };
-  try {
-    parsed = JSON.parse(msg);
-  } catch {
-    return msg;
-  }
-  if (parsed.id !== reqId || !parsed.result) {
-    return msg;
-  }
-  const existing = Array.isArray(parsed.result.tools)
-    ? parsed.result.tools
-    : [];
-  parsed.result.tools = [...existing, ...readToolDefs()];
-  return JSON.stringify(parsed);
 }
 
 /** Result of one HTTP POST to the MCP endpoint. */
@@ -391,6 +330,7 @@ export function createStdioMcpBridge(): StdioMcpBridge {
   let onEndpointFailure:
     | (() => Promise<McpHttpEndpoint | undefined>)
     | undefined;
+  const toolNames = new ToolNameRegistry(maxMcpToolNameLenFromEnv());
 
   const decoder = new McpStdioDecoder();
   const encoder = new McpStdioEncoder();
@@ -470,7 +410,10 @@ export function createStdioMcpBridge(): StdioMcpBridge {
     // Methods whose backend response we rewrite to inject guidance.
     const injectMethod = guidanceEnabled() ? request?.method : undefined;
 
-    chain.append(() => forwardToBackend(message, request, injectMethod));
+    const outbound = new McpStdioMessage(
+      rewriteToolsCallRequest({ body: message.body, registry: toolNames }),
+    );
+    chain.append(() => forwardToBackend(outbound, request, injectMethod));
   };
 
   const forwardToBackend = async (
@@ -560,19 +503,97 @@ export function createStdioMcpBridge(): StdioMcpBridge {
     return true;
   };
 
+  type RpcResult = {
+    instructions?: unknown;
+    prompts?: unknown;
+    tools?: unknown;
+  };
+  type RpcResponse = { id?: unknown; result?: RpcResult };
+  type RewritePlan = {
+    guidance: "initialize" | "prompts/list" | undefined;
+    readTools: boolean;
+    shorten: boolean;
+  };
+
+  const planRewrite = (
+    method: string | undefined,
+    injectMethod: string | undefined,
+    hasReadBackend: boolean,
+  ): RewritePlan | undefined => {
+    if (injectMethod === "initialize" || injectMethod === "prompts/list") {
+      return { guidance: injectMethod, readTools: false, shorten: false };
+    }
+    if (method === "tools/list") {
+      return {
+        guidance: undefined,
+        readTools: hasReadBackend && readEnabled(),
+        shorten: true,
+      };
+    }
+    return undefined;
+  };
+
+  const shortenToolNames = (
+    tools: Array<{ name?: unknown }>,
+    registry: { exportName: (n: string) => string },
+  ): Array<{ name?: unknown }> =>
+    tools.map((tool) => {
+      if (!tool || typeof tool !== "object") {
+        return tool;
+      }
+      const name = tool.name;
+      if (typeof name !== "string") {
+        return tool;
+      }
+      return { ...tool, name: registry.exportName(name) };
+    });
+
+  const applyGuidance = (result: RpcResult, plan: RewritePlan): void => {
+    if (plan.guidance === "initialize") {
+      result.instructions = augmentInstructions(
+        result.instructions as string | undefined,
+      );
+    } else if (plan.guidance === "prompts/list") {
+      const existing = Array.isArray(result.prompts) ? result.prompts : [];
+      result.prompts = [...existing, ...guidancePromptDefs()];
+    }
+  };
+
+  const applyReadTools = (result: RpcResult): void => {
+    if (!Array.isArray(result.tools)) return;
+    result.tools = [...result.tools, ...readToolDefs()];
+  };
+
+  const applyShorten = (result: RpcResult): void => {
+    if (!Array.isArray(result.tools)) return;
+    result.tools = shortenToolNames(
+      result.tools as Array<{ name?: unknown }>,
+      toolNames,
+    );
+  };
+
   const rewriteForwardedMessage = (
     msg: string,
     request: ParsedRpc | undefined,
     injectMethod: string | undefined,
     hasReadBackend: boolean,
   ): string => {
-    const withGuidance = injectGuidance(msg, request?.id, injectMethod);
-    return injectReadTools(
-      withGuidance,
-      request?.id,
-      request?.method,
-      hasReadBackend,
-    );
+    const plan = planRewrite(request?.method, injectMethod, hasReadBackend);
+    if (!plan) return msg;
+    let parsed: RpcResponse;
+    try {
+      parsed = JSON.parse(msg) as RpcResponse;
+    } catch {
+      return msg;
+    }
+    if (parsed.id !== request?.id || !parsed.result) {
+      return msg;
+    }
+    const result = parsed.result as RpcResult;
+    applyGuidance(result, plan);
+    if (plan.readTools) applyReadTools(result);
+    if (plan.shorten) applyShorten(result);
+    return JSON.stringify(parsed);
   };
 
   const enqueuePending = (message: McpStdioMessage): void => {

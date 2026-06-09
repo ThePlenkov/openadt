@@ -375,6 +375,40 @@ Requires [Bun](https://bun.sh) on `PATH` (repo `packageManager`). Script chain: 
 
 Run `agent` from the repository root. Stale servers are stopped at startup; kill orphans with `Get-Process adt-lsc | Stop-Process -Force` if logon hangs.
 
+**Claude Code** uses the same schema in **`.mcp.json`** at the repo root (not `.cursor/mcp.json`). Use the same `sap-adt` server key and `bun run mcp:stdio` command as above.
+
+### Agent backend tool name limits (Claude + AWS Bedrock)
+
+Some agent hosts (notably **Claude Code on AWS Bedrock**) do not call MCP tools by their raw MCP name. Claude prefixes each tool as:
+
+```text
+mcp__<serverKey>__<toolName>
+```
+
+AWS Bedrock Converse rejects `toolSpec.name` values **longer than 64 characters**. SAP ADT MCP tool names can be long (for example `abap_business_services-fetch_service_information`, 49 characters). A long **server key** in `.mcp.json` / `.cursor/mcp.json` pushes the combined name over the limit.
+
+**Budget formula (Claude + Bedrock):**
+
+```text
+len(serverKey) + len(toolName) ≤ 57    // because mcp__ (5) + __ (2) = 7 overhead
+```
+
+| Server key       | Max safe SAP tool name | Example failure                                    |
+| ---------------- | ---------------------- | -------------------------------------------------- |
+| `sap-adt`        | 50                     | — (longest known SAP tool fits)                    |
+| `sap-adt-dev`    | 46                     | `abap_business_services-fetch_service_information` |
+| `my-sap-adt-mcp` | 43                     | most business-service tools                        |
+
+**Symptom:** project fails to start in Claude with HTTP 400 / `ValidationException`: `toolSpec.name` … `must have length less than or equal to 64`.
+
+**Mitigations (in order):**
+
+1. **Keep the MCP server key short** — use `sap-adt` or `adt` in `.mcp.json` and `.cursor/mcp.json`. Do **not** use descriptive suffixes like `-dev` unless you also shorten tool exposure.
+2. **Stdio proxy shortening (OpenADT)** — `serve --stdio` shortens SAP tool names longer than **45 characters** in `tools/list` and maps aliases back on `tools/call` (`tools/sap-adt-mcp-launcher/src/tool-name-limit.ts`). Override with `OPENADT_MCP_MAX_TOOL_NAME` (minimum 16).
+3. **Tighter limit for long server keys** — if you must keep a long server key, set `OPENADT_MCP_MAX_TOOL_NAME` to `57 - len(serverKey)`.
+
+Repo-local configs shipped in git must use the short key `sap-adt`. User-facing troubleshooting: [docs/usage.md](../docs/usage.md#mcp-troubleshooting).
+
 **SECUDIR:** do not point at `~/.openadt/sec` (HTTP CA PEMs). Launcher prefers `%APPDATA%\\SAP\\Common` and sets `SNC_LIB` to configured `sapcrypto`. **Logon:** use `createProjectAndLogon` (retry on “destination does not exist” race).
 
 ---
@@ -404,6 +438,7 @@ Each `serve` / `serve --stdio` writes `~/.openadt/mcp/endpoints/<port>.json` (`u
 | CLI entry              | `apps/openadt-cli` → `McpServeCommand` → Bun launcher                        |
 | Launcher               | `tools/sap-adt-mcp-launcher/src/main.ts`                                     |
 | Stdio bridge           | `tools/sap-adt-mcp-launcher/src/stdio-proxy.ts`                              |
+| Tool name limits       | `tools/sap-adt-mcp-launcher/src/tool-name-limit.ts`                          |
 | Content-Length framing | `tools/sap-adt-mcp-launcher/src/mcp-framing.ts` (`node:stream` Transform)    |
 | Stdio agent entry      | `scripts/mcp-stdio.ts` → `tools/sap-adt-mcp-launcher/src/mcp-stdio-entry.ts` |
 | LSP + logon            | `lsp-client.ts`, `logon-handlers.ts`                                         |
