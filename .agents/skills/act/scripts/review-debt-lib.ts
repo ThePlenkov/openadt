@@ -1,7 +1,6 @@
 /**
  * Shared types and helpers for review-debt harvest + query scripts.
  */
-import { createHash } from "node:crypto";
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { dirname, join } from "node:path";
 
@@ -75,31 +74,6 @@ export interface DebtSummary {
   oldest_open: string | null;
 }
 
-const PREVIEW_MAX = 120;
-
-export function gh(args: string[]): string {
-  const proc = Bun.spawnSync(["gh", ...args], {
-    stdout: "pipe",
-    stderr: "pipe",
-  });
-  if (proc.exitCode !== 0) {
-    const err = new TextDecoder().decode(proc.stderr).trim();
-    throw new Error(`gh ${args[0]} failed: ${err}`);
-  }
-  return new TextDecoder().decode(proc.stdout);
-}
-
-export function ensureGhAuth(): void {
-  const proc = Bun.spawnSync(["gh", "auth", "status"], {
-    stdout: "ignore",
-    stderr: "ignore",
-  });
-  if (proc.exitCode !== 0) {
-    console.error("error: gh not authenticated");
-    process.exit(1);
-  }
-}
-
 export function loadConfig(): DebtConfig {
   const fallback: DebtConfig = { ignore_authors: [], nit_authors: [] };
   if (!existsSync(CONFIG_FILE)) {
@@ -114,33 +88,6 @@ export function loadConfig(): DebtConfig {
   } catch {
     return fallback;
   }
-}
-
-export function normalizeBody(text: string): string {
-  return text.replace(/\s+/g, " ").trim().toLowerCase();
-}
-
-export function fingerprint(body: string, path: string): string {
-  const payload = `${normalizeBody(body)}|${path}`;
-  return `sha256:${createHash("sha256").update(payload).digest("hex").slice(0, 16)}`;
-}
-
-export function deriveArea(filePath: string): string {
-  if (!filePath || filePath === "-") {
-    return "(no path)";
-  }
-  const parts = filePath.split("/").filter(Boolean);
-  if (parts.length <= 2) {
-    return parts.join("/") || "(root)";
-  }
-  return parts.slice(0, 2).join("/");
-}
-
-export function bodyPreview(body: string): string {
-  const flat = body.replace(/\s+/g, " ").trim();
-  return flat.length > PREVIEW_MAX
-    ? `${flat.slice(0, PREVIEW_MAX - 1)}…`
-    : flat;
 }
 
 export function readDebtRecords(): DebtRecord[] {

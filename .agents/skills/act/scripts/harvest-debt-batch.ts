@@ -10,12 +10,12 @@
  */
 import {
   buildSummary,
-  ensureGhAuth,
   readDebtRecords,
   upsertRecords,
   writeDebtRecords,
   writeSummary,
 } from "./review-debt-lib.ts";
+import { ensureGhAuth } from "./review-debt-gh.ts";
 import { harvestOnePr } from "./harvest-threads.ts";
 import {
   hasHarvestSelection,

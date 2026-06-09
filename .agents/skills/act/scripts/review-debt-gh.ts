@@ -1,7 +1,30 @@
 /**
- * GitHub GraphQL helpers for review-debt harvest.
+ * GitHub CLI helpers for review-debt harvest.
  */
-import { gh, type ReviewThreadNode } from "./review-debt-lib.ts";
+import type { ReviewThreadNode } from "./review-debt-lib.ts";
+
+export function gh(args: string[]): string {
+  const proc = Bun.spawnSync(["gh", ...args], {
+    stdout: "pipe",
+    stderr: "pipe",
+  });
+  if (proc.exitCode !== 0) {
+    const err = new TextDecoder().decode(proc.stderr).trim();
+    throw new Error(`gh ${args[0]} failed: ${err}`);
+  }
+  return new TextDecoder().decode(proc.stdout);
+}
+
+export function ensureGhAuth(): void {
+  const proc = Bun.spawnSync(["gh", "auth", "status"], {
+    stdout: "ignore",
+    stderr: "ignore",
+  });
+  if (proc.exitCode !== 0) {
+    console.error("error: gh not authenticated");
+    process.exit(1);
+  }
+}
 
 export interface GhPrTarget {
   owner: string;

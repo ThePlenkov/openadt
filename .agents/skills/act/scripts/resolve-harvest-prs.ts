@@ -1,7 +1,7 @@
 /**
  * Resolve which merged PR numbers to harvest under filter criteria.
  */
-import { gh } from "./review-debt-lib.ts";
+import { gh } from "./review-debt-gh.ts";
 
 export interface MergedPrCandidate {
   number: number;

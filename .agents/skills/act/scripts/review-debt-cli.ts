@@ -11,7 +11,7 @@
  *   bun run act:debt:test
  */
 import { spawnSync } from "node:child_process";
-import { gh } from "./review-debt-lib.ts";
+import { gh } from "./review-debt-gh.ts";
 
 const SCRIPT_DIR = import.meta.dir;
 

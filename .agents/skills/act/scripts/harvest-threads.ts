@@ -11,13 +11,8 @@
  *   bun .agents/skills/act/scripts/harvest-threads.ts OWNER REPO PR --merged-sha SHA
  */
 import {
-  bodyPreview,
   buildSummary,
   classifyThread,
-  deriveArea,
-  ensureGhAuth,
-  fingerprint,
-  gh,
   loadConfig,
   readDebtRecords,
   upsertRecords,
@@ -25,7 +20,12 @@ import {
   writeSummary,
   type DebtRecord,
 } from "./review-debt-lib.ts";
-import { fetchReviewThreads } from "./review-debt-gh.ts";
+import {
+  ensureGhAuth,
+  fetchReviewThreads,
+  gh,
+} from "./review-debt-gh.ts";
+import { bodyPreview, deriveArea, fingerprint } from "./review-debt-text.ts";
 
 interface HarvestArgs {
   owner: string;
@@ -205,7 +205,7 @@ function toDebtRecord(opts: {
     author,
     body,
     body_preview: bodyPreview(body),
-    fingerprint: fingerprint(body, path),
+    fingerprint: fingerprint({ body, path }),
     area: deriveArea(path),
     harvested_at: opts.harvestedAt,
     harvest_run_id: opts.runId,

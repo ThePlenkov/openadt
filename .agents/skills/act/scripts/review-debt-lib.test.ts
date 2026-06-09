@@ -1,13 +1,11 @@
 import { describe, expect, test } from "bun:test";
+import { buildSummary, upsertRecords, type DebtRecord } from "./review-debt-lib.ts";
 import {
   bodyPreview,
-  buildSummary,
   deriveArea,
   fingerprint,
   normalizeBody,
-  upsertRecords,
-  type DebtRecord,
-} from "./review-debt-lib.ts";
+} from "./review-debt-text.ts";
 
 function sampleDebtRecord(
   overrides: Partial<DebtRecord> = {},
@@ -42,8 +40,9 @@ function sampleDebtRecord(
 
 describe("review-debt-lib", () => {
   test("fingerprint is stable for normalized body", () => {
-    const a = fingerprint("Consider  extracting", "apps/foo/Bar.java");
-    const b = fingerprint("consider extracting", "apps/foo/Bar.java");
+    const path = "apps/foo/Bar.java";
+    const a = fingerprint({ body: "Consider  extracting", path });
+    const b = fingerprint({ body: "consider extracting", path });
     expect(a).toBe(b);
   });
 
