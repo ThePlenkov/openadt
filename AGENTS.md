@@ -203,7 +203,7 @@ bun install
 ./mvnw -q verify -f pom.xml -Pdistribution -Dopenadt.distribution=true -Dsurefire.runOrder=alphabetical
 ```
 
-Always pass **both** `-Pdistribution` and `-Dopenadt.distribution=true` (the property deactivates the `sap-sdk` Maven profile). If `verify` fails on `ConfigDestinationsCreateCommandTest` with `user.home` NPE, add `-Dsurefire.runOrder=alphabetical` — `LocalProxyRegistryTest` clears `user.home` without restoring it and can break later tests in the default order.
+Always pass both -Pdistribution and -Dopenadt.distribution=true (the property deactivates the sap-sdk Maven profile). Note that if verify fails on ConfigDestinationsCreateCommandTest with a user.home NPE, it is due to LocalProxyRegistryTest clearing user.home without restoring its original value; the proper fix is to correct the test's cleanup logic rather than relying on -Dsurefire.runOrder=alphabetical workarounds.
 
 Equivalent Nx targets (`openadt:build`, `openadt:test`) already pass those flags for the CLI module, but `openadt-sap-adt:compile` in Nx does **not** — see below.
 
