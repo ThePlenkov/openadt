@@ -20,7 +20,6 @@ on:
         description: Pre-release id — only used with prerelease/prepatch/preminor/premajor bumps
         required: false
         type: choice
-        default: rc
         options:
           - rc
           - beta
