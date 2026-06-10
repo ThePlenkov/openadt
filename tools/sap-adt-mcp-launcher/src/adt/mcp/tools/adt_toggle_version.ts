@@ -1,61 +1,47 @@
 /**
- * MCP tool contract for toggle version.
- * MCP layer on top of ADT LSP filesystem service.
+ * MCP tool for adt toggle version.
+ * Uses MCP SDK pattern with Zod schema.
  */
-import { mcpTool, type, Infer } from "../../../mcp/contract/contract-core.js";
+import { z } from 'zod';
 import { toggleVersion } from "../../services/adtLs/fileSystem/toggleVersion.js";
 import type { LspTransport } from "../../../lsp/client/lsp-transport.js";
 import { callLspContract } from "../../../lsp/client/call-lsp-contract.js";
-import {
-  AgentErrorCode,
-  agentError,
-} from "../../../service/agent/error-codes.js";
 
-export const adt_toggle_version = mcpTool({
-  name: "adt_toggle_version",
-  description: "Toggle active/inactive version",
-  types: {
-    input: type<Infer<typeof inputSchema>>(),
-    output: type<{ success: boolean; isActive: boolean }>(),
-  },
+// Zod schema (single source of truth)
+const schema = z.object({
+  destination: z.string().describe("SAP destination"),
+  uri: z.string().describe("Object URI"),
 });
 
-export const inputSchema = {
-  type: "object",
-  properties: {
-    destination: { type: "string", description: "SAP destination" },
-    uri: { type: "string", description: "Object URI" },
+// Tool definition for MCP SDK registration
+export const adt_toggle_version = {
+  name: "adt_toggle_version",
+  description: "Toggle active/inactive version",
+  inputSchema: schema,
+  handler: async (args: z.infer<typeof schema>, transport: LspTransport) => {
+    try {
+      const lspResult = await callLspContract(
+        toggleVersion,
+        transport,
+        { destination: args.destination,
+          uri: args.uri },
+      );
+
+      return {
+        content: [{
+          type: "text",
+          text: JSON.stringify(lspResult),
+        }],
+      };
+    } catch (err) {
+      const message = err instanceof Error ? err.message : String(err);
+      return {
+        content: [{
+          type: "text",
+          text: `Error: ${message}`,
+        }],
+        isError: true,
+      };
+    }
   },
-  required: ["destination", "uri"],
-} as const;
-
-export function createHandler(transport: LspTransport) {
-  return {
-    async handle(args: Record<string, unknown>) {
-      const params = args as any;
-
-      // Validation
-      if (typeof params.destination !== "string") {
-        return {
-          success: false,
-          error: agentError(
-            AgentErrorCode.INVALID_URI,
-            "destination must be a string",
-            String(params.destination),
-          ),
-        };
-      }
-
-      if (typeof params.uri !== "string") {
-        return {
-          success: false,
-          error: agentError(
-            AgentErrorCode.INVALID_URI,
-            "uri must be a string",
-            String(params.uri),
-          ),
-        };
-      }
-    },
-  };
-}
+};

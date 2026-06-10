@@ -1,6 +1,6 @@
 /**
- * ADT MCP tool contracts and tool sets index.
- * Exports all MCP tool contracts organized by domain.
+ * ADT MCP tools index.
+ * Exports all MCP tools using MCP SDK pattern with Zod schemas.
  */
 
 // Repository
@@ -53,78 +53,64 @@ import { adt_run_check } from "./tools/adt_run_check.js";
 // Activation
 import { adt_get_inactive_objects } from "./tools/adt_get_inactive_objects.js";
 
-// Tool sets
-import { toolSets } from "./tool-sets/index.js";
-import type { McpToolRegistry } from "../../mcp/client/registry.js";
-import type { LspTransport } from "../../lsp/client/lsp-transport.js";
-
-export { adt_quick_search };
-export { adt_search_transports_simple };
-export { adt_search_transports };
-export { adt_check_transport_lock };
-export { adt_create_transport };
-export { adt_assign_transport };
-export { adt_document_symbols };
-export { adt_run_application };
-export { adt_find_references };
-export { adt_force_refresh };
-export { adt_get_object_name };
-export { adt_get_package_name };
-export { adt_get_folder_uri };
-export { adt_get_external_links };
-export { adt_lock_file };
-export { adt_unlock_file };
-export { adt_get_file_lock_status };
-export { adt_toggle_version };
-export { adt_get_hover };
-export { adt_format };
-export { adt_diagnostic };
-export { adt_get_coverage };
-export { adt_load_statement_results };
-export { adt_get_check_variants };
-export { adt_run_check };
-export { adt_get_inactive_objects };
+export {
+  adt_quick_search,
+  adt_search_transports_simple,
+  adt_search_transports,
+  adt_check_transport_lock,
+  adt_create_transport,
+  adt_assign_transport,
+  adt_document_symbols,
+  adt_run_application,
+  adt_find_references,
+  adt_force_refresh,
+  adt_get_object_name,
+  adt_get_package_name,
+  adt_get_folder_uri,
+  adt_get_external_links,
+  adt_lock_file,
+  adt_unlock_file,
+  adt_get_file_lock_status,
+  adt_toggle_version,
+  adt_get_hover,
+  adt_format,
+  adt_diagnostic,
+  adt_get_coverage,
+  adt_load_statement_results,
+  adt_get_check_variants,
+  adt_run_check,
+  adt_get_inactive_objects,
+};
 
 /**
- * All MCP tool contracts organized by domain
+ * All MCP tools for easy registration with MCP SDK server.
  */
-export const mcpTools = {
-  repository: { adt_quick_search },
-  transport: {
-    adt_search_transports_simple,
-    adt_search_transports,
-    adt_check_transport_lock,
-    adt_create_transport,
-    adt_assign_transport,
-  },
-  documentSymbol: { adt_document_symbols },
-  applicationRun: { adt_run_application },
-  references: { adt_find_references },
-  fileSystem: {
-    adt_force_refresh,
-    adt_get_object_name,
-    adt_get_package_name,
-    adt_get_folder_uri,
-    adt_get_external_links,
-    adt_lock_file,
-    adt_unlock_file,
-    adt_get_file_lock_status,
-    adt_toggle_version,
-  },
-  hover: { adt_get_hover },
-  format: { adt_format },
-  diagnostic: { adt_diagnostic },
-  coverage: { adt_get_coverage, adt_load_statement_results },
-  atc: { adt_get_check_variants, adt_run_check },
-  activation: { adt_get_inactive_objects },
-} as const;
+export const mcpTools = [
+  adt_quick_search,
+  adt_search_transports_simple,
+  adt_search_transports,
+  adt_check_transport_lock,
+  adt_create_transport,
+  adt_assign_transport,
+  adt_document_symbols,
+  adt_run_application,
+  adt_find_references,
+  adt_force_refresh,
+  adt_get_object_name,
+  adt_get_package_name,
+  adt_get_folder_uri,
+  adt_get_external_links,
+  adt_lock_file,
+  adt_unlock_file,
+  adt_get_file_lock_status,
+  adt_toggle_version,
+  adt_get_hover,
+  adt_format,
+  adt_diagnostic,
+  adt_get_coverage,
+  adt_load_statement_results,
+  adt_get_check_variants,
+  adt_run_check,
+  adt_get_inactive_objects,
+];
 
-/**
- * Initialize MCP tool registry with all ADT tool sets.
- */
-export function initializeMcpRegistry(registry: McpToolRegistry): void {
-  for (const ToolSetClass of toolSets) {
-    const toolSet = new ToolSetClass();
-    toolSet.register(registry);
-  }
-}

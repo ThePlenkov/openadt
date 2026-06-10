@@ -1,109 +1,51 @@
 /**
- * MCP tool contract for getting inactive objects.
- * MCP layer on top of ADT LSP activation service.
+ * MCP tool for getting inactive objects.
+ * Uses MCP SDK pattern with Zod schema.
  */
-import { mcpTool, type, Infer } from "../../../mcp/contract/contract-core.js";
+import { z } from 'zod';
 import { getInactiveObjects } from "../../services/adtLs/activation/getInactiveObjects.js";
 import type { LspTransport } from "../../../lsp/client/lsp-transport.js";
 import { callLspContract } from "../../../lsp/client/call-lsp-contract.js";
-import {
-  AgentErrorCode,
-  agentError,
-} from "../../../service/agent/error-codes.js";
 
-export const adt_get_inactive_objects = mcpTool({
-  name: "adt_get_inactive_objects",
-  description: "Get list of inactive objects in the current request",
-  types: {
-    input: type<{
-      destination: string;
-      package?: string;
-      objectType?: string;
-    }>(),
-    output: type<{
-      success: boolean;
-      objects: Array<{
-        name: string;
-        type: string;
-        uri: string;
-        package?: string;
-      }>;
-    }>(),
-  },
+// Zod schema (single source of truth)
+const schema = z.object({
+  destination: z.string().describe("SAP destination"),
+  package: z.string().optional().describe("Package filter (optional)"),
+  objectType: z.string().optional().describe("Object type filter (optional)"),
 });
 
-export const inputSchema = {
-  type: "object",
-  properties: {
-    destination: { type: "string", description: "SAP destination" },
-    package: { type: "string", description: "Package filter (optional)" },
-    objectType: {
-      type: "string",
-      description: "Object type filter (optional)",
-    },
+// Tool definition for MCP SDK registration
+export const adt_get_inactive_objects = {
+  name: "adt_get_inactive_objects",
+  description: "Get list of inactive objects in the current request",
+  inputSchema: schema,
+  handler: async (args: z.infer<typeof schema>, transport: LspTransport) => {
+    try {
+      const lspResult = await callLspContract(
+        getInactiveObjects,
+        transport,
+        {
+          destination: args.destination,
+          package: args.package,
+          objectType: args.objectType,
+        },
+      );
+
+      return {
+        content: [{
+          type: "text",
+          text: JSON.stringify(lspResult),
+        }],
+      };
+    } catch (err) {
+      const message = err instanceof Error ? err.message : String(err);
+      return {
+        content: [{
+          type: "text",
+          text: `Error: ${message}`,
+        }],
+        isError: true,
+      };
+    }
   },
-  required: ["destination"],
-} as const;
-
-export function createHandler(transport: LspTransport) {
-  return {
-    async handle(args: Record<string, unknown>) {
-      const { destination, package: pkg, objectType } = args;
-
-      // Validation
-      if (typeof destination !== "string") {
-        return {
-          success: false,
-          error: agentError(
-            AgentErrorCode.INVALID_URI,
-            "destination must be a string",
-            String(destination),
-          ),
-        };
-      }
-
-      if (pkg !== undefined && typeof pkg !== "string") {
-        return {
-          success: false,
-          error: agentError(
-            AgentErrorCode.INVALID_URI,
-            "package must be a string",
-            String(pkg),
-          ),
-        };
-      }
-
-      if (objectType !== undefined && typeof objectType !== "string") {
-        return {
-          success: false,
-          error: agentError(
-            AgentErrorCode.INVALID_URI,
-            "objectType must be a string",
-            String(objectType),
-          ),
-        };
-      }
-
-      try {
-        const result = await callLspContract(getInactiveObjects, transport, {
-          destination,
-          package: pkg,
-          objectType,
-        });
-        return { success: true, data: result };
-      } catch (err) {
-        const message = err instanceof Error ? err.message : String(err);
-        let error;
-        try {
-          error = JSON.parse(message);
-        } catch {
-          error = agentError(AgentErrorCode.LSP_ERROR, message);
-        }
-        return {
-          success: false,
-          error: { ...error, destination },
-        };
-      }
-    },
-  };
-}
+};

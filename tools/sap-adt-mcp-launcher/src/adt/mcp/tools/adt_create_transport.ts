@@ -1,78 +1,49 @@
 /**
- * MCP tool contract for creating transport.
- * MCP layer on top of ADT LSP transport service.
+ * MCP tool for adt create transport.
+ * Uses MCP SDK pattern with Zod schema.
  */
-import { mcpTool, type, Infer } from "../../../mcp/contract/contract-core.js";
+import { z } from 'zod';
 import { createTransportForObjectLock } from "../../services/adtLs/transport/createTransportForObjectLock.js";
 import type { LspTransport } from "../../../lsp/client/lsp-transport.js";
 import { callLspContract } from "../../../lsp/client/call-lsp-contract.js";
-import { AgentErrorCode, agentError } from "../../../service/agent/error-codes.js";
 
-export const adt_create_transport = mcpTool({
-  name: "adt_create_transport",
-  description: "Create a transport for an object",
-  types: {
-    input: type<{
-      destination: string;
-      uri: string;
-      transportType: "workbench" | "customizing";
-      description?: string;
-    }>(),
-    output: type<{
-      success: boolean;
-      transportId: string;
-    }>(),
-  },
+// Zod schema (single source of truth)
+const schema = z.object({
+  destination: z.string().describe("SAP destination"),
+  uri: z.string().describe("Object URI"),
+  transportId: z.string().describe("Transport ID"),
 });
 
-export const inputSchema = {
-  type: "object",
-  properties: {
-    destination: { type: "string", description: "SAP destination" },
-    uri: { type: "string", description: "Object URI" },
-  },
-  required: ["destination", "uri"],
-} as const;
-
-export function createHandler(transport: LspTransport) {
-  return {
-      async handle(args: Record<string, unknown>) {
-        const params = args as any;
-
-        // Validation
-        if (typeof params.destination !== "string") {
-          return {
-            success: false,
-            error: agentError(
-              AgentErrorCode.INVALID_URI,
-              "destination must be a string",
-              String(params.destination),
-            ),
-          };
-        }
-
-        if (typeof params.uri !== "string") {
-          return {
-            success: false,
-            error: agentError(
-              AgentErrorCode.INVALID_URI,
-              "uri must be a string",
-              String(params.uri),
-            ),
-          };
-        }
-
-
-      uri: string;
-      transportType: "workbench" | "customizing";
-      description?: string;
-    }) {
-        try {
-          const result = await callLspContract(
+// Tool definition for MCP SDK registration
+export const adt_create_transport = {
+  name: "adt_create_transport",
+  description: "Create a transport for an object",
+  inputSchema: schema,
+  handler: async (args: z.infer<typeof schema>, transport: LspTransport) => {
+    try {
+      const lspResult = await callLspContract(
         createTransportForObjectLock,
         transport,
-        params,
+        { destination: args.destination,
+          uri: args.uri,
+          transportId: args.transportId },
       );
-    },
-  };
-}
+
+      return {
+        content: [{
+          type: "text",
+          text: JSON.stringify(lspResult),
+        }],
+      };
+    } catch (err) {
+      const message = err instanceof Error ? err.message : String(err);
+      return {
+        content: [{
+          type: "text",
+          text: `Error: ${message}`,
+        }],
+        isError: true,
+      };
+    }
+  },
+};
