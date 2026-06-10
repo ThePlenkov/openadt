@@ -13,7 +13,7 @@ import { dirname, join } from "node:path";
 import { homedir } from "node:os";
 import { fileURLToPath } from "node:url";
 
-import { buildAdtLscSpawnRuntime } from "./runtime-env.ts";
+import { buildAdtLscSpawnRuntime } from "./infra/runtime-env";
 
 const here = dirname(fileURLToPath(import.meta.url));
 
@@ -183,7 +183,7 @@ async function drainChildStreams(
 // Shared mode: pass --port only when OPENADT_MCP_PORT is set. The launcher
 // will auto-ensure (or attach to) a healthy shared backend.
 // OPENADT_MCP_RESTART=1 forces a fresh daemon on launch (dev: pick up new code).
-import { isTruthyEnv } from "./process.ts";
+import { isTruthyEnv } from "./infra/process";
 const explicitPort = parseExplicitPort(process.env.OPENADT_MCP_PORT?.trim());
 const restartArgs = isTruthyEnv(process.env.OPENADT_MCP_RESTART)
   ? ["--restart"]

@@ -10,7 +10,7 @@ import { spawn } from "node:child_process";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { pipeline } from "node:stream";
-import { frameMcpMessage, McpFrameDecoder } from "./mcp-framing.ts";
+import { frameMcpMessage, McpFrameDecoder } from "./mcp/mcp-framing";
 
 const repoRoot = join(
   dirname(fileURLToPath(import.meta.url)),
@@ -23,6 +23,7 @@ const launcher = join(
   "tools",
   "sap-adt-mcp-launcher",
   "src",
+  "cli",
   "main.ts",
 );
 

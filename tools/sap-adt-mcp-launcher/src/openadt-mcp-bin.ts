@@ -12,6 +12,6 @@ process.argv = [
   process.argv[1] ?? "openadt-mcp",
   ...process.argv.slice(2),
 ];
-await import("./main.ts");
+await import("./cli/main.ts");
 
 export {};
