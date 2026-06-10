@@ -24,6 +24,11 @@ import {
   rewriteToolsCallRequest,
   ToolNameRegistry,
 } from "../service/guidance/tool-name-limit";
+import {
+  createAgentRegistry,
+  type AgentContext,
+  type AgentRegistry,
+} from "../service/agent/index";
 
 /** Parse MCP HTTP response body (JSON or SSE `data:` lines). */
 export function parseMcpHttpResponseBody({
@@ -196,6 +201,13 @@ function isReadToolRequest(
   );
 }
 
+/** `request` is a tools/call against one of our agent tools. */
+function isToolCallRequest(
+  request: ParsedRpc | undefined,
+): request is ParsedRpc {
+  return request?.method === "tools/call" && request.id !== undefined;
+}
+
 /** Result of one HTTP POST to the MCP endpoint. */
 export class McpHttpResponse {
   constructor(
@@ -286,6 +298,34 @@ export type StdioMcpBridge = {
    */
   setReadBackend(backend: ReadObjectBackend | undefined): void;
   /**
+   * Wire an agent registry with custom LSP-based tools. When set, the bridge
+   * advertises these tools in tools/list and answers their tools/call locally.
+   * Call before run().
+   */
+  setAgentRegistry(registry: AgentRegistry | undefined): void;
+  /**
+   * Wire an LSP connection for agent tools. Required when agent registry is set.
+   * Call before run().
+   */
+  setLspConnection(
+    connection: import("../infra/rpc").MessageConnection | undefined,
+  ): void;
+  /**
+   * Wire a destination for agent tools. Required when agent registry is set.
+   * Call before run().
+   */
+  setDestination(destination: string | undefined): void;
+  /**
+   * Wire a log for agent tools. Optional.
+   * Call before run().
+   */
+  setLog(log: import("../infra/log").McpLog | undefined): void;
+  /**
+   * Set proxy mode: 'proxy' merges SAP + custom tools, 'no-proxy' serves only custom.
+   * Default is 'proxy'. Call before run().
+   */
+  setProxyMode(mode: "proxy" | "no-proxy"): void;
+  /**
    * Wire a reconnect handler. Called on network error during forwarding; should
    * return a fresh McpHttpEndpoint to retry on, or undefined to fail the request.
    * Call before run().
@@ -327,6 +367,11 @@ export function createStdioMcpBridge(): StdioMcpBridge {
   const lifecycle = new BridgeLifecycle();
   let backend: McpHttpEndpoint | undefined;
   let readBackend: ReadObjectBackend | undefined;
+  let agentRegistry: AgentRegistry | undefined;
+  let lspConnection: import("../infra/rpc").MessageConnection | undefined;
+  let agentDestination: string | undefined;
+  let agentLog: import("../infra/log").McpLog | undefined;
+  let proxyMode: "proxy" | "no-proxy" = "proxy";
   let onEndpointFailure:
     | (() => Promise<McpHttpEndpoint | undefined>)
     | undefined;
@@ -398,7 +443,67 @@ export function createStdioMcpBridge(): StdioMcpBridge {
     return true;
   };
 
+  const tryAnswerLocalAgentTool = (request: ParsedRpc | undefined): boolean => {
+    if (
+      !agentRegistry ||
+      !lspConnection ||
+      !agentDestination ||
+      !isToolCallRequest(request)
+    ) {
+      return false;
+    }
+    const { name, args } = toolCallParams(request.params);
+    if (!agentRegistry.has(name)) {
+      return false;
+    }
+    const tool = agentRegistry.get(name);
+    if (!tool) {
+      return false;
+    }
+    const ctx: AgentContext = {
+      lspConnection,
+      destination: agentDestination,
+      log: agentLog,
+    };
+    chain.append(async () => {
+      try {
+        const result = await tool.handle(args, ctx);
+        await writeMcpStdioMessage(encoder, {
+          jsonrpc: "2.0",
+          id: request.id,
+          result,
+        });
+      } catch (err) {
+        const message = err instanceof Error ? err.message : String(err);
+        await writeMcpStdioMessage(encoder, {
+          jsonrpc: "2.0",
+          id: request.id,
+          error: {
+            code: -32000,
+            message,
+          },
+        });
+      }
+    });
+    return true;
+  };
+
   const forwardHttpOne = (message: McpStdioMessage): void => {
+    // In no-proxy mode, only answer agent tools locally
+    if (proxyMode === "no-proxy" && agentRegistry) {
+      const request = parseRpc(message.body);
+      if (tryAnswerLocalAgentTool(request)) return;
+      // Reject all other requests in no-proxy mode
+      chain.append(async () => {
+        await replyError(
+          message,
+          new JsonRpcError(-32001, "Tool not available in no-proxy mode"),
+        );
+      });
+      return;
+    }
+
+    // Proxy mode: forward to SAP MCP, but intercept agent tools
     if (!backend) {
       return;
     }
@@ -406,6 +511,7 @@ export function createStdioMcpBridge(): StdioMcpBridge {
 
     if (tryAnswerLocalGuidance(request)) return;
     if (tryAnswerLocalReadTool(request)) return;
+    if (tryAnswerLocalAgentTool(request)) return;
 
     // Methods whose backend response we rewrite to inject guidance.
     const injectMethod = guidanceEnabled() ? request?.method : undefined;
@@ -512,6 +618,7 @@ export function createStdioMcpBridge(): StdioMcpBridge {
   type RewritePlan = {
     guidance: "initialize" | "prompts/list" | undefined;
     readTools: boolean;
+    agentTools: boolean;
     shorten: boolean;
   };
 
@@ -521,12 +628,18 @@ export function createStdioMcpBridge(): StdioMcpBridge {
     hasReadBackend: boolean,
   ): RewritePlan | undefined => {
     if (injectMethod === "initialize" || injectMethod === "prompts/list") {
-      return { guidance: injectMethod, readTools: false, shorten: false };
+      return {
+        guidance: injectMethod,
+        readTools: false,
+        agentTools: false,
+        shorten: false,
+      };
     }
     if (method === "tools/list") {
       return {
         guidance: undefined,
         readTools: hasReadBackend && readEnabled(),
+        agentTools: agentRegistry !== undefined,
         shorten: true,
       };
     }
@@ -564,6 +677,16 @@ export function createStdioMcpBridge(): StdioMcpBridge {
     result.tools = [...result.tools, ...readToolDefs()];
   };
 
+  const applyAgentTools = (result: RpcResult): void => {
+    if (!Array.isArray(result.tools) || !agentRegistry) return;
+    const agentTools = agentRegistry.list().map((t) => ({
+      name: t.name,
+      description: t.description,
+      inputSchema: t.inputSchema,
+    }));
+    result.tools = [...result.tools, ...agentTools];
+  };
+
   const applyShorten = (result: RpcResult): void => {
     if (!Array.isArray(result.tools)) return;
     result.tools = shortenToolNames(
@@ -592,6 +715,7 @@ export function createStdioMcpBridge(): StdioMcpBridge {
     const result = parsed.result as RpcResult;
     applyGuidance(result, plan);
     if (plan.readTools) applyReadTools(result);
+    if (plan.agentTools) applyAgentTools(result);
     if (plan.shorten) applyShorten(result);
     return JSON.stringify(parsed);
   };
@@ -749,6 +873,23 @@ export function createStdioMcpBridge(): StdioMcpBridge {
     },
     setReadBackend(b: ReadObjectBackend | undefined) {
       readBackend = b;
+    },
+    setAgentRegistry(registry: AgentRegistry | undefined) {
+      agentRegistry = registry;
+    },
+    setLspConnection(
+      connection: import("../infra/rpc").MessageConnection | undefined,
+    ) {
+      lspConnection = connection;
+    },
+    setDestination(destination: string | undefined) {
+      agentDestination = destination;
+    },
+    setLog(log: import("../infra/log").McpLog | undefined) {
+      agentLog = log;
+    },
+    setProxyMode(mode: "proxy" | "no-proxy") {
+      proxyMode = mode;
     },
     setEndpointFailureHandler(fn: () => Promise<McpHttpEndpoint | undefined>) {
       onEndpointFailure = fn;

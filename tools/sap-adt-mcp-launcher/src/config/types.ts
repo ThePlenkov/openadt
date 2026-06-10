@@ -98,6 +98,8 @@ export type McpServeConfig = {
   logonTimeoutMs: number;
   /** Stdio MCP transport: proxy stdin/stdout to local HTTP MCP (no token in agent config). */
   stdio: boolean;
+  /** Proxy mode: 'proxy' serves SAP + custom tools, 'no-proxy' serves only custom tools. */
+  proxyMode: "proxy" | "no-proxy";
   /** Monolithic mode: own adt-lsc, kill on exit. Default false (shared). */
   standalone: boolean;
   /** Shared stdio: stop any existing daemon first so a fresh one spawns. */

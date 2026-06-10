@@ -72,6 +72,7 @@ import {
   type ReadAuxServer,
 } from "../service/read/read-server.ts";
 import { DEFAULT_LOGON_TIMEOUT_MS } from "../client/logon-handlers.ts";
+import { createAgentRegistry } from "../service/agent/index";
 
 const EXIT_OK = 0;
 const EXIT_NO_EXTENSION = 1;
@@ -94,6 +95,18 @@ Commands:
   status        Probe MCP HTTP endpoint
   list          List active MCP endpoints (one store file per port)
   print-config  Emit HTTP MCP client JSON (url + headers) from endpoint store
+
+Flags for serve:
+  --proxy       Serve both SAP MCP tools and custom LSP-based tools (default)
+  --no-proxy    Serve only custom LSP-based tools (ATC, lock/unlock, format, etc.)
+  --stdio       Stdio MCP transport (proxy stdin/stdout to HTTP)
+  --standalone  Own adt-lsc process (kill on exit)
+  --port PORT   MCP HTTP port (default: 2236)
+  --workspace   ADT LS workspace path
+  --import-from Destination import mode (auto, adtls, gui, openadt, none)
+  --destination Destination to use for SAP logon
+  --verbose      Enable debug logging
+  --log-file    Log file path
 
 Install SAP ADT for VS Code: ${MARKETPLACE_URL}
 `);
@@ -370,6 +383,18 @@ async function prepareStandaloneBackend(
   if (bridge && readBackend) {
     bridge.setReadBackend(readBackend);
   }
+
+  // Wire agent registry for LSP-based tools (standalone mode only)
+  // Shared stdio mode doesn't have direct LSP access to the daemon
+  const agentRegistry = createAgentRegistry();
+  if (bridge && !cfg.stdio) {
+    bridge.setAgentRegistry(agentRegistry);
+    bridge.setLspConnection(session.connection);
+    bridge.setDestination(cfg.destination ?? "DEV");
+    bridge.setLog(log);
+    bridge.setProxyMode(cfg.proxyMode);
+  }
+
   return { ok: true, gui, log, token, session, readBackend };
 }
 

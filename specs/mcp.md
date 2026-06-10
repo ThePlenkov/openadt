@@ -490,10 +490,25 @@ Target is the contract above. Simplify implementation; remove experimental paths
 
 ### Out of scope (explicit)
 
-- OpenADT-owned MCP tools (all tools come from SAP).
 - Replacing SAP HTTP with native stdio in `adt-lsc`.
 - Two-process “backend + attach” as the primary workflow.
 - Cursor-specific sync scripts.
+
+### OpenADT-owned MCP tools
+
+OpenADT exposes additional LSP-based MCP tools (prefixed with `adt_`) that are not part of the SAP MCP server. These tools call LSP methods directly on the ADT Language Server and are available in standalone mode (`--standalone` or HTTP daemon) where the launcher has direct LSP access.
+
+**Availability:**
+
+- **Standalone mode** (`--standalone` or HTTP daemon): Full LSP access, agent tools available
+- **Shared stdio mode** (`--stdio` without `--standalone`): No direct LSP access to daemon, agent tools not available
+
+**Proxy modes:**
+
+- `--proxy` (default): Serve both SAP MCP tools (proxied) and custom LSP-based tools
+- `--no-proxy`: Serve only custom LSP-based tools, reject SAP tool calls
+
+See [adt-agent-typescript.md](adt-agent-typescript.md) for the full tool reference and implementation details.
 
 ---
 

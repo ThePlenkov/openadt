@@ -28,6 +28,20 @@ OpenADT is a **thin Java wrapper around the official SAP ADT SDK** (`com.sap.adt
 
 MCP is a **separate installable** product, `openadt-mcp`: a standalone compiled Bun binary with its own Scoop bucket (`scoop install openadt-mcp`) and Homebrew tap (`brew install openadt-mcp`). It is the same launcher described in [mcp.md](mcp.md) — child `adt-lsc`, HTTP MCP, optional stdio bridge (`serve --stdio`). The Java `openadt mcp` subcommand stays and wraps `openadt-mcp`; OpenADT does not define MCP tools.
 
+## Roadmap: Agent foundation (TypeScript)
+
+OpenADT exposes LSP operations as MCP tools via a TypeScript-based agent layer within the `sap-adt-mcp-launcher`. This enables agent workflows to interact with SAP ADT through LSP methods without requiring direct ADT REST calls.
+
+**Key features:**
+
+- 18 LSP-based tools (ATC, lock/unlock, format, diagnostics, references, transport, search, etc.)
+- Tools prefixed with `adt_` to distinguish from SAP MCP tools
+- `--proxy` / `--no-proxy` flags to control tool exposure
+- Available in standalone mode (direct LSP access)
+- Throttling for high-volume operations (format, diagnostics, references)
+
+See [adt-agent-typescript.md](adt-agent-typescript.md) for the full tool reference and implementation details.
+
 ## Package map (code navigation)
 
 | Area                         | Package                           | Spec                                   |

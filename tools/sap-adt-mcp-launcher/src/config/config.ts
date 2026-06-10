@@ -31,6 +31,7 @@ export function parseServeArgv(argv: string[]): McpServeConfig {
     stdio: false,
     standalone: false,
     restart: false,
+    proxyMode: "proxy",
   };
 
   const handlers = buildServeArgvHandlers();
@@ -65,6 +66,8 @@ type ServeArgvState = {
   standalone: boolean;
   /** When true (shared stdio), stop an existing daemon first so a fresh one spawns. */
   restart: boolean;
+  /** Proxy mode: 'proxy' serves SAP + custom tools, 'no-proxy' serves only custom tools. */
+  proxyMode: "proxy" | "no-proxy";
 };
 
 type ServeArgvHandler = {
@@ -160,6 +163,18 @@ function booleanFlagArgvHandlers(): ServeArgvHandler[] {
         s.verbose = true;
       },
       ["--verbose", "-v"],
+    ),
+    boolFlag(
+      (s) => {
+        s.proxyMode = "proxy";
+      },
+      ["--proxy"],
+    ),
+    boolFlag(
+      (s) => {
+        s.proxyMode = "no-proxy";
+      },
+      ["--no-proxy"],
     ),
   ];
 }
