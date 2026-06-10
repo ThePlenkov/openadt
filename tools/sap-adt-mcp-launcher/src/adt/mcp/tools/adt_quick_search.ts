@@ -7,12 +7,30 @@ import { tool } from '../tool-factory.js';
 import { quickSearch } from "../../services/adtLs/repository/quickSearch.js";
 import type { LspTransport } from "../../../lsp/client/lsp-transport.js";
 import { callLspContract } from "../../../lsp/client/call-lsp-contract.js";
+import type { QuickSearchResult, AdtObjectReference } from "../../../config/types.js";
 
 // Zod schema (single source of truth)
 const schema = z.object({
   destination: z.string().describe("SAP destination"),
   searchTerm: z.string().describe("Search term"),
 });
+
+// Format QuickSearchResult as text
+function formatQuickSearchResult(result: QuickSearchResult): string {
+  if (result.message) {
+    return `Message: ${result.message.label || ''} ${result.message.detail || ''}`;
+  }
+  
+  if (!result.references || result.references.length === 0) {
+    return "No results found.";
+  }
+  
+  const head = "| Name | Type | Description |\n|------|------|-------------|";
+  const rows = result.references.map(
+    (r) => `| ${r.name} | ${r.type ?? "?"} | ${r.description ?? ""} |`,
+  );
+  return [head, ...rows].join("\n");
+}
 
 // Tool definition for MCP SDK registration
 export const adt_quick_search = tool({
@@ -31,7 +49,7 @@ export const adt_quick_search = tool({
       return {
         content: [{
           type: "text",
-          text: JSON.stringify(lspResult),
+          text: formatQuickSearchResult(lspResult),
         }],
       };
     } catch (err) {
