@@ -8,11 +8,11 @@ import type { LspTransport } from "../../lsp/client/lsp-transport.js";
 /**
  * MCP tool definition (internal type)
  */
-type ToolDefinition = {
+type ToolDefinition<T extends z.ZodRawShape> = {
   name: string;
   description: string;
-  inputSchema: z.ZodObject<any>;
-  handler: (args: any, transport: LspTransport) => Promise<{
+  inputSchema: z.ZodObject<T>;
+  handler: (args: z.infer<z.ZodObject<T>>, transport: LspTransport) => Promise<{
     content: Array<{ type: string; text: string }>;
     isError?: boolean;
   }>;
@@ -22,14 +22,14 @@ type ToolDefinition = {
  * MCP tool factory function.
  * Validates and creates a properly typed MCP tool.
  */
-export function tool(def: {
+export function tool<T extends z.ZodRawShape>(def: {
   name: string;
   description: string;
-  inputSchema: z.ZodObject<any>;
-  handler: (args: any, transport: LspTransport) => Promise<{
+  inputSchema: z.ZodObject<T>;
+  handler: (args: z.infer<z.ZodObject<T>>, transport: LspTransport) => Promise<{
     content: Array<{ type: string; text: string }>;
     isError?: boolean;
   }>;
-}): ToolDefinition {
+}): ToolDefinition<T> {
   return def;
 }
