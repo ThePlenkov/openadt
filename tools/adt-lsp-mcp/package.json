@@ -14,7 +14,10 @@
   },
   "dependencies": {
     "@openadt/mcp-framing": "workspace:*",
-    "@openadt/adt-mcp-tools": "workspace:*"
+    "@openadt/adt-mcp-tools": "workspace:*",
+    "@openadt/lsp-client": "workspace:*",
+    "@openadt/adt-config": "workspace:*",
+    "@openadt/adt-infra": "workspace:*"
   },
   "exports": {
     ".": "./dist/main.mjs",

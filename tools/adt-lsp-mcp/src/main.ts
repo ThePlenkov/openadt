@@ -2,10 +2,8 @@
 /**
  * ADT LSP MCP Server - stdio-only MCP server for 26 OpenADT tools
  *
- * This is a focused MCP server that exposes only the LSP-based tools (adt_*)
- * that connect to the adt-lsc language server via stdio.
- *
- * Usage: bun src/main.ts serve --stdio --destination <DEST> --import-from adtls
+ * Usage: adt-lsp-mcp <destination>
+ * Or set OPENADT_DESTINATION / OPENADT_MCP_DESTINATION.
  */
 import { mcpTools } from '@openadt/adt-mcp-tools'
 import {
@@ -14,85 +12,180 @@ import {
   McpStdioEncoder,
   writeMcpStdioMessage,
 } from '@openadt/mcp-framing'
+import { locateAdtLs } from './locate'
+import {
+  connectAdtLanguageServer,
+  LspConnectionTransport,
+  type LspSession,
+} from '@openadt/lsp-client'
+import { DEFAULT_WORKSPACE } from '@openadt/adt-config'
+import { homedir } from 'node:os'
+import { join } from 'node:path'
 
-// Simple MCP server implementation (stdio-only, no HTTP)
+type JsonRpcRequest = {
+  id?: number | string
+  method?: string
+  params?: unknown
+}
+
 class SimpleMcpServer {
   private encoder = new McpStdioEncoder()
   private decoder = new McpStdioDecoder()
-  private pending = new Map<number | string, (result: unknown) => void>()
-  private nextId = 1
+  private lspSession: LspSession | undefined
+  private lspReady: Promise<void> | undefined
+  private readonly destination: string
 
-  constructor() {
+  constructor(destination: string) {
+    this.destination = destination
     attachMcpStdoutEncoder(this.encoder)
-    this.decoder.on('data', (body: string) => this.onMessage(body))
-    this.decoder.pipe(process.stdin)
+    this.decoder.on('data', (body: string) => {
+      void this.onMessage(body)
+    })
+    process.stdin.pipe(this.decoder)
   }
 
-  private onMessage(body: string): void {
+  /** Connect adt-lsc in the background; MCP initialize/tools/list do not wait. */
+  startLspInBackground(): void {
+    this.lspReady = this.connectLsp().catch((err) => {
+      this.lspReady = undefined
+      throw err
+    })
+  }
+
+  private async connectLsp(): Promise<void> {
+    const install = locateAdtLs()
+    if (!install) {
+      throw new Error('ADT LS not found. Install SAP ADT VS Code extension or set ADT_LS_PATH')
+    }
+
+    console.error(`ADT LS: ${install.adtLscPath} (${install.version})`)
+    console.error(`Destination: ${this.destination}`)
+
+    this.lspSession = await connectAdtLanguageServer(install, DEFAULT_WORKSPACE, {
+      destinationsStorePath: join(homedir(), '.adtls'),
+      createProjectIds: [this.destination],
+      ensureLoggedOnIds: [this.destination],
+    })
+
+    console.error('LSP connection established')
+  }
+
+  private async ensureLspReady(): Promise<LspSession> {
+    if (!this.lspReady) {
+      this.startLspInBackground()
+    }
+    await this.lspReady
+    if (!this.lspSession) {
+      throw new Error('LSP session not initialized')
+    }
+    return this.lspSession
+  }
+
+  private async onMessage(body: string): Promise<void> {
     try {
-      const parsed = JSON.parse(body) as {
-        id?: number | string
-        method?: string
-        params?: unknown
-      }
-      if (!parsed.id) return // notification, ignore
-      if (parsed.method === 'tools/list') {
-        this.respond(parsed.id, {
-          tools: mcpTools.map((t) => ({
-            name: t.name,
-            description: t.description,
-            inputSchema: t.inputSchema,
-          })),
-        })
-      } else if (parsed.method === 'tools/call' && parsed.params) {
-        const params = parsed.params as {
-          name?: string
-          arguments?: Record<string, unknown>
-        }
-        if (params.name) {
-          this.handleToolCall(parsed.id, params.name, params.arguments ?? {})
-        }
+      const parsed = JSON.parse(body) as JsonRpcRequest
+      if (parsed.id === undefined) return
+
+      switch (parsed.method) {
+        case 'initialize':
+          await this.sendResult(parsed.id, {
+            protocolVersion: '2024-11-05',
+            capabilities: { tools: {} },
+            serverInfo: { name: 'adt-lsp-mcp', version: '0.1.0' },
+          })
+          return
+        case 'tools/list':
+          await this.sendResult(parsed.id, {
+            tools: mcpTools.map((t) => ({
+              name: t.name,
+              description: t.description,
+              inputSchema: t.inputSchema,
+            })),
+          })
+          return
+        case 'tools/call':
+          await this.handleToolCall(parsed.id, parsed.params)
+          return
+        default:
+          await this.sendError(parsed.id, -32601, `Method not found: ${parsed.method ?? '(none)'}`)
       }
     } catch (err) {
       console.error('MCP message error:', err)
     }
   }
 
-  private async handleToolCall(
-    id: number | string,
-    name: string,
-    args: Record<string, unknown>
-  ): Promise<void> {
+  private async handleToolCall(id: number | string, params: unknown): Promise<void> {
+    const call = params as { name?: string; arguments?: Record<string, unknown> } | undefined
+    const name = call?.name
+    if (!name) {
+      await this.sendError(id, -32602, 'Missing tool name')
+      return
+    }
+
+    const tool = mcpTools.find((t) => t.name === name)
+    if (!tool) {
+      await this.sendError(id, -32601, `Tool not found: ${name}`)
+      return
+    }
+
     try {
-      const tool = mcpTools.find((t) => t.name === name)
-      if (!tool) {
-        this.respond(id, {
-          error: { code: -32601, message: `Tool not found: ${name}` },
-        })
-        return
-      }
-      const result = await tool.handler(args)
-      this.respond(id, { result })
+      const session = await this.ensureLspReady()
+      const transport = new LspConnectionTransport(session.connection)
+      const result = await tool.handler(call?.arguments ?? {}, transport)
+      await this.sendResult(id, result)
     } catch (err) {
-      this.respond(id, {
-        error: {
-          code: -32603,
-          message: err instanceof Error ? err.message : String(err),
-        },
-      })
+      const message = err instanceof Error ? err.message : String(err)
+      await this.sendError(id, -32603, message)
     }
   }
 
-  private respond(id: number | string, result: unknown): void {
-    const response = { jsonrpc: '2.0' as const, id, result }
-    writeMcpStdioMessage(this.encoder, response)
+  private async sendResult(id: number | string, result: unknown): Promise<void> {
+    await writeMcpStdioMessage(this.encoder, { jsonrpc: '2.0', id, result })
+  }
+
+  private async sendError(id: number | string, code: number, message: string): Promise<void> {
+    await writeMcpStdioMessage(this.encoder, {
+      jsonrpc: '2.0',
+      id,
+      error: { code, message },
+    })
+  }
+
+  shutdown(): void {
+    if (this.lspSession) {
+      this.lspSession.connection.dispose()
+      this.lspSession.child.kill()
+    }
   }
 }
 
-async function main() {
-  new SimpleMcpServer()
+function resolveDestination(argv: string[]): string | undefined {
+  const fromArg = argv.find((a) => !a.startsWith('-'))
+  return fromArg ?? process.env.OPENADT_DESTINATION ?? process.env.OPENADT_MCP_DESTINATION
+}
+
+async function main(): Promise<void> {
+  const destination = resolveDestination(process.argv.slice(2))
+  if (!destination) {
+    console.error('Usage: adt-lsp-mcp <destination>')
+    console.error('Or set OPENADT_DESTINATION / OPENADT_MCP_DESTINATION')
+    process.exit(1)
+  }
+
+  const server = new SimpleMcpServer(destination)
+  server.startLspInBackground()
+
   console.error('ADT LSP MCP server started (stdio mode)')
   console.error('Tools:', mcpTools.map((t) => t.name).join(', '))
+
+  process.on('SIGINT', () => {
+    server.shutdown()
+    process.exit(0)
+  })
+  process.on('SIGTERM', () => {
+    server.shutdown()
+    process.exit(0)
+  })
 }
 
 main().catch((error) => {

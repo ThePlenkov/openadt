@@ -14,7 +14,11 @@ export {
 
 export { callLspContract } from './lsp/client/call-lsp-contract'
 
-export { type LspTransport } from './lsp/client/lsp-transport'
+export {
+  HttpLspTransport,
+  LspConnectionTransport,
+  type LspTransport,
+} from './lsp/client/lsp-transport'
 
 export {
   lspEndpoint,
