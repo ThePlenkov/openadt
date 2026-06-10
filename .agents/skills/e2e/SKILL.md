@@ -40,10 +40,13 @@ Read the scenario markdown under the suite's `e2e/scenarios/` dir — every scen
 
 **Do not assume a SID or destination from git.**
 
-Ask the user for **ADT destination id** (`SID_CLIENT_USER_LANG`), or:
+Ask the user for **ADT destination id**. Accept either:
 
+- Full format: `SID_CLIENT_USER_LANG` (e.g., `BHF_200_PPLENKOV_EN`)
+- Partial format: system ID or partial name (e.g., `BHF`, `BHF_200`) — **auto-resolved from `~/.adtls/destinations.json`**
 - `OPENADT_MCP_DESTINATION` if already set in the session
-- `--resolve-destination --system <SID>` when `~/.adtls/destinations.json` has a unique match
+
+**Auto-resolution:** When a partial destination is provided (not full `SID_CLIENT_USER_LANG` format), the runner automatically resolves it from `~/.adtls/destinations.json` using the partial input as a system hint. No manual `--resolve-destination --system` flags needed.
 
 ### 3. Choose executor
 

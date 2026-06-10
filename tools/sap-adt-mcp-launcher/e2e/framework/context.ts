@@ -121,8 +121,34 @@ type AdtlsEntry = {
   properties?: Record<string, string>
 }
 
+/**
+ * Detect if destination is partial (not full SID_CLIENT_USER_LANG format).
+ * Full format: ABC_123_USER_EN (3+ underscores, specific pattern)
+ * Partial: anything else (e.g., ABC, ABC_123, USER, etc.)
+ */
+function isPartialDestination(destination: string): boolean {
+  const parts = destination.split('_')
+  // Full format typically has at least 4 parts: SID_CLIENT_USER_LANG
+  return parts.length < 4
+}
+
 export function resolveDestinationId(opts: CliOptions): string {
-  if (opts.destination) return opts.destination
+  if (opts.destination) {
+    // Auto-enable resolution for partial destinations
+    if (isPartialDestination(opts.destination) && !opts.resolveDestination) {
+      console.error(
+        `[e2e] Partial destination "${opts.destination}" detected, auto-resolving from ~/.adtls/destinations.json`
+      )
+      const resolved = resolveDestinationId({
+        ...opts,
+        destination: undefined,
+        resolveDestination: true,
+        system: opts.destination, // Use partial input as system hint
+      })
+      return resolved
+    }
+    return opts.destination
+  }
   if (!opts.resolveDestination) {
     throw new Error(
       'Missing destination. Pass --destination ABC_200_USER_EN or set OPENADT_MCP_DESTINATION. ' +
