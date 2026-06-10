@@ -1,11 +1,11 @@
 /**
  * Create transport contract.
- * LSP method: adtLs/transport/createTransportForObjectLock
+ * LSP method: adtLs/cts/transport/createTransportForObjectLock
  */
 import { lspEndpoint, type, type LspEndpoint } from '@openadt/lsp-client'
 
 export const createTransportForObjectLock: LspEndpoint = lspEndpoint({
-  method: 'adtLs/transport/createTransportForObjectLock',
+  method: 'adtLs/cts/transport/createTransportForObjectLock',
   types: {
     params: type<{
       destination: string

@@ -16,9 +16,10 @@ steps:
   - tool: adt_check_transport_lock
     args:
       destination: "{{destination}}"
-      uri: "/sap/bc/adt/oo/classes/zcl_example"
+      uri: "/sap/bc/adt/oo/classes/cl_abap_typedescr"
       transportId: "DEVK900000"
     assert:
+      contentContains: "isTransportCheckSuccessful"
       notError: true
 ---
 

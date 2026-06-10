@@ -1,11 +1,11 @@
 /**
  * Assign transport contract.
- * LSP method: adtLs/transport/assignTransportToObject
+ * LSP method: adtLs/cts/transport/assignTransportToObject
  */
 import { lspEndpoint, type, type LspEndpoint } from '@openadt/lsp-client'
 
 export const assignTransportToObject: LspEndpoint = lspEndpoint({
-  method: 'adtLs/transport/assignTransportToObject',
+  method: 'adtLs/cts/transport/assignTransportToObject',
   types: {
     params: type<{
       destination: string

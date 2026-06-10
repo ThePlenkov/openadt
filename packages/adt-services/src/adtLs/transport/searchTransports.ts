@@ -1,11 +1,11 @@
 /**
  * Transport advanced search contract.
- * LSP method: adtLs/transport/searchTransports
+ * LSP method: adtLs/cts/transport/searchTransports
  */
 import { lspEndpoint, type, type LspEndpoint } from '@openadt/lsp-client'
 
 export const searchTransports: LspEndpoint = lspEndpoint({
-  method: 'adtLs/transport/searchTransports',
+  method: 'adtLs/cts/transport/searchTransports',
   types: {
     params: type<{
       destination: string

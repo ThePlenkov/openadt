@@ -3,29 +3,36 @@
  * Uses MCP SDK pattern with Zod schema.
  */
 import { z } from 'zod'
+import { LSP_METHOD_REPOSITORY_GET_LS_URI } from '@openadt/adt-config'
 import { tool } from '@openadt/mcp-tools'
 import { checkTransportForObjectLock } from '@openadt/adt-services'
 import type { LspTransport } from '@openadt/lsp-client'
 import { callLspContract } from '@openadt/lsp-client'
 
-// Zod schema (single source of truth)
 const schema = z.object({
   destination: z.string().describe('SAP destination'),
-  uri: z.string().describe('Object URI'),
-  transportId: z.string().describe('Transport ID'),
+  uri: z.string().describe('ADT object path, e.g. /sap/bc/adt/oo/classes/cl_x'),
+  transportId: z.string().optional().describe('Optional transport ID (not used for check)'),
 })
 
-// Tool definition for MCP SDK registration
 export const adt_check_transport_lock = tool({
   name: 'adt_check_transport_lock',
   description: 'Check if an object requires a transport',
   inputSchema: schema,
   handler: async (args: z.infer<typeof schema>, transport: LspTransport) => {
     try {
-      const lspResult = await callLspContract(checkTransportForObjectLock, transport, {
+      const lsUriResult = (await transport.sendRequest(LSP_METHOD_REPOSITORY_GET_LS_URI, {
         destination: args.destination,
-        uri: args.uri,
-        transportId: args.transportId,
+        adtUri: args.uri,
+      })) as { uri?: string }
+      const objectUri = lsUriResult?.uri
+      if (!objectUri) {
+        throw new Error(`getLsUri did not resolve ${args.uri}`)
+      }
+
+      const lspResult = await callLspContract(checkTransportForObjectLock, transport, {
+        objectInfo: { objectUri },
+        operationType: 'MODIFICATION',
       })
 
       return {

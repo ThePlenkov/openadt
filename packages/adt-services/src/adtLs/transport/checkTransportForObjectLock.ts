@@ -1,19 +1,28 @@
 /**
  * Check transport lock contract.
- * LSP method: adtLs/transport/checkTransportForObjectLock
+ * LSP method: adtLs/cts/transport/checkTransportForObjectLock
  */
 import { lspEndpoint, type, type LspEndpoint } from '@openadt/lsp-client'
 
 export const checkTransportForObjectLock: LspEndpoint = lspEndpoint({
-  method: 'adtLs/transport/checkTransportForObjectLock',
+  method: 'adtLs/cts/transport/checkTransportForObjectLock',
   types: {
     params: type<{
-      destination: string
-      uri: string
+      objectInfo: { objectUri: string }
+      operationType: 'MODIFICATION' | 'CREATION'
     }>(),
     response: type<{
-      requiresTransport: boolean
-      transportId?: string
+      isTransportCheckSuccessful: boolean
+      isRecordingRequired?: boolean
+      isLockedInRequests?: boolean
+      isRecordingOnlyInLockedRequest?: boolean
+      transports?: unknown[]
+      locks?: unknown[]
+      checkMessages?: {
+        infoMessages?: unknown[]
+        warningMessages?: unknown[]
+        errorMessages?: unknown[]
+      }
     }>(),
   },
 })
