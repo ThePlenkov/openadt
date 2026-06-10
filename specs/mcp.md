@@ -512,6 +512,87 @@ See [adt-agent-typescript.md](adt-agent-typescript.md) for the full tool referen
 
 ---
 
+### Contract-first architecture (proposed)
+
+**Goal:** Enable agent tools (currently LSP-only) to work in shared mode by decoupling the contract from the transport.
+
+**Current limitation:**
+
+- Agent tools require direct `MessageConnection` to LSP
+- Shared mode daemon owns LSP connection; stdio bridge only has HTTP access
+- Result: agent tools unavailable in shared stdio mode
+
+**Proposed design (ts-rest-style):**
+
+```typescript
+// Transport-agnostic contract
+interface AdtLsContract {
+  quickSearch(params: { destination: string; pattern: string }): Promise<QuickSearchResult>;
+  searchTransports(params: { destination: string; user?: string }): Promise<TransportResult>;
+  // ... all other LSP methods
+}
+
+// LSP implementation (standalone mode)
+class LspAdtLsClient implements AdtLsContract {
+  constructor(private connection: MessageConnection) {}
+  async quickSearch(params) {
+    return this.connection.sendRequest("adtLs/repository/quickSearch", params);
+  }
+}
+
+// HTTP implementation (shared mode)
+class HttpAdtLsClient implements AdtLsContract {
+  constructor private baseUrl: string, private token: string) {}
+  async quickSearch(params) {
+    return fetch(`${this.baseUrl}/lsp/quickSearch`, {
+      method: "POST",
+      headers: { "Authorization": `Bearer ${this.token}` },
+      body: JSON.stringify(params)
+    });
+  }
+}
+
+// Agent tools use contract, not transport
+class RepositoryToolSet {
+  constructor(private client: AdtLsContract) {}
+  async handleQuickSearch(args, ctx) {
+    return this.client.quickSearch({ ... });
+  }
+}
+```
+
+**Implementation scope:**
+
+1. Define `AdtLsContract` interface covering all LSP methods used by agent tools
+2. Implement `LspAdtLsClient` (current behavior refactored)
+3. Implement `HttpAdtLsClient` (new)
+4. Refactor all agent tool sets to inject contract instead of `MessageConnection`
+5. Extend daemon to expose all LSP methods as HTTP endpoints (`/lsp/*`)
+6. Update stdio bridge to use `HttpAdtLsClient` in shared mode
+
+**Benefits:**
+
+- Agent tools work in both standalone and shared modes
+- Better testability (mock contract for unit tests)
+- Transport flexibility (could add gRPC, WebSocket later)
+- Unified architecture with read tools (which already have backend abstraction)
+
+**Migration path:**
+
+- Phase 1: Define contract + LSP implementation (no behavior change)
+- Phase 2: Add HTTP implementation + daemon endpoints
+- Phase 3: Refactor agent tools to use contract
+- Phase 4: Update stdio bridge to inject HTTP client in shared mode
+- Phase 5: E2E tests for agent tools in shared mode
+
+**Status:** Proposed. Requires spec approval and implementation planning before coding.
+
+### AI scenario testing (live landscape)
+
+User- or agent-supplied destination id (no SID in git). Runner and YAML scenarios: `tools/sap-adt-mcp-launcher/ai-tests/`. Contract: [mcp-ai-testing.md](mcp-ai-testing.md). Command: `bun run mcp:ai-tests -- --destination <ADT_DESTINATION_ID>`.
+
+---
+
 ## Gap (implementation vs this spec)
 
 ### Implemented (core path)

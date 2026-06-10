@@ -60,12 +60,15 @@ function isBunScriptPath(path: string): boolean {
 
 /** Treat the parent as the dist/ or src/ launcher if its script lives on disk. */
 function resolveBundleLauncher(): string | undefined {
-  const distMjs = resolve(here, "..", "dist", "main.mjs");
+  const srcRoot = resolve(here, "..", "..");
+  const distMjs = resolve(srcRoot, "..", "dist", "main.mjs");
   if (existsSync(distMjs)) return distMjs;
-  const distJs = resolve(here, "..", "dist", "main.js");
+  const distJs = resolve(srcRoot, "..", "dist", "main.js");
   if (existsSync(distJs)) return distJs;
-  const mainTs = resolve(here, "main.ts");
+  const mainTs = resolve(srcRoot, "main.ts");
   if (existsSync(mainTs)) return mainTs;
+  const cliMainTs = resolve(srcRoot, "cli", "main.ts");
+  if (existsSync(cliMainTs)) return cliMainTs;
   return undefined;
 }
 

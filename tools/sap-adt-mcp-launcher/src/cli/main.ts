@@ -384,13 +384,13 @@ async function prepareStandaloneBackend(
     bridge.setReadBackend(readBackend);
   }
 
-  // Wire agent registry for LSP-based tools (standalone mode only)
-  // Shared stdio mode doesn't have direct LSP access to the daemon
+  // Wire agent registry for LSP-based tools (standalone stdio only).
+  // Shared stdio attaches to a detached daemon without direct LSP access.
   const agentRegistry = createAgentRegistry();
-  if (bridge && !cfg.stdio) {
+  if (bridge) {
     bridge.setAgentRegistry(agentRegistry);
     bridge.setLspConnection(session.connection);
-    bridge.setDestination(cfg.destination ?? "DEV");
+    bridge.setDestination(cfg.destination ?? gui.imported[0]?.id ?? "DEV");
     bridge.setLog(log);
     bridge.setProxyMode(cfg.proxyMode);
   }

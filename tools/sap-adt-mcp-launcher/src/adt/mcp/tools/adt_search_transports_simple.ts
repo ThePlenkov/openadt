@@ -6,8 +6,9 @@ import { mcpTool, type } from "../../../mcp/contract/contract-core.js";
 import { searchTransportsSimple } from "../../services/adtLs/transport/searchTransportsSimple.js";
 import type { LspTransport } from "../../../lsp/client/lsp-transport.js";
 import { callLspContract } from "../../../lsp/client/call-lsp-contract.js";
+import { AgentErrorCode, agentError } from "../../../service/agent/error-codes.js";
 
-export const adtSearchTransportsSimple = mcpTool({
+export const adt_search_transports_simple = mcpTool({
   name: "adt_search_transports_simple",
   description: "Search for ABAP transports (simple)",
   types: {
@@ -29,14 +30,43 @@ export const adtSearchTransportsSimple = mcpTool({
   },
 });
 
+export const inputSchema = {
+  type: "object",
+  properties: {
+    destination: { type: "string", description: "SAP destination" },
+    user: { type: "string", description: "User filter (optional)" },
+    status: {
+      type: "string",
+      enum: ["modifiable", "released", "all"],
+      description: "Transport status filter",
+    },
+  },
+  required: ["destination"],
+};
+
 export function createHandler(transport: LspTransport) {
   return {
-    async handle(params: {
-      destination: string;
+      async handle(args: Record<string, unknown>) {
+        const params = args as any;
+
+        // Validation
+        if (typeof params.destination !== "string") {
+          return {
+            success: false,
+            error: agentError(
+              AgentErrorCode.INVALID_URI,
+              "destination must be a string",
+              String(params.destination),
+            ),
+          };
+        }
+
+
       user?: string;
       status?: "modifiable" | "released" | "all";
     }) {
-      return await callLspContract(searchTransportsSimple, transport, params);
+        try {
+          const result = await callLspContract(
     },
   };
 }

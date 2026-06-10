@@ -14,6 +14,6 @@ process.argv = [
   "--stdio",
   ...userArgs,
 ];
-await import("./main.ts");
+await import("./cli/main.ts");
 
 export {};

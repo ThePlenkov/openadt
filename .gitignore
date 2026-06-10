@@ -43,6 +43,12 @@ bun.lockb
 pnpm-lock.yaml
 yarn.lock
 
+# E2E evidence (live SAP runs — see .e2e/README.md; always use repo-root .e2e/)
+.e2e/results/
+**/.e2e/results/
+.e2e/dispatch/
+**/.e2e/dispatch/
+
 # Local OpenADT runtime and config
 .openadt/
 .devin/

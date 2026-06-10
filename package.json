@@ -27,6 +27,9 @@
     "harvest:archive": "bun .agents/skills/harvest/scripts/harvest-cli.ts archive",
     "harvest:test": "bun .agents/skills/harvest/scripts/harvest-cli.ts test",
     "test:mcp:stdio": "bun tools/sap-adt-mcp-launcher/src/test-mcp-stdio.ts",
+    "mcp:ai-tests": "bun tools/sap-adt-mcp-launcher/ai-tests/run.ts",
+    "e2e": "bun scripts/e2e.ts",
+    "e2e:dispatch": "bun scripts/e2e-dispatch.ts",
     "prepare": "husky",
     "precommit:format": "nx format:write --uncommitted && git update-index --again",
     "nx": "nx"

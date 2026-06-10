@@ -88,6 +88,10 @@ interface AgentResult<T = unknown> {
 }
 ```
 
+MCP `tools/call` responses wrap this envelope as standard `CallToolResult`: JSON text in
+`content[0].text`, the same object in `structuredContent`, and `isError: true` when
+`success` is false (same pattern as read tools).
+
 Error codes:
 
 - `LOCKED_BY_OTHER`: Object locked by another user
