@@ -146,6 +146,10 @@ function listHarvestFiles(): string[] {
     .map((name) => join(dir, name));
 }
 
+export function listHarvestPaths(): string[] {
+  return listHarvestFiles();
+}
+
 export function harvestFilename(opts: {
   harvestedAt: string;
   pr: number;

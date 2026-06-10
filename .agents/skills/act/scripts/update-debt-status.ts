@@ -15,7 +15,7 @@ import {
   writeSummary,
   type DebtStatus,
   type LedgerOverlay,
-} from "./review-debt-lib.ts";
+} from "../../harvest/scripts/review-debt-lib.ts";
 
 interface StatusArgs {
   threadIds: string[];

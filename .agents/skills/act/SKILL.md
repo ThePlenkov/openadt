@@ -1,69 +1,80 @@
 ---
 name: act
 description: >-
-  Use when the user invokes /act on a PR/MR or /act debt for batched review debt.
-  PR mode: fix CI and implement review feedback in product code. Debt mode: fix
-  harvested threads from .agents/review-debt/ (harvests/*.jsonl + ledger) in one batch PR. Resolve
-  threads only after each item is fixed or answered. Never resolve-only.
+  Use when the user invokes /act on a PR/MR or /act <context> with
+  context ∈ {pr, plan, backlog, harvest}. Resolves threads in product code
+  (or posts a substantive in-thread reply), commits, then closes threads.
+  Never resolve-only. Harvest (collecting threads) lives in /harvest;
+  triage (priority / grouping / wontfix) lives in /backlog. /act is the
+  fix loop, not the collect or triage.
 disable-model-invocation: true
-compatibility: Requires gh, jq, bun; optional ledger at .agents/review-debt/ (override OPENADT_DEBT_FILE).
+compatibility: Requires gh, jq, bun.
 ---
 
 # /act
 
-Portable skill layout ([agentskills.io](https://agentskills.io/specification)): `scripts/` (helpers), `references/` (EVALUATE, RATING_FLOW). Copy `.agents/skills/act/` to relocate; wire `bun run act:debt:*` or call `scripts/*` directly.
+Portable skill layout ([agentskills.io](https://agentskills.io/specification)): `scripts/` (helpers), `references/` (EVALUATE, RATING_FLOW). Copy `.agents/skills/act/` to relocate.
 
 **`/act` means fix the PR, not hide review comments.**
 
 The main work is **P0–P3**: read each review thread, change **product code** (or post a substantive in-thread reply), commit, then close threads.  
-Running the resolve script **without** doing that first is **wrong** — same as clicking “Resolve conversation” on every thread with no code changes.
+Running the resolve script **without** doing that first is **wrong** — same as clicking "Resolve conversation" on every thread with no code changes.
 
-Applies to `/act`, `/act debt`, `/act all`, `@claude /act`, `@codex /act`, `@copilot /act`.
+Applies to `/act`, `/act pr`, `/act plan`, `/act backlog`, `/act harvest`, `@claude /act`, `@codex /act`, `@copilot /act`.
 
 **No Playwright** for GitHub PR UI.
 
-## Modes
+## Contexts
 
-| Command | Mode | Target |
-| ------- | ---- | ------ |
-| `/act` | **PR** (default when a PR is in context) | Current PR — P0–P6 below |
-| `/act 42` | **PR** | PR `#42` |
-| `/act debt` | **Debt** | Open rows in [`.agents/review-debt/`](../../../.agents/review-debt/) (`harvests/` + `ledger.jsonl`) → **new batch PR** |
-| `/act debt --limit 25` | **Debt** | Cap batch size (suggested default: 25) |
-| `/act all` | **Debt** | Same as `/act debt` when no PR is in context |
+`/act <context>` resolves threads from one of four sources and produces one PR:
 
-**Harvest is not part of `/act`.** Unresolved threads are collected by
-[`scripts/harvest-threads.ts`](scripts/harvest-threads.ts) on **PR merge** or
-[`workflow_dispatch`](../../../.github/workflows/review-debt-harvest.yml) only.
-See [docs/plans/2026-06-09-review-debt-harvest.md](../../../docs/plans/2026-06-09-review-debt-harvest.md).
+| Context | Command | Source | Owner of the source |
+| ------- | ------- | ------ | ------------------- |
+| **`pr`** (default when a PR is in context) | `/act` · `/act pr` · `/act 42` | Open threads on a single PR | Live PR |
+| **`plan`** | `/act plan` | `.agents/plans/*.md` | `/plan` (future) |
+| **`backlog`** | `/act backlog` | `.agents/backlog/*.md` | `/backlog` |
+| **`harvest`** | `/act harvest` | `.agents/review-debt/harvests/*.jsonl` | `/harvest` |
 
-**PR mode** — pre-merge: all open threads on the PR should be fixed or answered
-before merge-ready (unless the user explicitly ships with debt and relies on harvest).
+Resolution rule: every `<context>` other than `pr` must `resolve by pr | branch` — i.e. each row in the source is keyed by a PR number (or branch name) and a thread id; `/act` then opens **one** batch PR that lists the source identifiers and fixes the threads in product code.
 
-**Debt mode** — post-merge batch: fix many harvested threads in one PR; source PR
-threads may be replied/resolved after the debt PR lands.
+`/act` does **not** collect (`/harvest`) or triage (`/backlog`). The three skills form a one-way pipeline:
+
+```text
+PR merge → /harvest → /backlog → /act → /backlog (archive)
+```
+
+If a thread is on the live PR you're running `/act pr` against, fix it directly.
+If it's in `harvests/*.jsonl`, run `/act harvest` (or its alias `/act debt`, see
+below). If it's in `.agents/backlog/*.md`, run `/act backlog`.
+
+### `/act debt` (alias for `harvest`)
+
+`/act debt` is kept as a deprecated alias for `/act harvest` to avoid breaking
+existing muscle memory. It is **not** a separate mode; the scripts under
+`bun run act:debt:*` now resolve to the harvest-style batch PR (single batch PR
+listing source PRs + thread ids).
 
 ## Wrong vs right
 
 | Wrong (do not do this) | Right |
 |------------------------|--------|
 | Run `resolve-open-threads.sh` to clear open threads | Read threads → fix code → reply in thread → then resolve |
-| One PR comment “addressed feedback” | Per-thread fix or per-thread reply, then resolve that thread |
+| One PR comment "addressed feedback" | Per-thread fix or per-thread reply, then resolve that thread |
 | Only touch `.agents/skills/` or the resolve script | Change `apps/`, `tools/`, `specs/`, `packaging/`, workflows per feedback |
-| “Merge-ready” because `open_threads=0` | Merge-ready only if feedback is **implemented** and CI green on HEAD |
+| "Merge-ready" because `open_threads=0` | Merge-ready only if feedback is **implemented** and CI green on HEAD |
 | Edit PR title/body to track agent progress | Leave author PR summary alone; reply in threads + commits |
 
 ## PR metadata
 
 **Never change pull request title or description** unless the user explicitly asks.
 
-Do not replace the author’s summary with checklists, thread counts, or CI notes. On GitHub Copilot, repository rules live in [`.github/copilot-instructions.md`](../../../.github/copilot-instructions.md) and [`.github/instructions/act.instructions.md`](../../../.github/instructions/act.instructions.md).
+Do not replace the author's summary with checklists, thread counts, or CI notes. On GitHub Copilot, repository rules live in [`.github/copilot-instructions.md`](../../../.github/copilot-instructions.md) and [`.github/instructions/act.instructions.md`](../../../.github/instructions/act.instructions.md).
 
 ## On start
 
 1. React 👀 (or 👍).
 2. **HEAD SHA** — `gh pr view NUMBER --json headRefOid,statusCheckRollup,url`.
-3. **Inventory open threads** — for each unresolved thread, capture: file/line, reviewer ask, whether it needs a **code change** or a **written answer**.
+3. **Resolve the context** (see table above) and **inventory threads** — for each unresolved thread, capture: file/line, reviewer ask, whether it needs a **code change** or a **written answer**.
 
 Build a short **thread plan** before editing (can be in your working notes / final summary):
 
@@ -74,40 +85,44 @@ Thread 2 …
 
 Do not start the resolve script until every open thread has a planned action and you have executed P0–P3.
 
-## Debt mode (`/act debt`, `/act all`)
+## Debt context (`/act harvest`, `/act debt`, `/act backlog`)
 
-Use after merge when threads were **harvested** into the ledger (not for a live PR loop).
+Use after a `/harvest` cycle (or after `/backlog` triage has written
+`.agents/backlog/*.md`) and you want to fix many threads in one batch PR.
 
 | Step | What | Done when |
 | ---- | ---- | --------- |
-| **D0** | Load queue | `bun run act:debt:query -- --status open --limit N --format tsv` |
+| **D0** | Load queue | `bun run act:debt:query -- --status open --limit N --format tsv` (harvest) **or** read `.agents/backlog/*.md` (backlog) |
 | **D1** | Thread plan | Group by `area` / file; note `source_pr` + `thread_id` per row |
-| **D2** | Branch | `cursor/review-debt-YYYY-MM-DD-f7a9` |
+| **D2** | Branch | `cursor/<context>-YYYY-MM-DD-f7a9` |
 | **D3** | Fix | Product code in `apps/`, `tools/`, `specs/`, … |
-| **D4** | Verify | Same verify block as PR mode where applicable |
+| **D4** | Verify | Same verify block as PR context where applicable |
 | **D5** | PR | Title lists source PRs; body maps themes → commits |
 | **D6** | Close loop | `bun run act:debt:done -- --status done --fix-pr N --threads-file …` |
 | **D7** | Resolve | `resolve-open-threads.sh` on source PRs only after reply + fix |
 
-Debt PR **merge-ready:** CI green on HEAD + summary of themes fixed. Do **not**
-require `open_threads=0` on source PRs before the debt PR merges.
+Batch PR **merge-ready:** CI green on HEAD + summary of themes fixed. Do **not**
+require `open_threads=0` on source PRs before the batch PR merges.
 
-Query and batch helpers:
+Query helpers:
 
 ```bash
-bun run act:debt:plan -- --limit 25
+bun run act:debt:query -- --status open --limit N --format tsv
 bun run act:debt:query -- --duplicates
 bun run act:debt:query -- --area apps/openadt-cli
-bun run act:debt:query -- --write-summary
-bun run act:debt:done -- --status done --fix-pr N --thread-id PRRT_…
+bun run act:debt:plan  -- --limit 25
+bun run act:debt:done  -- --status done --fix-pr N --thread-id PRRT_…
 ```
 
-## Work order — PR mode (mandatory sequence)
+After the batch PR merges, run `bun run harvest:archive` (or
+`/backlog harvest`) so the harvest file is moved out of `harvests/`.
+
+## Work order — PR context (mandatory sequence)
 
 | Step | What | Done when |
 |------|------|-----------|
 | **P0** | CI / merge blockers on **HEAD** | Required checks green on **current** HEAD |
-| **P1** | Blocking review (“must fix”, changes requested) | **Code fixed** on branch + **reply in that thread** |
+| **P1** | Blocking review ("must fix", changes requested) | **Code fixed** on branch + **reply in that thread** |
 | **P2** | Nits, questions, style | **Fix or answer in thread** (not silent) |
 | **P3** | Inline suggestions | **Applied in code** or declined with reason **in thread** |
 | **P4** | Resolve pass | Only after P0–P3 for **all** open threads |
@@ -154,7 +169,7 @@ Skipping steps 2–4 and only running the batch resolve script **violates `/act`
 
 **In scope:** `apps/`, `tools/`, `specs/`, `packaging/`, `.github/workflows/`, etc.
 
-**Out of scope for “addressing review”:** `.agents/skills/`, `resolve-open-threads.sh` — unless the script literally cannot run (`bash -n` fails).
+**Out of scope for "addressing review":** `.agents/skills/`, `resolve-open-threads.sh` — unless the script literally cannot run (`bash -n` fails).
 
 ## Resolve pass (P4 only)
 
@@ -170,7 +185,7 @@ bash scripts/resolve-open-threads.sh OWNER REPO NUMBER
 bash scripts/resolve-open-threads.sh --dry-run OWNER REPO NUMBER
 ```
 
-The script only clicks “Resolve conversation” in GitHub — it does **not** implement review fixes.  
+The script only clicks "Resolve conversation" in GitHub — it does **not** implement review fixes.  
 Resolve outdated threads too, but only after the underlying comment was handled on the branch.
 
 ## Rate findings (P5 — research dataset)
@@ -219,7 +234,7 @@ Say **merge-ready** only when:
 1. Review feedback is **done in code** (or explicitly declined in threads with reason).
 2. CI required checks **success on current HEAD**.
 3. `open_threads=0` from final `--dry-run`.
-4. Summary lists **what you changed per theme/file**, not only “resolved N threads”.
+4. Summary lists **what you changed per theme/file**, not only "resolved N threads".
 5. **P5 done** — `review_scores.csv` upserted and committed on the PR branch. Delegate to a `general` subagent (not the orchestrator) to keep the main context cheap. Pass the `--evaluator` value as the subagent's model name (e.g. `claude-haiku-4-5`). Do NOT re-extract findings after scoring begins — use one `findings.jsonl` per `/act` run.
 6. **P6 passed** — no cycle signals (reopened threads, duplicate rule flags, empty `/act` loop); retrospective + sink update done if anything went wrong this session.
 
@@ -236,7 +251,7 @@ Say **merge-ready** only when:
 
 ## Idempotency
 
-If feedback is already fixed on HEAD and threads are closed → short “already done”, no resolve-only rerun.
+If feedback is already fixed on HEAD and threads are closed → short "already done", no resolve-only rerun.
 
 ## Validation
 
@@ -256,10 +271,10 @@ prefix paths with `.agents/skills/act/` (or use `bun run act:debt:*` for ledger 
 | **Resolve open threads (P4)**| `bash scripts/resolve-open-threads.sh OWNER REPO PR`      | unchanged                                   |
 | **Extract findings (P5)**    | `bun scripts/extract-findings.ts OWNER REPO PR`           | N × `gh api` check-runs/annotations/comments reads |
 | **Submit scores (P5)**       | `bun scripts/submit-scores.ts … --findings F --scores S`   | per-finding parse + CSV writes (local, no API) |
-| **Harvest debt (on merge)**  | `bun run act:debt:harvest-pr -- PR`                       | Not during `/act`; CI workflow or manual dispatch |
 | **Query debt (D0)**          | `bun run act:debt:query -- --status open --format tsv`    | Reading harvest files by hand |
 | **Plan debt batch (D1)**     | `bun run act:debt:plan -- --limit 25`                     | Hand-grouping ledger rows |
 | **Mark debt done (D6)**      | `bun run act:debt:done -- --status done …`                | Editing `ledger.jsonl` by hand |
+| **Archive harvests (post-D7)**| `bun run harvest:archive`                                 | Hand-moving files into `archive/` |
 
 **Scratch artifacts (e.g. `replies.tsv`) MUST live outside the worktree** —
 use an absolute path under the cloud-agent pre-approved `/tmp/agent_*/`. The
@@ -269,8 +284,8 @@ allowlists turn into an ever-growing list. `reply-threads.sh --file` accepts
 absolute paths; nothing else has to change.
 
 **`replies.tsv` format** (one row per thread). TAB separates the thread ID
-from the body; newlines and tabs in the body must be escaped as `\n` and
-`\t` (the script decodes them before POST):
+from the body; newlines and tabs in the body must be escaped as `\n` and `\t`
+(the script decodes them before POST):
 
 ```tsv
 <thread_id>	<reply body on a single line; \n for newlines, \t for tabs>
