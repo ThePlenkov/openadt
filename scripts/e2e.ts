@@ -3,15 +3,15 @@
  * /e2e entry — run MCP AI scenario(s) and write evidence to <repo>/.e2e/results/<run>.md
  * Usage: bun run e2e -- mcp-1 [--destination ABC_200_USER_EN]
  */
-import { dirname } from "node:path";
-import { fileURLToPath } from "node:url";
-import { parseCli } from "../tools/sap-adt-mcp-launcher/ai-tests/framework/context";
-import { runE2eDispatch } from "../tools/sap-adt-mcp-launcher/ai-tests/framework/dispatch";
+import { dirname } from 'node:path'
+import { fileURLToPath } from 'node:url'
+import { parseCli } from '../tools/sap-adt-mcp-launcher/e2e/framework/context'
+import { runE2eDispatch } from '../tools/sap-adt-mcp-launcher/e2e/framework/dispatch'
 import {
   defaultEvidenceRoot,
   resolveRepoRoot,
-} from "../tools/sap-adt-mcp-launcher/ai-tests/framework/evidence";
-import { runAiTests } from "../tools/sap-adt-mcp-launcher/ai-tests/framework/runner";
+} from '../tools/sap-adt-mcp-launcher/e2e/framework/evidence'
+import { runAiTests } from '../tools/sap-adt-mcp-launcher/e2e/framework/runner'
 
 process.env.OPENADT_E2E_EVIDENCE = "1";
 const repoRoot = resolveRepoRoot(dirname(fileURLToPath(import.meta.url)));

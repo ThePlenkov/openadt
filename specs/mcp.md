@@ -532,7 +532,7 @@ Package: `tools/adt-lsp-mcp/` — stdio-only MCP for the 26 `adt_*` tools. Calls
 | `prompts/list` | Includes `adt_lsp_workflow` |
 | `prompts/get` | `{ "name": "adt_lsp_workflow" }` → workflow markdown (direct LSP model, destination id, transport namespace, getLsUri chain) |
 
-Implementation: `tools/adt-lsp-mcp/src/guidance/`. E2e: `tools/adt-lsp-mcp/e2e/` (`bun run mcp:e2e -- --scenario adt-N --destination <id>`).
+Implementation: `tools/adt-lsp-mcp/src/guidance/`. E2e: `tools/adt-lsp-mcp/e2e/` — prefer root `bun run adt:e2e -- adt-N --destination <id>` (evidence always on); package `bun run mcp:e2e -- --scenario adt-N --destination <id> --evidence` also writes `.e2e/results/`.
 
 ---
 

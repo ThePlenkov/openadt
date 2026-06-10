@@ -125,6 +125,40 @@ export function loadScenarios(root: string): Scenario[] {
   return out.sort((a, b) => codeOrder(a.code) - codeOrder(b.code))
 }
 
+function scenarioFileMatchesSelector(file: string, selector: string): boolean {
+  const key = selector.trim().toLowerCase()
+  const lower = file.toLowerCase()
+  if (lower.startsWith(`${key}-`)) return true
+  return lower.includes(`-${key}-`) || lower.includes(`-${key}.`)
+}
+
+/** Load scenarios from `<root>/scenarios/` only — optional filename pre-filter (avoids bulk YAML parse failures). */
+export function loadScenariosFromRoot(
+  root: string,
+  selector?: string,
+  options?: { skipInvalid?: boolean }
+): Scenario[] {
+  const dir = scenariosDir(root)
+  if (!existsSync(dir)) return []
+  const files = readdirSync(dir)
+    .filter((f) => f.endsWith('.md'))
+    .filter((f) => !selector?.trim() || scenarioFileMatchesSelector(f, selector))
+    .sort()
+  const out: Scenario[] = []
+  for (const file of files) {
+    try {
+      const raw = readFileSync(join(dir, file), 'utf8')
+      const { meta, body } = parseScenarioMarkdown(raw)
+      out.push(toScenario(file, meta, body))
+    } catch (err) {
+      if (!options?.skipInvalid) throw err
+      const message = err instanceof Error ? err.message : String(err)
+      console.warn(`Skipping scenario file ${file}: ${message}`)
+    }
+  }
+  return out
+}
+
 function loadScenariosFromDir(dir: string): Scenario[] {
   const files = readdirSync(dir).filter((f) => f.endsWith('.md'))
   const out: Scenario[] = []

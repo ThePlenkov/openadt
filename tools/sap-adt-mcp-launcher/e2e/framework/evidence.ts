@@ -70,6 +70,11 @@ export function createEvidencePath(
   return { runId, path: join(root, `${runId}.md`) }
 }
 
+export type E2eSuiteMeta = {
+  scenarioFilePrefix: string
+  formatCommand: (scenarios: Scenario[], ctx: RunContext) => string
+}
+
 type EvidenceReportInput = {
   path: string
   runId: string
@@ -81,6 +86,7 @@ type EvidenceReportInput = {
   scenarios: Scenario[]
   results: ScenarioResult[]
   mcpMode: string
+  suite?: E2eSuiteMeta
 }
 
 function gwtText(raw: string, ctx: RunContext): string {
@@ -152,6 +158,7 @@ function formatScenarioBlock(
 
 function buildEvidenceMarkdown(input: EvidenceReportInput): string {
   const { scenarios, results, ctx, runId, exitCode } = input
+  const suite = input.suite ?? LAUNCHER_E2E_SUITE
   const passed = results.filter((r) => r.passed).length
   const durationMs = new Date(input.finishedAt).getTime() - new Date(input.startedAt).getTime()
 
@@ -170,14 +177,14 @@ function buildEvidenceMarkdown(input: EvidenceReportInput): string {
     '',
     '## 🚀 How this run was executed',
     '',
-    `- **Command:** \`${formatE2eCommand(scenarios, ctx)}\``,
+    `- **Command:** \`${suite.formatCommand(scenarios, ctx)}\``,
     `- **Agent:** ${agent}`,
     `- **Model / LLM:** ${model}`,
     `- **Execution:** ${resolveE2eExecution(agent)}`,
     `- **Destination:** ${formatDestination(ctx.destination)}`,
     `- **MCP mode:** ${input.mcpMode}`,
     `- **import-from:** ${ctx.importFrom}`,
-    `- **Scenario files:** ${scenarios.map((s) => `tools/sap-adt-mcp-launcher/ai-tests/scenarios/${s.file}`).join(', ')}`,
+    `- **Scenario files:** ${scenarios.map((s) => `${suite.scenarioFilePrefix}${s.file}`).join(', ')}`,
     '',
     '---',
     '',
@@ -219,4 +226,22 @@ export function formatE2eCommand(scenarios: Scenario[], ctx: RunContext): string
   if (!dest) return `bun run e2e -- ${codes}`
   const destArg = shouldRedactDestination() ? '<destination>' : dest
   return `bun run e2e -- ${codes} --destination ${destArg}`
+}
+
+export function formatAdtE2eCommand(scenarios: Scenario[], ctx: RunContext): string {
+  const codes = scenarios.map((s) => s.code).join(' ')
+  const dest = ctx.destination?.trim()
+  if (!dest) return `bun run adt:e2e -- ${codes}`
+  const destArg = shouldRedactDestination() ? '<destination>' : dest
+  return `bun run adt:e2e -- ${codes} --destination ${destArg}`
+}
+
+export const LAUNCHER_E2E_SUITE: E2eSuiteMeta = {
+  scenarioFilePrefix: 'tools/sap-adt-mcp-launcher/e2e/scenarios/',
+  formatCommand: formatE2eCommand,
+}
+
+export const ADT_LSP_E2E_SUITE: E2eSuiteMeta = {
+  scenarioFilePrefix: 'tools/adt-lsp-mcp/e2e/scenarios/',
+  formatCommand: formatAdtE2eCommand,
 }

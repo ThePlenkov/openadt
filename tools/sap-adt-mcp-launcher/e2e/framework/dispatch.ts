@@ -10,10 +10,10 @@ import {
   resolveDestinationId,
   resolveE2eModel,
 } from './context'
-import { defaultEvidenceRoot } from './evidence'
-import { filterScenarios, loadScenarios } from './scenarios'
+import { ADT_LSP_E2E_SUITE, defaultEvidenceRoot, LAUNCHER_E2E_SUITE } from './evidence'
+import { filterScenarios, loadScenariosFromRoot } from './scenarios'
 
-const aiTestsRoot = join(dirname(fileURLToPath(import.meta.url)), '..')
+const launcherE2eRoot = join(dirname(fileURLToPath(import.meta.url)), '..')
 
 export type E2eDispatchPayload = {
   version: 1
@@ -66,7 +66,14 @@ function shellQuote(value: string): string {
   return `"${value.replace(/"/g, '\\"')}"`
 }
 
+const adtLspE2eRoot = join(launcherE2eRoot, '..', '..', 'adt-lsp-mcp', 'e2e')
+
+function isAdtScenarioCode(code: string): boolean {
+  return code.startsWith('adt-')
+}
+
 function buildLocalRunCommand(
+  script: 'e2e' | 'adt:e2e',
   scenario: string,
   destination: string,
   agent: string,
@@ -75,7 +82,7 @@ function buildLocalRunCommand(
   const parts = [
     'bun',
     'run',
-    'e2e',
+    script,
     '--',
     scenario,
     '--destination',
@@ -91,7 +98,7 @@ function buildLocalRunCommand(
 
 function buildAcpPrompt(input: {
   scenario: string
-  scenarioFile: string
+  scenarioFilePath: string
   destination: string
   localCommand: string
   acpAgent: string
@@ -100,7 +107,7 @@ function buildAcpPrompt(input: {
     `Run OpenADT MCP E2E scenario ${input.scenario} on destination ${input.destination}.`,
     '',
     'Follow the /e2e skill contract (specs/mcp-ai-testing.md):',
-    `1. Read scenario: tools/sap-adt-mcp-launcher/ai-tests/scenarios/${input.scenarioFile}`,
+    `1. Read scenario: ${input.scenarioFilePath}`,
     `2. Execute: ${input.localCommand}`,
     '3. Report PASS/FAIL, exit code, and E2E_EVIDENCE_FILE path.',
     '4. Summarize Given/When/Then and assertion table highlights (no secrets).',
@@ -114,27 +121,70 @@ function buildAcpPrompt(input: {
 }
 
 export function buildE2eDispatch(opts: CliOptions, repoRoot: string): E2eDispatchPayload {
+  return buildE2eDispatchForSuite(opts, repoRoot, {
+    e2eRoot: launcherE2eRoot,
+    e2eScript: 'e2e',
+    suite: LAUNCHER_E2E_SUITE,
+    usageExample: 'bun run e2e -- mcp-1 --destination <ID> --acp --agent <acp-agent-id>',
+  })
+}
+
+export function buildAdtLspE2eDispatch(opts: CliOptions, repoRoot: string): E2eDispatchPayload {
+  return buildE2eDispatchForSuite(opts, repoRoot, {
+    e2eRoot: adtLspE2eRoot,
+    e2eScript: 'adt:e2e',
+    suite: ADT_LSP_E2E_SUITE,
+    usageExample: 'bun run adt:e2e -- adt-1 --destination <ID> --acp --agent <acp-agent-id>',
+  })
+}
+
+function buildE2eDispatchForSuite(
+  opts: CliOptions,
+  repoRoot: string,
+  suiteConfig: {
+    e2eRoot: string
+    e2eScript: 'e2e' | 'adt:e2e'
+    suite: typeof LAUNCHER_E2E_SUITE
+    usageExample: string
+  }
+): E2eDispatchPayload {
   if (opts.list) {
     throw new Error('Dispatch does not support --list; run without --acp.')
   }
   const scenarioKey = opts.scenario?.trim()
   if (!scenarioKey) {
-    throw new Error(
-      'Dispatch requires a scenario code (e.g. mcp-1). ' +
-        'Usage: bun run e2e -- mcp-1 --destination <ID> --acp --agent <acp-agent-id>'
-    )
+    throw new Error(`Dispatch requires a scenario code. Usage: ${suiteConfig.usageExample}`)
   }
   const acpAgent = resolveAcpAgent(opts)
   const destination = resolveDestinationId(opts)
-  const scenarios = filterScenarios(loadScenarios(aiTestsRoot), scenarioKey)
+  const scenarios = filterScenarios(
+    loadScenariosFromRoot(suiteConfig.e2eRoot, scenarioKey),
+    scenarioKey
+  )
   const testId = scenarios.map((s) => s.code).join('_')
   const scenario = scenarios[0]!
+  if (suiteConfig.e2eScript === 'adt:e2e' && !isAdtScenarioCode(scenario.code)) {
+    throw new Error(
+      `Scenario ${scenario.code} is not an adt-* scenario. Use bun run e2e for mcp-* scenarios.`
+    )
+  }
+  if (suiteConfig.e2eScript === 'e2e' && isAdtScenarioCode(scenario.code)) {
+    throw new Error(
+      `Scenario ${scenario.code} is an adt-* scenario. Use bun run adt:e2e -- ${scenario.code} … --acp --agent <id>.`
+    )
+  }
   const model = resolveE2eModel(opts)
   const evidenceDir = opts.evidenceRoot ?? defaultEvidenceRoot(repoRoot)
-  const localCommand = buildLocalRunCommand(scenario.code, destination, acpAgent, model)
+  const localCommand = buildLocalRunCommand(
+    suiteConfig.e2eScript,
+    scenario.code,
+    destination,
+    acpAgent,
+    model
+  )
   const prompt = buildAcpPrompt({
     scenario: scenario.code,
-    scenarioFile: scenario.file,
+    scenarioFilePath: `${suiteConfig.suite.scenarioFilePrefix}${scenario.file}`,
     destination,
     localCommand,
     acpAgent,
@@ -223,8 +273,20 @@ export type RunE2eDispatchOutcome = {
 }
 
 export function runE2eDispatch(opts: CliOptions, repoRoot: string): RunE2eDispatchOutcome {
+  return runDispatch(buildE2eDispatch, opts, repoRoot)
+}
+
+export function runAdtLspE2eDispatch(opts: CliOptions, repoRoot: string): RunE2eDispatchOutcome {
+  return runDispatch(buildAdtLspE2eDispatch, opts, repoRoot)
+}
+
+function runDispatch(
+  build: (opts: CliOptions, repoRoot: string) => E2eDispatchPayload,
+  opts: CliOptions,
+  repoRoot: string
+): RunE2eDispatchOutcome {
   try {
-    const payload = buildE2eDispatch(opts, repoRoot)
+    const payload = build(opts, repoRoot)
     const dispatchRoot = defaultDispatchRoot(repoRoot)
     const dispatchPath = writeDispatchFile(dispatchRoot, payload)
     console.log(formatDispatchInstructions(payload))

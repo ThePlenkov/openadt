@@ -145,6 +145,36 @@ bun run e2e -- mcp-1 --destination ABC_200_USER_EN --acp --agent devin
 - On local completion prints `E2E_EVIDENCE_FILE=<path>` for agents.
 - With `--acp` (or `--command=acp`) and `--agent <acp-agent-id>`, prints dispatch instructions and `E2E_DISPATCH_FILE=<path>` — **do not** spawn MCP locally in Cursor.
 
+### `@openadt/adt-lsp-mcp` entry (evidence)
+
+Direct LSP stdio MCP (`tools/adt-lsp-mcp/`). Scenarios: `tools/adt-lsp-mcp/e2e/scenarios/adt-N-<id>.md` (`adt-1` … `adt-26`).
+
+```bash
+bun run adt:e2e -- adt-1 --destination ABC_200_USER_EN
+OPENADT_E2E_AGENT=cursor OPENADT_E2E_MODEL=Auto bun run adt:e2e -- adt-2 --destination ABC_200_USER_EN
+bun run adt:e2e -- adt-1 --destination ABC_200_USER_EN --acp --agent devin
+```
+
+Package-local (evidence only with `--evidence` or `OPENADT_E2E_EVIDENCE=1`):
+
+```bash
+cd tools/adt-lsp-mcp && bun run build
+cd tools/adt-lsp-mcp && bun run mcp:e2e -- --scenario adt-1 --destination ABC_200_USER_EN --evidence
+```
+
+- Root `bun run adt:e2e` sets `OPENADT_E2E_EVIDENCE=1` and always passes `--evidence` on **local** runs.
+- Positional first non-flag arg is the scenario code (`adt-1`, …) or slug `id`.
+- On local completion prints `E2E_EVIDENCE_FILE=<path>` for agents.
+- With `--acp` and `--agent <acp-agent-id>`, prints dispatch instructions (`bun run adt:e2e:dispatch -- …` is equivalent). External agent runs `command.local` from `.e2e/dispatch/<run-id>.json`.
+
+**Devin / external agents:** do **not** use bare `devin -p` with `bun run mcp:e2e` in `tools/adt-lsp-mcp` — that bypasses evidence. Use:
+
+```bash
+OPENADT_E2E_AGENT=devin bun run adt:e2e -- adt-1 --destination <ADT_DESTINATION_ID>
+```
+
+Or dispatch: `bun run adt:e2e -- adt-1 --destination <ID> --acp --agent devin` and submit the printed prompt via ACP.
+
 ### Evidence file (single markdown)
 
 Path: `.e2e/results/<datetime>-<✅|❌>-<test_id>-<8hex>.md` (gitignored).

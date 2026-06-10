@@ -40,6 +40,8 @@
     "mcp:e2e": "bun tools/sap-adt-mcp-launcher/e2e/run.ts",
     "e2e": "bun scripts/e2e.ts",
     "e2e:dispatch": "bun scripts/e2e-dispatch.ts",
+    "adt:e2e": "bun scripts/adt-e2e.ts",
+    "adt:e2e:dispatch": "bun scripts/adt-e2e-dispatch.ts",
     "prepare": "husky",
     "precommit:format": "biome format --write --no-errors-on-unmatched . && git update-index --again",
     "nx": "nx"

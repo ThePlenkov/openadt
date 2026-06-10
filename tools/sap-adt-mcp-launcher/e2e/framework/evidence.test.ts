@@ -128,9 +128,7 @@ describe('evidence', () => {
       expect(md).toContain('📦 Response payload')
       expect(md).toContain('**Destination:** ABC_200_USER_EN')
       expect(md).toContain('**Command:** `bun run e2e -- mcp-1 --destination ABC_200_USER_EN`')
-      expect(md).toContain(
-        'tools/sap-adt-mcp-launcher/ai-tests/scenarios/mcp-1-list-destinations.md'
-      )
+      expect(md).toContain('tools/sap-adt-mcp-launcher/e2e/scenarios/mcp-1-list-destinations.md')
       expect(md).toContain(`**Agent:** ${DEFAULT_E2E_AGENT}`)
       expect(md).toContain(`**Model / LLM:** ${DEFAULT_E2E_MODEL}`)
       expect(md).toContain('**Execution:** framework')
