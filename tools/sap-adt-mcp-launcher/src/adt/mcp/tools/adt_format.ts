@@ -31,7 +31,7 @@ export const adt_format = tool({
       return {
         content: [{
           type: "text",
-          text: JSON.stringify(lspResult),
+          text: JSON.stringify(lspResult, null, 2),
         }],
       };
     } catch (err) {

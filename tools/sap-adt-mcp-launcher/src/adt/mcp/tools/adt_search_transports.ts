@@ -29,7 +29,7 @@ export const adt_search_transports = tool({
       return {
         content: [{
           type: "text",
-          text: JSON.stringify(lspResult),
+          text: JSON.stringify(lspResult, null, 2),
         }],
       };
     } catch (err) {

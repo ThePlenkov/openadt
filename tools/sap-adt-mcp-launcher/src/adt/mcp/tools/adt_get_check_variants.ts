@@ -29,7 +29,7 @@ export const adt_get_check_variants = tool({
       return {
         content: [{
           type: "text",
-          text: JSON.stringify(lspResult),
+          text: JSON.stringify(lspResult, null, 2),
         }],
       };
     } catch (err) {
