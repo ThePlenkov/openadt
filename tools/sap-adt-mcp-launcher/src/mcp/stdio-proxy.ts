@@ -29,6 +29,7 @@ import {
   type AgentContext,
   type AgentRegistry,
 } from "../service/agent/index";
+import { renderAgentResult } from "../service/agent/mapping";
 
 /** Parse MCP HTTP response body (JSON or SSE `data:` lines). */
 export function parseMcpHttpResponseBody({
@@ -467,11 +468,11 @@ export function createStdioMcpBridge(): StdioMcpBridge {
     };
     chain.append(async () => {
       try {
-        const result = await tool.handle(args, ctx);
+        const agentResult = await tool.handle(args, ctx);
         await writeMcpStdioMessage(encoder, {
           jsonrpc: "2.0",
           id: request.id,
-          result,
+          result: renderAgentResult(agentResult),
         });
       } catch (err) {
         const message = err instanceof Error ? err.message : String(err);
