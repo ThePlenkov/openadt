@@ -3,6 +3,7 @@
  * Uses MCP SDK pattern with Zod schema.
  */
 import { z } from 'zod';
+import { tool } from '../tool-factory.js';
 import { assignTransportToObject } from "../../services/adtLs/transport/assignTransportToObject.js";
 import type { LspTransport } from "../../../lsp/client/lsp-transport.js";
 import { callLspContract } from "../../../lsp/client/call-lsp-contract.js";
@@ -15,7 +16,7 @@ const schema = z.object({
 });
 
 // Tool definition for MCP SDK registration
-export const adt_assign_transport = {
+export const adt_assign_transport = tool({
   name: "adt_assign_transport",
   description: "Assign a transport to an object",
   inputSchema: schema,
@@ -44,4 +45,4 @@ export const adt_assign_transport = {
       };
     }
   },
-};
+});

@@ -3,6 +3,7 @@
  * Uses MCP SDK pattern with Zod schema.
  */
 import { z } from 'zod';
+import { tool } from '../tool-factory.js';
 import { checkTransportForObjectLock } from "../../services/adtLs/transport/checkTransportForObjectLock.js";
 import type { LspTransport } from "../../../lsp/client/lsp-transport.js";
 import { callLspContract } from "../../../lsp/client/call-lsp-contract.js";
@@ -15,7 +16,7 @@ const schema = z.object({
 });
 
 // Tool definition for MCP SDK registration
-export const adt_check_transport_lock = {
+export const adt_check_transport_lock = tool({
   name: "adt_check_transport_lock",
   description: "Check if an object requires a transport",
   inputSchema: schema,
@@ -46,4 +47,4 @@ export const adt_check_transport_lock = {
       };
     }
   },
-};
+});

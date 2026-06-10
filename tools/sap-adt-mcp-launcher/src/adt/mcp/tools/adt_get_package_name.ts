@@ -3,6 +3,7 @@
  * Uses MCP SDK pattern with Zod schema.
  */
 import { z } from 'zod';
+import { tool } from '../tool-factory.js';
 import { getPackageName } from "../../services/adtLs/fileSystem/getPackageName.js";
 import type { LspTransport } from "../../../lsp/client/lsp-transport.js";
 import { callLspContract } from "../../../lsp/client/call-lsp-contract.js";
@@ -14,7 +15,7 @@ const schema = z.object({
 });
 
 // Tool definition for MCP SDK registration
-export const adt_get_package_name = {
+export const adt_get_package_name = tool({
   name: "adt_get_package_name",
   description: "Get package name from URI",
   inputSchema: schema,
@@ -44,4 +45,4 @@ export const adt_get_package_name = {
       };
     }
   },
-};
+});

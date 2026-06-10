@@ -3,6 +3,7 @@
  * Uses MCP SDK pattern with Zod schema.
  */
 import { z } from 'zod';
+import { tool } from '../tool-factory.js';
 import { createTransportForObjectLock } from "../../services/adtLs/transport/createTransportForObjectLock.js";
 import type { LspTransport } from "../../../lsp/client/lsp-transport.js";
 import { callLspContract } from "../../../lsp/client/call-lsp-contract.js";
@@ -15,7 +16,7 @@ const schema = z.object({
 });
 
 // Tool definition for MCP SDK registration
-export const adt_create_transport = {
+export const adt_create_transport = tool({
   name: "adt_create_transport",
   description: "Create a transport for an object",
   inputSchema: schema,
@@ -46,4 +47,4 @@ export const adt_create_transport = {
       };
     }
   },
-};
+});

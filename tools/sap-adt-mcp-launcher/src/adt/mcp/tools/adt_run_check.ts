@@ -3,6 +3,7 @@
  * Uses MCP SDK pattern with Zod schema.
  */
 import { z } from 'zod';
+import { tool } from '../tool-factory.js';
 import { runCheck as atcRunCheck } from "../../services/adtLs/atc/runCheck.js";
 import type { LspTransport } from "../../../lsp/client/lsp-transport.js";
 import { callLspContract } from "../../../lsp/client/call-lsp-contract.js";
@@ -15,7 +16,7 @@ const schema = z.object({
 });
 
 // Tool definition for MCP SDK registration
-export const adt_run_check = {
+export const adt_run_check = tool({
   name: "adt_run_check",
   description: "Run ATC check",
   inputSchema: schema,
@@ -48,4 +49,4 @@ export const adt_run_check = {
       };
     }
   },
-};
+});

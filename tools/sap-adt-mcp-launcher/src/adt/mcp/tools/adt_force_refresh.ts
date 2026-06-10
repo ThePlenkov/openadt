@@ -3,6 +3,7 @@
  * Uses MCP SDK pattern with Zod schema.
  */
 import { z } from 'zod';
+import { tool } from '../tool-factory.js';
 import { forceRefresh } from "../../services/adtLs/fileSystem/forceRefresh.js";
 import type { LspTransport } from "../../../lsp/client/lsp-transport.js";
 import { callLspContract } from "../../../lsp/client/call-lsp-contract.js";
@@ -14,7 +15,7 @@ const schema = z.object({
 });
 
 // Tool definition for MCP SDK registration
-export const adt_force_refresh = {
+export const adt_force_refresh = tool({
   name: "adt_force_refresh",
   description: "Force refresh a file",
   inputSchema: schema,
@@ -44,4 +45,4 @@ export const adt_force_refresh = {
       };
     }
   },
-};
+});

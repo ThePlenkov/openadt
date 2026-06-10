@@ -3,6 +3,7 @@
  * Uses MCP SDK pattern with Zod schema.
  */
 import { z } from 'zod';
+import { tool } from '../tool-factory.js';
 import { getFileLockStatus } from "../../services/adtLs/fileSystem/getFileLockStatus.js";
 import type { LspTransport } from "../../../lsp/client/lsp-transport.js";
 import { callLspContract } from "../../../lsp/client/call-lsp-contract.js";
@@ -14,7 +15,7 @@ const schema = z.object({
 });
 
 // Tool definition for MCP SDK registration
-export const adt_get_file_lock_status = {
+export const adt_get_file_lock_status = tool({
   name: "adt_get_file_lock_status",
   description: "Get file lock status",
   inputSchema: schema,
@@ -44,4 +45,4 @@ export const adt_get_file_lock_status = {
       };
     }
   },
-};
+});

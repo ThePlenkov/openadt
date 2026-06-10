@@ -1,0 +1,35 @@
+/**
+ * MCP tool factory function.
+ * Ensures exports are valid MCP tools with proper typing.
+ */
+import { z } from 'zod';
+import type { LspTransport } from "../../lsp/client/lsp-transport.js";
+
+/**
+ * MCP tool definition (internal type)
+ */
+type ToolDefinition = {
+  name: string;
+  description: string;
+  inputSchema: z.ZodObject<any>;
+  handler: (args: any, transport: LspTransport) => Promise<{
+    content: Array<{ type: string; text: string }>;
+    isError?: boolean;
+  }>;
+};
+
+/**
+ * MCP tool factory function.
+ * Validates and creates a properly typed MCP tool.
+ */
+export function tool(def: {
+  name: string;
+  description: string;
+  inputSchema: z.ZodObject<any>;
+  handler: (args: any, transport: LspTransport) => Promise<{
+    content: Array<{ type: string; text: string }>;
+    isError?: boolean;
+  }>;
+}): ToolDefinition {
+  return def;
+}
