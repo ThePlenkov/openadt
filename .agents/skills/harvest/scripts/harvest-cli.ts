@@ -32,6 +32,100 @@ const SUBCOMMANDS = {
 
 type Subcommand = keyof typeof SUBCOMMANDS;
 
+const GH_REPO_FIELDS = "owner.login,nameWithOwner";
+
+interface GhRepo {
+  owner: string;
+  repo: string;
+}
+
+function parseOwnerLogin(parsed: {
+  [k: string]: unknown;
+  owner?: { login?: string };
+}): string | null {
+  return typeof parsed.owner?.login === "string" ? parsed.owner.login : null;
+}
+
+function parseNameWithOwner(parsed: {
+  [k: string]: unknown;
+  nameWithOwner?: string;
+}): string | null {
+  return typeof parsed.nameWithOwner === "string" ? parsed.nameWithOwner : null;
+}
+
+function splitOwnerRepo(nameWithOwner: string): GhRepo | null {
+  const slash = nameWithOwner.indexOf("/");
+  if (slash < 0) {
+    return null;
+  }
+  const owner = nameWithOwner.slice(0, slash);
+  const repo = nameWithOwner.slice(slash + 1);
+  if (!owner || !repo) {
+    return null;
+  }
+  return { owner, repo };
+}
+
+function parseGhRepoView(stdout: string): GhRepo | null {
+  let parsed:
+    | {
+        [k: string]: unknown;
+        owner?: { login?: string };
+        nameWithOwner?: string;
+      }
+    | null = null;
+  try {
+    parsed = JSON.parse(stdout);
+  } catch {
+    return null;
+  }
+  if (!parsed) {
+    return null;
+  }
+  const owner = parseOwnerLogin(parsed);
+  const nameWithOwner = parseNameWithOwner(parsed);
+  if (owner && nameWithOwner) {
+    return { owner, repo: nameWithOwner };
+  }
+  if (nameWithOwner) {
+    return splitOwnerRepo(nameWithOwner);
+  }
+  return null;
+}
+
+function resolveGhRepo(): GhRepo | null {
+  const envRepo = process.env.GITHUB_REPOSITORY;
+  if (envRepo && envRepo.includes("/")) {
+    const [owner, repo] = envRepo.split("/", 2);
+    if (owner && repo) {
+      return { owner, repo };
+    }
+  }
+  const result = spawnSync(
+    "gh",
+    ["repo", "view", "--json", GH_REPO_FIELDS],
+    { encoding: "utf8" },
+  );
+  if (result.status !== 0 || !result.stdout) {
+    return null;
+  }
+  return parseGhRepoView(result.stdout);
+}
+
+function withOwnerRepo(cmd: Subcommand, rest: string[]): string[] {
+  if (cmd !== "pr" && cmd !== "batch") {
+    return rest;
+  }
+  if (rest[0] && !rest[0].startsWith("--")) {
+    return rest;
+  }
+  const repo = resolveGhRepo();
+  if (!repo) {
+    return rest;
+  }
+  return [repo.owner, repo.repo, ...rest];
+}
+
 function usage(): never {
   console.error(`Usage:
   bun run harvest:<cmd> -- [args…]
@@ -96,7 +190,8 @@ function runCommand(cmd: string, rest: string[]): number {
   if (cmd === "test") {
     return runTests();
   }
-  return runBun(subcommandScript(cmd), rest);
+  const subcommand = cmd as Subcommand;
+  return runBun(subcommandScript(subcommand), withOwnerRepo(subcommand, rest));
 }
 
 function main(): void {

@@ -127,9 +127,9 @@ flowchart LR
   F --> B["/backlog harvest"]
   B --> BL[.agents/backlog/*.md]
   B --> S["/harvest archive"]
-  S --> A[archive/harvests/*.jsonl]
-  F --> A["/act <context>"]
-  A --> P[batch PR]
+  S --> AR[archive/harvests/*.jsonl]
+  F --> Act["/act context"]
+  Act --> P[batch PR]
   P --> R["/act done"]
   R --> L[ledger.jsonl]
   L --> S
