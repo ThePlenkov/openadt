@@ -510,6 +510,30 @@ OpenADT exposes additional LSP-based MCP tools (prefixed with `adt_`) that are n
 
 See [adt-agent-typescript.md](adt-agent-typescript.md) for the full tool reference and implementation details.
 
+#### `@openadt/adt-lsp-mcp` (direct LSP stdio)
+
+Package: `tools/adt-lsp-mcp/` — stdio-only MCP for the 26 `adt_*` tools. Calls `adt-lsc` over **pipe LSP** directly; there is **no** HTTP MCP bridge (`adtLs/mcp/startMCPServer` is not used).
+
+| Item | Contract |
+| ---- | -------- |
+| CLI | `adt-lsp-mcp <destination>` or env `OPENADT_DESTINATION` / `OPENADT_MCP_DESTINATION` |
+| Destination id | `SID_CLIENT_USER_LANG` (e.g. `ABC_200_USER_EN`) — must exist in `~/.adtls/destinations.json` |
+| `destinationsStorePath` | **Directory** `~/.adtls` (contains `destinations.json`), not the file path |
+| LSP transport | Handlers receive `LspConnectionTransport`, not raw `MessageConnection` |
+| MCP `tools/call` result | Handler return value is the JSON-RPC **`result`** field (`{ content, isError? }`), not nested under `result.result` |
+| Startup | MCP `initialize` / `tools/list` / `prompts/list` respond immediately; LSP connect + logon runs in background; first `tools/call` awaits readiness |
+| Transport LSP namespace | `adtLs/cts/transport/*` (not `adtLs/transport/*`) |
+| Object URI chain | ADT path from `adt_quick_search` → `adtLs/repository/getLsUri` → repotree/AFF URI for file/transport ops; `checkTransportForObjectLock` uses `{ objectInfo: { objectUri }, operationType }` after getLsUri |
+
+**Guidance prompt (OpenADT-owned):**
+
+| MCP method | Behavior |
+| ---------- | -------- |
+| `prompts/list` | Includes `adt_lsp_workflow` |
+| `prompts/get` | `{ "name": "adt_lsp_workflow" }` → workflow markdown (direct LSP model, destination id, transport namespace, getLsUri chain) |
+
+Implementation: `tools/adt-lsp-mcp/src/guidance/`. E2e: `tools/adt-lsp-mcp/e2e/` (`bun run mcp:e2e -- --scenario adt-N --destination <id>`).
+
 ---
 
 ### Contract-first architecture (proposed)

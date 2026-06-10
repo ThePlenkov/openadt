@@ -11,8 +11,10 @@ import type { QuickSearchResult } from '@openadt/adt-config'
 
 // Zod schema (single source of truth)
 const schema = z.object({
-  destination: z.string().describe('SAP destination'),
-  searchTerm: z.string().describe('Search term'),
+  destination: z
+    .string()
+    .describe('SAP destination id (SID_CLIENT_USER_LANG, e.g. ABC_200_USER_EN)'),
+  searchTerm: z.string().describe('Search pattern (LSP field: pattern)'),
 })
 
 // Format QuickSearchResult as text
@@ -35,7 +37,8 @@ function formatQuickSearchResult(result: QuickSearchResult): string {
 // Tool definition for MCP SDK registration
 export const adt_quick_search = tool({
   name: 'adt_quick_search',
-  description: 'Quick search in the ABAP repository',
+  description:
+    'Quick search in the ABAP repository. Returns references[].uri (ADT path) — pass to getLsUri-dependent tools or adt_check_transport_lock.',
   inputSchema: schema,
   handler: async (args: z.infer<typeof schema>, transport: LspTransport) => {
     try {

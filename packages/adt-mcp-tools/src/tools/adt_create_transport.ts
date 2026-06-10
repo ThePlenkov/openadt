@@ -10,15 +10,21 @@ import { callLspContract } from '@openadt/lsp-client'
 
 // Zod schema (single source of truth)
 const schema = z.object({
-  destination: z.string().describe('SAP destination'),
-  uri: z.string().describe('Object URI'),
-  transportId: z.string().describe('Transport ID'),
+  destination: z
+    .string()
+    .describe('SAP destination id (SID_CLIENT_USER_LANG, e.g. ABC_200_USER_EN)'),
+  uri: z
+    .string()
+    .describe(
+      'Object URI (ADT path or repotree URI; use getLsUri after adt_quick_search when unsure)'
+    ),
+  transportId: z.string().describe('Transport request number'),
 })
 
-// Tool definition for MCP SDK registration
 export const adt_create_transport = tool({
   name: 'adt_create_transport',
-  description: 'Create a transport for an object',
+  description:
+    'Create a transport for an object lock (adtLs/cts/transport/createTransportForObjectLock). Check lock with adt_check_transport_lock first.',
   inputSchema: schema,
   handler: async (args: z.infer<typeof schema>, transport: LspTransport) => {
     try {

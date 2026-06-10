@@ -10,14 +10,24 @@ import type { LspTransport } from '@openadt/lsp-client'
 import { callLspContract } from '@openadt/lsp-client'
 
 const schema = z.object({
-  destination: z.string().describe('SAP destination'),
-  uri: z.string().describe('ADT object path, e.g. /sap/bc/adt/oo/classes/cl_x'),
-  transportId: z.string().optional().describe('Optional transport ID (not used for check)'),
+  destination: z
+    .string()
+    .describe('SAP destination id (SID_CLIENT_USER_LANG, e.g. ABC_200_USER_EN)'),
+  uri: z
+    .string()
+    .describe(
+      'ADT object path from adt_quick_search (e.g. /sap/bc/adt/oo/classes/cl_x); tool resolves repotree URI via getLsUri'
+    ),
+  transportId: z
+    .string()
+    .optional()
+    .describe('Optional; not used for lock check (LSP uses objectInfo + operationType)'),
 })
 
 export const adt_check_transport_lock = tool({
   name: 'adt_check_transport_lock',
-  description: 'Check if an object requires a transport',
+  description:
+    'Check if an ABAP object requires transport recording. Uses adtLs/cts/transport/checkTransportForObjectLock after getLsUri. Pass ADT path from adt_quick_search as uri.',
   inputSchema: schema,
   handler: async (args: z.infer<typeof schema>, transport: LspTransport) => {
     try {

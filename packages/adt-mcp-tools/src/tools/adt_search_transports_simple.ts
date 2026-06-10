@@ -10,13 +10,15 @@ import { callLspContract } from '@openadt/lsp-client'
 
 // Zod schema (single source of truth)
 const schema = z.object({
-  destination: z.string().describe('SAP destination'),
+  destination: z
+    .string()
+    .describe('SAP destination id (SID_CLIENT_USER_LANG, e.g. ABC_200_USER_EN)'),
 })
 
-// Tool definition for MCP SDK registration
 export const adt_search_transports_simple = tool({
   name: 'adt_search_transports_simple',
-  description: 'Search for ABAP transports (simple)',
+  description:
+    'List modifiable ABAP transports for a destination (adtLs/cts/transport/searchTransportsSimple). Run before create/assign transport.',
   inputSchema: schema,
   handler: async (args: z.infer<typeof schema>, transport: LspTransport) => {
     try {

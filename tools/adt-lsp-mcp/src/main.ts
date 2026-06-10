@@ -21,6 +21,12 @@ import {
 import { DEFAULT_WORKSPACE } from '@openadt/adt-config'
 import { homedir } from 'node:os'
 import { join } from 'node:path'
+import {
+  ADT_LSP_WORKFLOW_PROMPT,
+  getGuidancePrompt,
+  guidancePromptDefs,
+  isGuidancePrompt,
+} from './guidance/guidance'
 
 type JsonRpcRequest = {
   id?: number | string
@@ -90,10 +96,24 @@ class SimpleMcpServer {
         case 'initialize':
           await this.sendResult(parsed.id, {
             protocolVersion: '2024-11-05',
-            capabilities: { tools: {} },
+            capabilities: { tools: {}, prompts: {} },
             serverInfo: { name: 'adt-lsp-mcp', version: '0.1.0' },
+            instructions: `Fetch MCP prompt "${ADT_LSP_WORKFLOW_PROMPT}" via prompts/get before using adt_* transport or object tools.`,
           })
           return
+        case 'prompts/list':
+          await this.sendResult(parsed.id, { prompts: guidancePromptDefs() })
+          return
+        case 'prompts/get': {
+          const promptParams = parsed.params as { name?: string } | undefined
+          const promptName = promptParams?.name ?? ''
+          if (!isGuidancePrompt(promptName)) {
+            await this.sendError(parsed.id, -32602, `Unknown prompt: ${promptName}`)
+            return
+          }
+          await this.sendResult(parsed.id, getGuidancePrompt(promptName))
+          return
+        }
         case 'tools/list':
           await this.sendResult(parsed.id, {
             tools: mcpTools.map((t) => ({

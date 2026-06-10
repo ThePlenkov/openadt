@@ -1,6 +1,7 @@
 import { describe, expect, test, mock, afterEach } from 'bun:test'
 // @ts-ignore - workspace package without types yet
 import { mcpTools } from '@openadt/adt-mcp-tools'
+import { ADT_LSP_WORKFLOW_PROMPT, guidancePromptDefs } from './guidance/guidance'
 
 describe('ADT LSP MCP Server', () => {
   test('mcpTools exports all 26 ADT tools', () => {
@@ -24,6 +25,18 @@ describe('ADT LSP MCP Server', () => {
   test('tool names follow adt_ prefix convention', () => {
     for (const tool of mcpTools) {
       expect(tool.name).toMatch(/^adt_/)
+    }
+  })
+
+  test('guidance prompt is registered for MCP prompts/list', () => {
+    const defs = guidancePromptDefs()
+    expect(defs.map((d) => d.name)).toContain(ADT_LSP_WORKFLOW_PROMPT)
+  })
+
+  test('transport tools mention cts/transport in description', () => {
+    const transportTools = mcpTools.filter((t: { name: string }) => t.name.includes('transport'))
+    for (const tool of transportTools) {
+      expect(tool.description).toContain('adtLs/cts/transport')
     }
   })
 })
