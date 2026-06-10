@@ -1,6 +1,6 @@
 # MCP AI scenario testing
 
-Live MCP acceptance tests for **real SAP landscapes**. Scenarios live in `tools/sap-adt-mcp-launcher/ai-tests/` and never embed a system ID (SID) or destination id — the **agent user supplies** the target at run time.
+Live MCP acceptance tests for **real SAP landscapes**. Scenarios live in `tools/sap-adt-mcp-launcher/e2e/` and never embed a system ID (SID) or destination id — the **agent user supplies** the target at run time.
 
 ## Goals
 
@@ -25,7 +25,7 @@ The runner resolves placeholders from (first wins):
 
 ## Scenario file format
 
-Path: `tools/sap-adt-mcp-launcher/ai-tests/scenarios/mcp-N-<id>.md` — **one file per scenario** (filename is `code` + slug `id` for sortable, readable names; e.g. `mcp-2-read-standard-class.md`).
+Path: `tools/sap-adt-mcp-launcher/e2e/scenarios/mcp-N-<id>.md` — **one file per scenario** (filename is `code` + slug `id` for sortable, readable names; e.g. `mcp-2-read-standard-class.md`).
 
 ```markdown
 ---
@@ -86,10 +86,10 @@ Codes are stable operator ids (issue trackers, agent prompts: _«run mcp-3»_). 
 ## Runner
 
 ```bash
-bun run mcp:ai-tests -- --destination ABC_200_USER_EN
-bun run mcp:ai-tests -- --destination ABC_200_USER_EN --scenario mcp-2
-bun run mcp:ai-tests -- --destination ABC_200_USER_EN --scenario read-standard-class
-bun run mcp:ai-tests -- --resolve-destination --system ABC --list
+bun run mcp:e2e -- --destination ABC_200_USER_EN
+bun run mcp:e2e -- --destination ABC_200_USER_EN --scenario mcp-2
+bun run mcp:e2e -- --destination ABC_200_USER_EN --scenario read-standard-class
+bun run mcp:e2e -- --resolve-destination --system ABC --list
 ```
 
 | Flag                       | Default                                                           | Meaning                                                                                                                                                                    |
@@ -170,7 +170,7 @@ Assertion table rows include: `mcp_replied`, `mcp_is_error`, plus each machine a
 
 1. Ask the user which SAP system / destination to test (or run `abap_list_destinations` after MCP start).
 2. Export `OPENADT_MCP_DESTINATION` or pass `--destination`.
-3. Run `bun run e2e -- mcp-N …` (evidence on) with `OPENADT_E2E_AGENT` / `OPENADT_E2E_MODEL` (or `--agent` / `--model`) when an LLM agent orchestrates the run **or** `bun run mcp:ai-tests` **or** open `ai-tests/scenarios/mcp-N-<id>.md` and follow the markdown body via MCP.
+3. Run `bun run e2e -- mcp-N …` (evidence on) with `OPENADT_E2E_AGENT` / `OPENADT_E2E_MODEL` (or `--agent` / `--model`) when an LLM agent orchestrates the run **or** `bun run mcp:e2e` **or** open `e2e/scenarios/mcp-N-<id>.md` and follow the markdown body via MCP.
 4. For full `adt_*` agent tools, use `mode: standalone` scenarios (launcher spawns with `--standalone`).
 5. Report evidence file from `E2E_EVIDENCE_FILE` or `Evidence written:` line; cite assertion table rows on failure.
 

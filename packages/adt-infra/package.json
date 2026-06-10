@@ -1,0 +1,19 @@
+{
+  "name": "@openadt/adt-infra",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "exports": {
+    ".": "./dist/index.mjs",
+    "./package.json": "./package.json"
+  },
+  "scripts": {
+    "build": "tsdown",
+    "build:check": "tsc --noEmit",
+    "lint": "oxlint"
+  },
+  "dependencies": {
+    "vscode-jsonrpc": "^8.2.1",
+    "@openadt/adt-config": "workspace:*"
+  }
+}

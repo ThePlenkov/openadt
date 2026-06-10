@@ -27,7 +27,7 @@ replay_pid*
 target/
 
 # TypeScript build output
-tools/sap-adt-mcp-launcher/dist/
+dist/
 
 # IDE files
 .idea/

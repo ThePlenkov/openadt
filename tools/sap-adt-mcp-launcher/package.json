@@ -3,19 +3,29 @@
   "private": true,
   "type": "module",
   "bin": {
-    "openadt-mcp": "./src/openadt-mcp-bin.ts"
+    "sap-adt-mcp-launcher": "./dist/mcp-stdio-entry.mjs"
   },
   "scripts": {
     "build": "tsdown",
-    "build:check": "tsc --noEmit"
-  },
-  "devDependencies": {
-    "uuid": "^11.1.0",
-    "vscode-jsonrpc": "^8.2.1"
+    "build:check": "tsc --noEmit",
+    "lint": "oxlint",
+    "mcp:e2e": "bun e2e/run.ts",
+    "mcp:e2e:adt": "bun e2e/run-adt.mjs",
+    "mcp:e2e:adt:all": "bun e2e/run-all-adt-sequential.mjs"
   },
   "dependencies": {
-    "@modelcontextprotocol/sdk": "^1.29.0",
+    "@openadt/mcp-framing": "workspace:*",
+    "@openadt/lsp-client": "workspace:*",
+    "@openadt/adt-infra": "workspace:*",
+    "@openadt/adt-services": "workspace:*",
+    "@openadt/adt-config": "workspace:*",
+    "@openadt/mcp-tools": "workspace:*",
+    "@openadt/adt-mcp-tools": "workspace:*",
     "zod": "^4.4.3",
     "zod-to-json-schema": "^3.25.2"
+  },
+  "exports": {
+    ".": "./dist/mcp-stdio-entry.mjs",
+    "./package.json": "./package.json"
   }
 }

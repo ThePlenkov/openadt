@@ -589,7 +589,7 @@ class RepositoryToolSet {
 
 ### AI scenario testing (live landscape)
 
-User- or agent-supplied destination id (no SID in git). Runner and YAML scenarios: `tools/sap-adt-mcp-launcher/ai-tests/`. Contract: [mcp-ai-testing.md](mcp-ai-testing.md). Command: `bun run mcp:ai-tests -- --destination <ADT_DESTINATION_ID>`.
+User- or agent-supplied destination id (no SID in git). Runner and YAML scenarios: `tools/sap-adt-mcp-launcher/e2e/`. Contract: [mcp-ai-testing.md](mcp-ai-testing.md). Command: `bun run mcp:e2e -- --destination <ADT_DESTINATION_ID>`.
 
 ---
 

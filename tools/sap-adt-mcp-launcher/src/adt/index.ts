@@ -5,81 +5,81 @@
  */
 
 // Repository
-import { quickSearch } from "./services/adtLs/repository/quickSearch";
+import { quickSearch } from '@openadt/adt-services'
 
 // Transport
-import { searchTransportsSimple } from "./services/adtLs/transport/searchTransportsSimple";
-import { searchTransports } from "./services/adtLs/transport/searchTransports";
-import { checkTransportForObjectLock } from "./services/adtLs/transport/checkTransportForObjectLock";
-import { createTransportForObjectLock } from "./services/adtLs/transport/createTransportForObjectLock";
-import { assignTransportToObject } from "./services/adtLs/transport/assignTransportToObject";
+import { searchTransportsSimple } from '@openadt/adt-services'
+import { searchTransports } from '@openadt/adt-services'
+import { checkTransportForObjectLock } from '@openadt/adt-services'
+import { createTransportForObjectLock } from '@openadt/adt-services'
+import { assignTransportToObject } from '@openadt/adt-services'
 
 // Document symbol
-import { documentSymbols } from "./services/adtLs/documentSymbol/documentSymbols";
+import { documentSymbols } from '@openadt/adt-services'
 
 // Application run
-import { runApplication } from "./services/adtLs/applicationRun/runApplication";
+import { runApplication } from '@openadt/adt-services'
 
 // References
-import { findReferences } from "./services/adtLs/references/findReferences";
+import { findReferences } from '@openadt/adt-services'
 
 // File system
-import { forceRefresh } from "./services/adtLs/fileSystem/forceRefresh";
-import { getObjectName } from "./services/adtLs/fileSystem/getObjectName";
-import { getPackageName } from "./services/adtLs/fileSystem/getPackageName";
-import { getFolderUri } from "./services/adtLs/fileSystem/getFolderUri";
-import { getExternalLinks } from "./services/adtLs/fileSystem/getExternalLinks";
-import { lockFile } from "./services/adtLs/fileSystem/lockFile";
-import { unlockFile } from "./services/adtLs/fileSystem/unlockFile";
-import { getFileLockStatus } from "./services/adtLs/fileSystem/getFileLockStatus";
-import { toggleVersion } from "./services/adtLs/fileSystem/toggleVersion";
+import { forceRefresh } from '@openadt/adt-services'
+import { getObjectName } from '@openadt/adt-services'
+import { getPackageName } from '@openadt/adt-services'
+import { getFolderUri } from '@openadt/adt-services'
+import { getExternalLinks } from '@openadt/adt-services'
+import { lockFile } from '@openadt/adt-services'
+import { unlockFile } from '@openadt/adt-services'
+import { getFileLockStatus } from '@openadt/adt-services'
+import { toggleVersion } from '@openadt/adt-services'
 
 // Hover
-import { getHover } from "./services/adtLs/hover/getHover";
+import { getHover } from '@openadt/adt-services'
 
 // Format
-import { formatting } from "./services/adtLs/format/formatting";
+import { formatting } from '@openadt/adt-services'
 
 // Diagnostic
-import { diagnostic } from "./services/adtLs/diagnostic/diagnostic";
+import { diagnostic } from '@openadt/adt-services'
 
 // Coverage
-import { getCoverage } from "./services/adtLs/coverage/getCoverage";
-import { loadStatementResults } from "./services/adtLs/coverage/loadStatementResults";
+import { getCoverage } from '@openadt/adt-services'
+import { loadStatementResults } from '@openadt/adt-services'
 
 // ATC
-import { getCheckVariants } from "./services/adtLs/atc/getCheckVariants";
-import { runCheck as atcRunCheck } from "./services/adtLs/atc/runCheck";
+import { getCheckVariants } from '@openadt/adt-services'
+import { runCheck as atcRunCheck } from '@openadt/adt-services'
 
 // Activation
-import { getInactiveObjects } from "./services/adtLs/activation/getInactiveObjects";
+import { getInactiveObjects } from '@openadt/adt-services'
 
-export { quickSearch };
-export { searchTransportsSimple };
-export { searchTransports };
-export { checkTransportForObjectLock };
-export { createTransportForObjectLock };
-export { assignTransportToObject };
-export { documentSymbols };
-export { runApplication };
-export { findReferences };
-export { forceRefresh };
-export { getObjectName };
-export { getPackageName };
-export { getFolderUri };
-export { getExternalLinks };
-export { lockFile };
-export { unlockFile };
-export { getFileLockStatus };
-export { toggleVersion };
-export { getHover };
-export { formatting };
-export { diagnostic };
-export { getCoverage };
-export { loadStatementResults };
-export { getCheckVariants };
-export { atcRunCheck as runCheck };
-export { getInactiveObjects };
+export { quickSearch }
+export { searchTransportsSimple }
+export { searchTransports }
+export { checkTransportForObjectLock }
+export { createTransportForObjectLock }
+export { assignTransportToObject }
+export { documentSymbols }
+export { runApplication }
+export { findReferences }
+export { forceRefresh }
+export { getObjectName }
+export { getPackageName }
+export { getFolderUri }
+export { getExternalLinks }
+export { lockFile }
+export { unlockFile }
+export { getFileLockStatus }
+export { toggleVersion }
+export { getHover }
+export { formatting }
+export { diagnostic }
+export { getCoverage }
+export { loadStatementResults }
+export { getCheckVariants }
+export { atcRunCheck as runCheck }
+export { getInactiveObjects }
 
 /**
  * All contracts organized by domain
@@ -113,4 +113,4 @@ export const contracts = {
   coverage: { getCoverage, loadStatementResults },
   atc: { getCheckVariants, runCheck: atcRunCheck },
   activation: { getInactiveObjects },
-} as const;
+} as const

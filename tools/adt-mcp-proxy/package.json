@@ -1,0 +1,21 @@
+{
+  "name": "@openadt/adt-mcp-proxy",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "bin": {
+    "adt-mcp-proxy": "./dist/main.mjs"
+  },
+  "scripts": {
+    "build": "tsdown",
+    "build:check": "tsc --noEmit",
+    "lint": "oxlint"
+  },
+  "dependencies": {
+    "@openadt/mcp-framing": "workspace:*"
+  },
+  "exports": {
+    ".": "./dist/main.mjs",
+    "./package.json": "./package.json"
+  }
+}
