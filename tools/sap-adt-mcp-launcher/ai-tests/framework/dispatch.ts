@@ -134,7 +134,12 @@ export function buildE2eDispatch(
   const scenario = scenarios[0]!;
   const model = resolveE2eModel(opts);
   const evidenceDir = opts.evidenceRoot ?? defaultEvidenceRoot(repoRoot);
-  const localCommand = buildLocalRunCommand(scenario.code, destination, acpAgent, model);
+  const localCommand = buildLocalRunCommand(
+    scenario.code,
+    destination,
+    acpAgent,
+    model,
+  );
   const prompt = buildAcpPrompt({
     scenario: scenario.code,
     scenarioFile: scenario.file,
@@ -192,7 +197,9 @@ export function writeDispatchFile(
   return path;
 }
 
-export function formatDispatchInstructions(payload: E2eDispatchPayload): string {
+export function formatDispatchInstructions(
+  payload: E2eDispatchPayload,
+): string {
   const dispatchPath = join(
     payload.repoRoot,
     ".e2e",
@@ -234,7 +241,10 @@ export type RunE2eDispatchOutcome = {
   dispatchPath?: string;
 };
 
-export function runE2eDispatch(opts: CliOptions, repoRoot: string): RunE2eDispatchOutcome {
+export function runE2eDispatch(
+  opts: CliOptions,
+  repoRoot: string,
+): RunE2eDispatchOutcome {
   try {
     const payload = buildE2eDispatch(opts, repoRoot);
     const dispatchRoot = defaultDispatchRoot(repoRoot);

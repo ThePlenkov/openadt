@@ -8,6 +8,28 @@ export type Type<T> = { readonly __type?: T };
 export const type = <T>(): Type<T> => ({}) as Type<T>;
 
 /**
+ * Infer TypeScript type from JSON Schema.
+ * Supports basic types: string, number, boolean, array, object.
+ */
+export type Infer<S> = S extends { type: "object"; properties: infer P; required: infer R }
+  ? { [K in keyof P]: P[K] extends { type: infer T }
+      ? T extends "string" ? string
+      : T extends "number" ? number
+      : T extends "boolean" ? boolean
+      : T extends "array" ? unknown[]
+      : unknown
+      : unknown }
+  : S extends { type: "string" }
+    ? string
+    : S extends { type: "number" }
+      ? number
+      : S extends { type: "boolean" }
+        ? boolean
+        : S extends { type: "array" }
+          ? unknown[]
+          : unknown;
+
+/**
  * MCP tool contract specification.
  */
 export type McpToolSpec = {

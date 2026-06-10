@@ -1,9 +1,16 @@
 /**
  * Activation tool set for MCP registry.
  */
-import type { McpToolRegistry, McpContext, McpResult } from "../../../mcp/client/registry.js";
+import type {
+  McpToolRegistry,
+  McpContext,
+  McpResult,
+} from "../../../mcp/client/registry.js";
 import { McpToolSet } from "../../../mcp/client/registry.js";
-import { adt_get_inactive_objects, inputSchema } from "../tools/adt_get_inactive_objects.js";
+import {
+  adt_get_inactive_objects,
+  inputSchema,
+} from "../tools/adt_get_inactive_objects.js";
 import { createHandler } from "../tools/adt_get_inactive_objects.js";
 import type { LspTransport } from "../../../lsp/client/lsp-transport.js";
 

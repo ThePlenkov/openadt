@@ -1,10 +1,19 @@
 /**
  * CoverageToolSet for MCP registry.
  */
-import type { McpToolRegistry, McpContext } from "../../../mcp/client/registry.js";
+import type {
+  McpToolRegistry,
+  McpContext,
+} from "../../../mcp/client/registry.js";
 import { McpToolSet } from "../../../mcp/client/registry.js";
-import { adt_get_coverage, inputSchema as adt_get_coverage_schema } from "../tools/adt_get_coverage.js";
-import { adt_load_statement_results, inputSchema as adt_load_statement_results_schema } from "../tools/adt_load_statement_results.js";
+import {
+  adt_get_coverage,
+  inputSchema as adt_get_coverage_schema,
+} from "../tools/adt_get_coverage.js";
+import {
+  adt_load_statement_results,
+  inputSchema as adt_load_statement_results_schema,
+} from "../tools/adt_load_statement_results.js";
 import { createHandler as adt_get_coverage_handler } from "../tools/adt_get_coverage.js";
 import { createHandler as adt_load_statement_results_handler } from "../tools/adt_load_statement_results.js";
 

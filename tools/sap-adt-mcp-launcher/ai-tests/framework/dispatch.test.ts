@@ -1,6 +1,10 @@
 import { describe, expect, test } from "bun:test";
 import { join } from "node:path";
-import { buildE2eDispatch, dispatchRunId, formatDispatchInstructions } from "./dispatch";
+import {
+  buildE2eDispatch,
+  dispatchRunId,
+  formatDispatchInstructions,
+} from "./dispatch";
 import type { CliOptions } from "./context";
 
 const baseOpts = (): CliOptions => ({

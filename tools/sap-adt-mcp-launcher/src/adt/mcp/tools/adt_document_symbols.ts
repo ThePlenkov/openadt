@@ -2,11 +2,14 @@
  * MCP tool contract for document symbols.
  * MCP layer on top of ADT LSP document symbol service.
  */
-import { mcpTool, type } from "../../../mcp/contract/contract-core.js";
+import { mcpTool, type, Infer } from "../../../mcp/contract/contract-core.js";
 import { documentSymbols } from "../../services/adtLs/documentSymbol/documentSymbols.js";
 import type { LspTransport } from "../../../lsp/client/lsp-transport.js";
 import { callLspContract } from "../../../lsp/client/call-lsp-contract.js";
-import { AgentErrorCode, agentError } from "../../../service/agent/error-codes.js";
+import {
+  AgentErrorCode,
+  agentError,
+} from "../../../service/agent/error-codes.js";
 
 export const adt_document_symbols = mcpTool({
   name: "adt_document_symbols",
@@ -39,37 +42,35 @@ export const inputSchema = {
     uri: { type: "string", description: "Object URI" },
   },
   required: ["destination", "uri"],
-};
+} as const;
 
 export function createHandler(transport: LspTransport) {
   return {
-      async handle(args: Record<string, unknown>) {
-        const params = args as any;
+    async handle(args: Record<string, unknown>) {
+      const params = args as any;
 
-        // Validation
-        if (typeof params.destination !== "string") {
-          return {
-            success: false,
-            error: agentError(
-              AgentErrorCode.INVALID_URI,
-              "destination must be a string",
-              String(params.destination),
-            ),
-          };
-        }
+      // Validation
+      if (typeof params.destination !== "string") {
+        return {
+          success: false,
+          error: agentError(
+            AgentErrorCode.INVALID_URI,
+            "destination must be a string",
+            String(params.destination),
+          ),
+        };
+      }
 
-        if (typeof params.uri !== "string") {
-          return {
-            success: false,
-            error: agentError(
-              AgentErrorCode.INVALID_URI,
-              "uri must be a string",
-              String(params.uri),
-            ),
-          };
-        }
-
-
+      if (typeof params.uri !== "string") {
+        return {
+          success: false,
+          error: agentError(
+            AgentErrorCode.INVALID_URI,
+            "uri must be a string",
+            String(params.uri),
+          ),
+        };
+      }
     },
   };
 }

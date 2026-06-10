@@ -2,10 +2,7 @@ import type { RunContext, ScenarioAssert } from "./types";
 
 const VARS = ["destination", "pattern"] as const;
 
-export function substituteValue(
-  value: unknown,
-  ctx: RunContext,
-): unknown {
+export function substituteValue(value: unknown, ctx: RunContext): unknown {
   if (typeof value === "string") {
     return substituteString(value, ctx);
   }

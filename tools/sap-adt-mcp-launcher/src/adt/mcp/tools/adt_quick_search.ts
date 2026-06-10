@@ -2,11 +2,14 @@
  * MCP tool contract for repository quick search.
  * MCP layer on top of ADT LSP repository service.
  */
-import { mcpTool, type } from "../../../mcp/contract/contract-core.js";
+import { mcpTool, type, Infer } from "../../../mcp/contract/contract-core.js";
 import { quickSearch } from "../../services/adtLs/repository/quickSearch.js";
 import type { LspTransport } from "../../../lsp/client/lsp-transport.js";
 import { callLspContract } from "../../../lsp/client/call-lsp-contract.js";
-import { AgentErrorCode, agentError } from "../../../service/agent/error-codes.js";
+import {
+  AgentErrorCode,
+  agentError,
+} from "../../../service/agent/error-codes.js";
 
 export const adt_quick_search = mcpTool({
   name: "adt_quick_search",
@@ -48,7 +51,7 @@ export const inputSchema = {
     },
   },
   required: ["destination", "searchTerm"],
-};
+} as const;
 
 export function createHandler(transport: LspTransport) {
   return {
@@ -124,16 +127,12 @@ export function createHandler(transport: LspTransport) {
       }
 
       try {
-        const result = await callLspContract(
-          quickSearch,
-          transport,
-          {
-            destination,
-            pattern: searchTerm,
-            types: objectType ? [objectType] : [],
-            maxResults: maxResults ?? 50,
-          },
-        );
+        const result = await callLspContract(quickSearch, transport, {
+          destination,
+          pattern: searchTerm,
+          types: objectType ? [objectType] : [],
+          maxResults: maxResults ?? 50,
+        });
         return { success: true, data: result };
       } catch (err) {
         const message = err instanceof Error ? err.message : String(err);

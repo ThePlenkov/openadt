@@ -49,8 +49,7 @@ export async function runAiTests(opts: CliOptions): Promise<RunAiTestsOutcome> {
   const selected = filterScenarios(scenarios, opts.scenario);
 
   const evidenceRoot =
-    opts.evidenceRoot ??
-    defaultEvidenceRoot(resolveRepoRoot(aiTestsRoot));
+    opts.evidenceRoot ?? defaultEvidenceRoot(resolveRepoRoot(aiTestsRoot));
   const testId = selected.map((s) => s.code).join("_");
   const writeEvidence = opts.evidence;
 
@@ -60,7 +59,9 @@ export async function runAiTests(opts: CliOptions): Promise<RunAiTestsOutcome> {
     `scenarios: ${selected.map((s) => `${s.code} (${s.id})`).join(", ")}\n`,
   );
   if (writeEvidence) {
-    console.log(`evidence: ${evidenceRoot} (filename gets ✅/❌ on completion)\n`);
+    console.log(
+      `evidence: ${evidenceRoot} (filename gets ✅/❌ on completion)\n`,
+    );
   }
 
   const mcpMode = selected.some((s) => (s.mode ?? "standalone") === "shared")
@@ -177,7 +178,9 @@ async function runScenario(
 
 function printSummary(results: ScenarioResult[]): void {
   const passed = results.filter((r) => r.passed).length;
-  console.log(`\n=== Summary: ${passed}/${results.length} scenarios passed ===`);
+  console.log(
+    `\n=== Summary: ${passed}/${results.length} scenarios passed ===`,
+  );
   for (const r of results) {
     console.log(`${r.passed ? "✓" : "✗"} ${r.code} ${r.id}`);
   }

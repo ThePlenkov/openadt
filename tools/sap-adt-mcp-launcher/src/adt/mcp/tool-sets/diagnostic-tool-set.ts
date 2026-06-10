@@ -1,9 +1,15 @@
 /**
  * DiagnosticToolSet for MCP registry.
  */
-import type { McpToolRegistry, McpContext } from "../../../mcp/client/registry.js";
+import type {
+  McpToolRegistry,
+  McpContext,
+} from "../../../mcp/client/registry.js";
 import { McpToolSet } from "../../../mcp/client/registry.js";
-import { adt_diagnostic, inputSchema as adt_diagnostic_schema } from "../tools/adt_diagnostic.js";
+import {
+  adt_diagnostic,
+  inputSchema as adt_diagnostic_schema,
+} from "../tools/adt_diagnostic.js";
 import { createHandler as adt_diagnostic_handler } from "../tools/adt_diagnostic.js";
 
 export class DiagnosticToolSet extends McpToolSet {

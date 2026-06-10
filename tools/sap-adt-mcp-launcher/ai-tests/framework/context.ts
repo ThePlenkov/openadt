@@ -7,7 +7,8 @@ export const DEFAULT_E2E_AGENT = "openadt-runner";
 export const DEFAULT_E2E_MODEL = "(none — deterministic MCP runner)";
 
 export const ACP_AGENTS_URL = "https://agentclientprotocol.com/overview/agents";
-export const ACP_GET_STARTED_URL = "https://agentclientprotocol.com/get-started/introduction";
+export const ACP_GET_STARTED_URL =
+  "https://agentclientprotocol.com/get-started/introduction";
 
 /** Who runs the SAP-backed scenario (local bun vs external ACP agent). */
 export type E2eExecutor = "local" | "acp";
@@ -101,7 +102,8 @@ function positionalScenario(argv: string[]): string | undefined {
 export function parseCli(argv: string[]): CliOptions {
   const get = (flag: string): string | undefined => getCliFlag(argv, flag);
   return {
-    destination: get("--destination") ?? process.env.OPENADT_MCP_DESTINATION?.trim(),
+    destination:
+      get("--destination") ?? process.env.OPENADT_MCP_DESTINATION?.trim(),
     system: get("--system") ?? process.env.OPENADT_MCP_SYSTEM?.trim(),
     user: get("--user") ?? process.env.OPENADT_MCP_USER?.trim(),
     client: get("--client") ?? process.env.OPENADT_MCP_CLIENT?.trim(),
@@ -135,7 +137,9 @@ export function resolveDestinationId(opts: CliOptions): string {
   }
   const system = opts.system;
   if (!system) {
-    throw new Error("--resolve-destination requires --system (SID hint, not stored in scenarios).");
+    throw new Error(
+      "--resolve-destination requires --system (SID hint, not stored in scenarios).",
+    );
   }
   const path = join(homedir(), ".adtls", "destinations.json");
   if (!existsSync(path)) {
@@ -148,7 +152,8 @@ export function resolveDestinationId(opts: CliOptions): string {
     const p = d.properties ?? {};
     if (p.systemId?.toUpperCase() !== system.toUpperCase()) return false;
     if (opts.client && p.client !== opts.client) return false;
-    if (opts.user && p.user?.toUpperCase() !== opts.user.toUpperCase()) return false;
+    if (opts.user && p.user?.toUpperCase() !== opts.user.toUpperCase())
+      return false;
     return Boolean(d.id?.trim());
   });
   if (matches.length === 0) {
@@ -156,12 +161,17 @@ export function resolveDestinationId(opts: CliOptions): string {
   }
   if (matches.length > 1) {
     const ids = matches.map((m) => m.id).join(", ");
-    throw new Error(`Ambiguous adtls match (${ids}); pass --destination explicitly.`);
+    throw new Error(
+      `Ambiguous adtls match (${ids}); pass --destination explicitly.`,
+    );
   }
   return matches[0]!.id!.trim();
 }
 
-export function buildRunContext(opts: CliOptions, destination: string): RunContext {
+export function buildRunContext(
+  opts: CliOptions,
+  destination: string,
+): RunContext {
   return {
     destination,
     pattern: "CL_ABAP*",

@@ -1,9 +1,15 @@
 /**
  * DocumentSymbolToolSet for MCP registry.
  */
-import type { McpToolRegistry, McpContext } from "../../../mcp/client/registry.js";
+import type {
+  McpToolRegistry,
+  McpContext,
+} from "../../../mcp/client/registry.js";
 import { McpToolSet } from "../../../mcp/client/registry.js";
-import { adt_document_symbols, inputSchema as adt_document_symbols_schema } from "../tools/adt_document_symbols.js";
+import {
+  adt_document_symbols,
+  inputSchema as adt_document_symbols_schema,
+} from "../tools/adt_document_symbols.js";
 import { createHandler as adt_document_symbols_handler } from "../tools/adt_document_symbols.js";
 
 export class DocumentSymbolToolSet extends McpToolSet {

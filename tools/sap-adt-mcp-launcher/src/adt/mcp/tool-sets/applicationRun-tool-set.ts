@@ -1,9 +1,15 @@
 /**
  * ApplicationRunToolSet for MCP registry.
  */
-import type { McpToolRegistry, McpContext } from "../../../mcp/client/registry.js";
+import type {
+  McpToolRegistry,
+  McpContext,
+} from "../../../mcp/client/registry.js";
 import { McpToolSet } from "../../../mcp/client/registry.js";
-import { adt_run_application, inputSchema as adt_run_application_schema } from "../tools/adt_run_application.js";
+import {
+  adt_run_application,
+  inputSchema as adt_run_application_schema,
+} from "../tools/adt_run_application.js";
 import { createHandler as adt_run_application_handler } from "../tools/adt_run_application.js";
 
 export class ApplicationRunToolSet extends McpToolSet {

@@ -1,17 +1,47 @@
 /**
  * FileSystemToolSet for MCP registry.
  */
-import type { McpToolRegistry, McpContext } from "../../../mcp/client/registry.js";
+import type {
+  McpToolRegistry,
+  McpContext,
+} from "../../../mcp/client/registry.js";
 import { McpToolSet } from "../../../mcp/client/registry.js";
-import { adt_force_refresh, inputSchema as adt_force_refresh_schema } from "../tools/adt_force_refresh.js";
-import { adt_get_object_name, inputSchema as adt_get_object_name_schema } from "../tools/adt_get_object_name.js";
-import { adt_get_package_name, inputSchema as adt_get_package_name_schema } from "../tools/adt_get_package_name.js";
-import { adt_get_folder_uri, inputSchema as adt_get_folder_uri_schema } from "../tools/adt_get_folder_uri.js";
-import { adt_get_external_links, inputSchema as adt_get_external_links_schema } from "../tools/adt_get_external_links.js";
-import { adt_lock_file, inputSchema as adt_lock_file_schema } from "../tools/adt_lock_file.js";
-import { adt_unlock_file, inputSchema as adt_unlock_file_schema } from "../tools/adt_unlock_file.js";
-import { adt_get_file_lock_status, inputSchema as adt_get_file_lock_status_schema } from "../tools/adt_get_file_lock_status.js";
-import { adt_toggle_version, inputSchema as adt_toggle_version_schema } from "../tools/adt_toggle_version.js";
+import {
+  adt_force_refresh,
+  inputSchema as adt_force_refresh_schema,
+} from "../tools/adt_force_refresh.js";
+import {
+  adt_get_object_name,
+  inputSchema as adt_get_object_name_schema,
+} from "../tools/adt_get_object_name.js";
+import {
+  adt_get_package_name,
+  inputSchema as adt_get_package_name_schema,
+} from "../tools/adt_get_package_name.js";
+import {
+  adt_get_folder_uri,
+  inputSchema as adt_get_folder_uri_schema,
+} from "../tools/adt_get_folder_uri.js";
+import {
+  adt_get_external_links,
+  inputSchema as adt_get_external_links_schema,
+} from "../tools/adt_get_external_links.js";
+import {
+  adt_lock_file,
+  inputSchema as adt_lock_file_schema,
+} from "../tools/adt_lock_file.js";
+import {
+  adt_unlock_file,
+  inputSchema as adt_unlock_file_schema,
+} from "../tools/adt_unlock_file.js";
+import {
+  adt_get_file_lock_status,
+  inputSchema as adt_get_file_lock_status_schema,
+} from "../tools/adt_get_file_lock_status.js";
+import {
+  adt_toggle_version,
+  inputSchema as adt_toggle_version_schema,
+} from "../tools/adt_toggle_version.js";
 import { createHandler as adt_force_refresh_handler } from "../tools/adt_force_refresh.js";
 import { createHandler as adt_get_object_name_handler } from "../tools/adt_get_object_name.js";
 import { createHandler as adt_get_package_name_handler } from "../tools/adt_get_package_name.js";

@@ -8,9 +8,9 @@ import {
 
 describe("getCliFlag", () => {
   test("reads --flag value form", () => {
-    expect(getCliFlag(["--destination", "ABC_100_USER_EN"], "--destination")).toBe(
-      "ABC_100_USER_EN",
-    );
+    expect(
+      getCliFlag(["--destination", "ABC_100_USER_EN"], "--destination"),
+    ).toBe("ABC_100_USER_EN");
   });
 
   test("reads --flag=value form", () => {
@@ -48,7 +48,9 @@ describe("resolveE2eExecutor", () => {
   });
 
   test("rejects unknown executor", () => {
-    expect(() => resolveE2eExecutor(["--command", "codex"])).toThrow(/Unknown executor/);
+    expect(() => resolveE2eExecutor(["--command", "codex"])).toThrow(
+      /Unknown executor/,
+    );
   });
 });
 

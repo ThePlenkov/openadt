@@ -2,7 +2,7 @@
  * MCP tool contract for get hover.
  * MCP layer on top of ADT LSP hover service.
  */
-import { mcpTool, type } from "../../../mcp/contract/contract-core.js";
+import { mcpTool, type, Infer } from "../../../mcp/contract/contract-core.js";
 import { getHover } from "../../services/adtLs/hover/getHover.js";
 import type { LspTransport } from "../../../lsp/client/lsp-transport.js";
 import { callLspContract } from "../../../lsp/client/call-lsp-contract.js";
@@ -34,7 +34,7 @@ export const inputSchema = {
     uri: { type: "string", description: "Object URI" },
   },
   required: ["destination", "uri"],
-};
+} as const;
 
 export function createHandler(transport: LspTransport) {
   return {

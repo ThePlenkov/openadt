@@ -2,7 +2,7 @@
  * MCP tool contract for advanced transport search.
  * MCP layer on top of ADT LSP transport service.
  */
-import { mcpTool, type } from "../../../mcp/contract/contract-core.js";
+import { mcpTool, type, Infer } from "../../../mcp/contract/contract-core.js";
 import { searchTransports } from "../../services/adtLs/transport/searchTransports.js";
 import type { LspTransport } from "../../../lsp/client/lsp-transport.js";
 import { callLspContract } from "../../../lsp/client/call-lsp-contract.js";
@@ -45,7 +45,7 @@ export const inputSchema = {
     },
   },
   required: ["destination"],
-};
+} as const;
 
 export function createHandler(transport: LspTransport) {
   return {

@@ -1,13 +1,31 @@
 /**
  * TransportToolSet for MCP registry.
  */
-import type { McpToolRegistry, McpContext } from "../../../mcp/client/registry.js";
+import type {
+  McpToolRegistry,
+  McpContext,
+} from "../../../mcp/client/registry.js";
 import { McpToolSet } from "../../../mcp/client/registry.js";
-import { adt_search_transports_simple, inputSchema as adt_search_transports_simple_schema } from "../tools/adt_search_transports_simple.js";
-import { adt_search_transports, inputSchema as adt_search_transports_schema } from "../tools/adt_search_transports.js";
-import { adt_check_transport_lock, inputSchema as adt_check_transport_lock_schema } from "../tools/adt_check_transport_lock.js";
-import { adt_create_transport, inputSchema as adt_create_transport_schema } from "../tools/adt_create_transport.js";
-import { adt_assign_transport, inputSchema as adt_assign_transport_schema } from "../tools/adt_assign_transport.js";
+import {
+  adt_search_transports_simple,
+  inputSchema as adt_search_transports_simple_schema,
+} from "../tools/adt_search_transports_simple.js";
+import {
+  adt_search_transports,
+  inputSchema as adt_search_transports_schema,
+} from "../tools/adt_search_transports.js";
+import {
+  adt_check_transport_lock,
+  inputSchema as adt_check_transport_lock_schema,
+} from "../tools/adt_check_transport_lock.js";
+import {
+  adt_create_transport,
+  inputSchema as adt_create_transport_schema,
+} from "../tools/adt_create_transport.js";
+import {
+  adt_assign_transport,
+  inputSchema as adt_assign_transport_schema,
+} from "../tools/adt_assign_transport.js";
 import { createHandler as adt_search_transports_simple_handler } from "../tools/adt_search_transports_simple.js";
 import { createHandler as adt_search_transports_handler } from "../tools/adt_search_transports.js";
 import { createHandler as adt_check_transport_lock_handler } from "../tools/adt_check_transport_lock.js";

@@ -8,7 +8,9 @@ describe("assertions", () => {
     });
     const r = evaluateAssert({ contentContains: "CL_ABAP_TYPEDESCR" }, p);
     expect(r.ok).toBe(true);
-    expect(r.checks.some((c) => c.name.startsWith("content_contains"))).toBe(true);
+    expect(r.checks.some((c) => c.name.startsWith("content_contains"))).toBe(
+      true,
+    );
   });
 
   test("notError fails on agent success:false", () => {

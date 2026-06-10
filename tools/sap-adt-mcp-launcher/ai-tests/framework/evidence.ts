@@ -8,7 +8,12 @@ import {
   type CliOptions,
 } from "./context";
 import { substituteValue } from "./template";
-import type { AssertCheck, RunContext, Scenario, ScenarioResult } from "./types";
+import type {
+  AssertCheck,
+  RunContext,
+  Scenario,
+  ScenarioResult,
+} from "./types";
 
 function isOpenadtRepoRoot(dir: string): boolean {
   return (
@@ -147,12 +152,27 @@ function formatScenarioBlock(
       "",
     );
     if (step.checks?.length) {
-      lines.push("#### ✅ Assertion checks", "", ...formatChecksTable(step.checks), "");
+      lines.push(
+        "#### ✅ Assertion checks",
+        "",
+        ...formatChecksTable(step.checks),
+        "",
+      );
     }
     if (step.responseBody) {
-      lines.push("#### 📦 Response payload", "", "```text", step.responseBody, "```", "");
+      lines.push(
+        "#### 📦 Response payload",
+        "",
+        "```text",
+        step.responseBody,
+        "```",
+        "",
+      );
     }
-    lines.push(`**Step verdict:** ${verdictLabel(step.ok)} — ${step.detail}`, "");
+    lines.push(
+      `**Step verdict:** ${verdictLabel(step.ok)} — ${step.detail}`,
+      "",
+    );
   }
 
   return lines;

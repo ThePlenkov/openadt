@@ -4,21 +4,21 @@ Live MCP acceptance tests for **real SAP landscapes**. Scenarios live in `tools/
 
 ## Goals
 
-| Goal | Contract |
-| ---- | -------- |
-| Agent-readable | **One `scenarios/mcp-N-<id>.md` per scenario** — markdown body is the agent brief; YAML frontmatter holds machine `steps` |
-| Landscape-agnostic | Scenario files use placeholders only (`{{destination}}`, `{{pattern}}`); no `BHF`, `S0D`, or real hostnames in git |
-| OpenADT `adt_*` focus | Default suite exercises OpenADT-owned tools; SAP `abap_*` scenarios are optional and separate |
-| Real system | Requires SAP ADT VS Code extension, `~/.adtls` logon (or `--import-from=openadt`), and SSO approval on cold start |
+| Goal                  | Contract                                                                                                                  |
+| --------------------- | ------------------------------------------------------------------------------------------------------------------------- |
+| Agent-readable        | **One `scenarios/mcp-N-<id>.md` per scenario** — markdown body is the agent brief; YAML frontmatter holds machine `steps` |
+| Landscape-agnostic    | Scenario files use placeholders only (`{{destination}}`, `{{pattern}}`); no `BHF`, `S0D`, or real hostnames in git        |
+| OpenADT `adt_*` focus | Default suite exercises OpenADT-owned tools; SAP `abap_*` scenarios are optional and separate                             |
+| Real system           | Requires SAP ADT VS Code extension, `~/.adtls` logon (or `--import-from=openadt`), and SSO approval on cold start         |
 
 ## User-supplied context
 
 The runner resolves placeholders from (first wins):
 
-| Source | Variable |
-| ------ | -------- |
-| CLI | `--destination <ADT_DESTINATION_ID>` (e.g. `ABC_200_USER_EN`) |
-| Env | `OPENADT_MCP_DESTINATION` |
+| Source              | Variable                                                                                                                   |
+| ------------------- | -------------------------------------------------------------------------------------------------------------------------- |
+| CLI                 | `--destination <ADT_DESTINATION_ID>` (e.g. `ABC_200_USER_EN`)                                                              |
+| Env                 | `OPENADT_MCP_DESTINATION`                                                                                                  |
 | Env (optional hint) | `OPENADT_MCP_SYSTEM` — used only with `--resolve-destination` to pick the matching entry from `~/.adtls/destinations.json` |
 
 `ADT_DESTINATION_ID` encodes SID, client, user, and language. The agent **asks the user** for this id (or runs `abap_list_destinations` first) — it is never committed in scenario files.
@@ -63,25 +63,25 @@ steps:
 
 ### Scenario codes
 
-| Code | Purpose |
-| ---- | ------- |
-| `mcp-1` | Destination list smoke |
-| `mcp-2` | `adt_read_object` |
-| `mcp-3` | `adt_search_objects` |
-| `mcp-4` | `adt_quick_search` |
+| Code    | Purpose                    |
+| ------- | -------------------------- |
+| `mcp-1` | Destination list smoke     |
+| `mcp-2` | `adt_read_object`          |
+| `mcp-3` | `adt_search_objects`       |
+| `mcp-4` | `adt_quick_search`         |
 | `mcp-5` | `adt_get_inactive_objects` |
 
-Codes are stable operator ids (issue trackers, agent prompts: *«run mcp-3»*). New scenarios take the next free `mcp-N` in `code` and filename `mcp-N-<id>.md` where `<id>` matches frontmatter `id`. The loader rejects filenames that do not match `code` + `id`. Slug `id` is also accepted for `--scenario` lookup.
+Codes are stable operator ids (issue trackers, agent prompts: _«run mcp-3»_). New scenarios take the next free `mcp-N` in `code` and filename `mcp-N-<id>.md` where `<id>` matches frontmatter `id`. The loader rejects filenames that do not match `code` + `id`. Slug `id` is also accepted for `--scenario` lookup.
 
 ### Assertions (machine checks)
 
-| Key | Meaning |
-| --- | ------- |
-| `contentContains` | Tool text content includes substring (string or array — all required) |
-| `notError` | No MCP `isError` and no `"success":false` in JSON agent envelope |
-| `success` | Agent envelope `success: true` when parseable |
-| `minCount` | Minimum length of `references` / `results` array in structured JSON |
-| `destinationsInclude` | `abap_list_destinations` output includes `{{destination}}` |
+| Key                   | Meaning                                                               |
+| --------------------- | --------------------------------------------------------------------- |
+| `contentContains`     | Tool text content includes substring (string or array — all required) |
+| `notError`            | No MCP `isError` and no `"success":false` in JSON agent envelope      |
+| `success`             | Agent envelope `success: true` when parseable                         |
+| `minCount`            | Minimum length of `references` / `results` array in structured JSON   |
+| `destinationsInclude` | `abap_list_destinations` output includes `{{destination}}`            |
 
 ## Runner
 
@@ -92,21 +92,21 @@ bun run mcp:ai-tests -- --destination ABC_200_USER_EN --scenario read-standard-c
 bun run mcp:ai-tests -- --resolve-destination --system ABC --list
 ```
 
-| Flag | Default | Meaning |
-| ---- | ------- | ------- |
-| `--destination` | env `OPENADT_MCP_DESTINATION` | Full ADT destination id |
-| `--resolve-destination` | off | Pick id from `~/.adtls/destinations.json` using `--system` + optional `--user` / `--client` |
-| `--scenario` | all | Run one scenario by `code` (`mcp-2`) or slug `id` |
-| `--list` | off | Print scenario catalog (intent summaries) and exit |
-| `--import-from` | `adtls` | Forwarded to MCP launcher |
-| `--timeout-ms` | `300000` | Whole run budget (SSO logon) |
-| `--evidence` | off (on via `bun run e2e`) | Write one `.md` report under `.e2e/results/` |
-| `--evidence-dir` | `<repo>/.e2e/results` | Override evidence directory |
-| `--agent` | env `OPENADT_E2E_AGENT`, else `openadt-runner` | Who orchestrated the run (Cursor agent vs bare CLI) |
-| `--model` | env `OPENADT_E2E_MODEL`, else `(none — deterministic MCP runner)` | LLM model when agent-orchestrated |
-| `--command` / `--executor` | `local` (default) | Who **runs** the SAP-backed scenario — see [Executor routing](#executor-routing) |
-| `--acp` | off | Boolean alias for `--command=acp` / `--executor=acp` |
-| `--agent` (ACP dispatch) | env `ACP_AGENT` | **Required** with `--acp` — ACP registry agent id (e.g. `devin`, `cursor`); see [agentclientprotocol.com/overview/agents](https://agentclientprotocol.com/overview/agents) |
+| Flag                       | Default                                                           | Meaning                                                                                                                                                                    |
+| -------------------------- | ----------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `--destination`            | env `OPENADT_MCP_DESTINATION`                                     | Full ADT destination id                                                                                                                                                    |
+| `--resolve-destination`    | off                                                               | Pick id from `~/.adtls/destinations.json` using `--system` + optional `--user` / `--client`                                                                                |
+| `--scenario`               | all                                                               | Run one scenario by `code` (`mcp-2`) or slug `id`                                                                                                                          |
+| `--list`                   | off                                                               | Print scenario catalog (intent summaries) and exit                                                                                                                         |
+| `--import-from`            | `adtls`                                                           | Forwarded to MCP launcher                                                                                                                                                  |
+| `--timeout-ms`             | `300000`                                                          | Whole run budget (SSO logon)                                                                                                                                               |
+| `--evidence`               | off (on via `bun run e2e`)                                        | Write one `.md` report under `.e2e/results/`                                                                                                                               |
+| `--evidence-dir`           | `<repo>/.e2e/results`                                             | Override evidence directory                                                                                                                                                |
+| `--agent`                  | env `OPENADT_E2E_AGENT`, else `openadt-runner`                    | Who orchestrated the run (Cursor agent vs bare CLI)                                                                                                                        |
+| `--model`                  | env `OPENADT_E2E_MODEL`, else `(none — deterministic MCP runner)` | LLM model when agent-orchestrated                                                                                                                                          |
+| `--command` / `--executor` | `local` (default)                                                 | Who **runs** the SAP-backed scenario — see [Executor routing](#executor-routing)                                                                                           |
+| `--acp`                    | off                                                               | Boolean alias for `--command=acp` / `--executor=acp`                                                                                                                       |
+| `--agent` (ACP dispatch)   | env `ACP_AGENT`                                                   | **Required** with `--acp` — ACP registry agent id (e.g. `devin`, `cursor`); see [agentclientprotocol.com/overview/agents](https://agentclientprotocol.com/overview/agents) |
 
 Exit `0` when all scenarios pass; `1` on missing destination, spawn failure, or assertion failure.
 
@@ -114,10 +114,10 @@ Exit `0` when all scenarios pass; `1` on missing destination, spawn failure, or 
 
 When Cursor credits are limited, delegate the live SAP run to an external ACP-compatible agent instead of executing `bun run e2e` locally.
 
-| `--command` / `--executor` | `--acp` | `--agent` | Behavior |
-| -------------------------- | ------- | --------- | -------- |
-| *(omit)* / `local` / `cursor` | off | — | **Local** — `bun run e2e` spawns MCP and writes `.e2e/results/<run>.md` |
-| `acp` | on | **required** | **Dispatch** — no local MCP spawn; writes `.e2e/dispatch/<run-id>.json` and prints ACP handoff instructions |
+| `--command` / `--executor`    | `--acp` | `--agent`    | Behavior                                                                                                    |
+| ----------------------------- | ------- | ------------ | ----------------------------------------------------------------------------------------------------------- |
+| _(omit)_ / `local` / `cursor` | off     | —            | **Local** — `bun run e2e` spawns MCP and writes `.e2e/results/<run>.md`                                     |
+| `acp`                         | on      | **required** | **Dispatch** — no local MCP spawn; writes `.e2e/dispatch/<run-id>.json` and prints ACP handoff instructions |
 
 Dispatch entry points:
 
@@ -153,14 +153,14 @@ Filename uses single-codepoint **✅** (pass) or **❌** (fail) — safe on Wind
 
 One file per run. Structure:
 
-| Section | Content |
-| ------- | ------- |
-| Header | PASS/FAIL, run id, duration, how executed (agent, model, execution mode) |
-| **Given** | Precondition from scenario frontmatter (placeholders resolved) |
-| **When** | Action taken (tool + args) |
-| **Then (expected)** | Acceptance criteria from scenario |
-| **Actual** | MCP replied?, `isError`, assertion table (expected vs actual), response payload excerpt |
-| **Overall verdict** | Whether Then criteria were met |
+| Section             | Content                                                                                 |
+| ------------------- | --------------------------------------------------------------------------------------- |
+| Header              | PASS/FAIL, run id, duration, how executed (agent, model, execution mode)                |
+| **Given**           | Precondition from scenario frontmatter (placeholders resolved)                          |
+| **When**            | Action taken (tool + args)                                                              |
+| **Then (expected)** | Acceptance criteria from scenario                                                       |
+| **Actual**          | MCP replied?, `isError`, assertion table (expected vs actual), response payload excerpt |
+| **Overall verdict** | Whether Then criteria were met                                                          |
 
 Assertion table rows include: `mcp_replied`, `mcp_is_error`, plus each machine assert (`destinations_include`, `content_contains:…`, `min_count`, etc.).
 

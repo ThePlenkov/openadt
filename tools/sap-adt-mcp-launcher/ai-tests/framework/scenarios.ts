@@ -23,20 +23,28 @@ const CODE_RE = /^mcp-\d+$/;
 const FILE_RE = /^mcp-\d+-[\w-]+\.md$/;
 
 /** Expected basename: `mcp-N-<id>.md` (sorted by N, readable slug from frontmatter `id`). */
-export function expectedScenarioFilename(code: ScenarioCode, id: string): string {
+export function expectedScenarioFilename(
+  code: ScenarioCode,
+  id: string,
+): string {
   return `${code}-${id}.md`;
 }
 
 export function normalizeScenarioCode(raw: string): ScenarioCode {
   const code = raw.trim().toLowerCase();
   if (!CODE_RE.test(code)) {
-    throw new Error(`Invalid scenario code "${raw}" (expected mcp-1, mcp-2, …)`);
+    throw new Error(
+      `Invalid scenario code "${raw}" (expected mcp-1, mcp-2, …)`,
+    );
   }
   return code as ScenarioCode;
 }
 
 /** Split YAML frontmatter and markdown body (`---` … `---`). */
-export function parseScenarioMarkdown(raw: string): { meta: Frontmatter; body: string } {
+export function parseScenarioMarkdown(raw: string): {
+  meta: Frontmatter;
+  body: string;
+} {
   const trimmed = raw.replace(/^\uFEFF/, "").trimStart();
   if (!trimmed.startsWith("---")) {
     throw new Error("Scenario .md must start with YAML frontmatter (---)");
@@ -51,19 +59,29 @@ export function parseScenarioMarkdown(raw: string): { meta: Frontmatter; body: s
   return { meta, body };
 }
 
-export function toScenario(file: string, meta: Frontmatter, body: string): Scenario {
+export function toScenario(
+  file: string,
+  meta: Frontmatter,
+  body: string,
+): Scenario {
   if (!meta.code) {
     throw new Error(`Invalid scenario file: ${file} (missing code: mcp-N)`);
   }
   if (!meta.id || !meta.steps?.length) {
-    throw new Error(`Invalid scenario file: ${file} (need id + steps in frontmatter)`);
+    throw new Error(
+      `Invalid scenario file: ${file} (need id + steps in frontmatter)`,
+    );
   }
   if (!body) {
-    throw new Error(`Invalid scenario file: ${file} (markdown body required for agent brief)`);
+    throw new Error(
+      `Invalid scenario file: ${file} (markdown body required for agent brief)`,
+    );
   }
   for (const key of ["given", "when", "then"] as const) {
     if (!meta[key]?.trim()) {
-      throw new Error(`Invalid scenario file: ${file} (frontmatter requires ${key})`);
+      throw new Error(
+        `Invalid scenario file: ${file} (frontmatter requires ${key})`,
+      );
     }
   }
   const code = normalizeScenarioCode(meta.code);
@@ -131,7 +149,9 @@ export function filterScenarios(
   const key = selector.trim().toLowerCase();
   const hit = all.filter((s) => scenarioMatchesSelector(s, key));
   if (hit.length === 0) {
-    throw new Error(`Unknown scenario: ${selector} (use mcp-N or slug id; bun run mcp:ai-tests -- --list)`);
+    throw new Error(
+      `Unknown scenario: ${selector} (use mcp-N or slug id; bun run mcp:ai-tests -- --list)`,
+    );
   }
   return hit;
 }

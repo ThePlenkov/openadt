@@ -1,9 +1,15 @@
 /**
  * FormatToolSet for MCP registry.
  */
-import type { McpToolRegistry, McpContext } from "../../../mcp/client/registry.js";
+import type {
+  McpToolRegistry,
+  McpContext,
+} from "../../../mcp/client/registry.js";
 import { McpToolSet } from "../../../mcp/client/registry.js";
-import { adt_format, inputSchema as adt_format_schema } from "../tools/adt_format.js";
+import {
+  adt_format,
+  inputSchema as adt_format_schema,
+} from "../tools/adt_format.js";
 import { createHandler as adt_format_handler } from "../tools/adt_format.js";
 
 export class FormatToolSet extends McpToolSet {

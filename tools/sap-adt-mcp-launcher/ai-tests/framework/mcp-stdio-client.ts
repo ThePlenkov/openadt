@@ -99,7 +99,10 @@ export class McpStdioClient {
     this.readyResolve();
   }
 
-  async callTool(name: string, args: Record<string, unknown>): Promise<unknown> {
+  async callTool(
+    name: string,
+    args: Record<string, unknown>,
+  ): Promise<unknown> {
     if (!this.ready) await this.readyPromise;
     return this.request("tools/call", { name, arguments: args });
   }

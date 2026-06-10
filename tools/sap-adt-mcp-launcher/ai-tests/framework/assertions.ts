@@ -41,7 +41,10 @@ export function evaluateAssert(
   assert: ScenarioAssert | undefined,
   payload: ToolCallPayload,
 ): AssertVerdict {
-  const checks: AssertCheck[] = [mcpRepliedCheck(payload), isErrorCheck(assert, payload)];
+  const checks: AssertCheck[] = [
+    mcpRepliedCheck(payload),
+    isErrorCheck(assert, payload),
+  ];
 
   if (assert?.notError) {
     checks.push(agentFailureCheck(payload));
@@ -65,7 +68,9 @@ export function evaluateAssert(
   }
   return {
     ok: false,
-    detail: failed.map((c) => `${c.name}: expected ${c.expected}, got ${c.actual}`).join("; "),
+    detail: failed
+      .map((c) => `${c.name}: expected ${c.expected}, got ${c.actual}`)
+      .join("; "),
     checks,
   };
 }

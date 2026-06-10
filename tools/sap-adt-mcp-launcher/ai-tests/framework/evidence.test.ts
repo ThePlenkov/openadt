@@ -38,7 +38,9 @@ describe("evidence", () => {
       new Date("2026-06-10T13:45:00.000Z"),
     );
     expect(pass).toMatch(
-      new RegExp(`^2026-06-10T13-45-00Z-${EVIDENCE_PASS_MARK}-mcp-1-[0-9a-f]{8}$`),
+      new RegExp(
+        `^2026-06-10T13-45-00Z-${EVIDENCE_PASS_MARK}-mcp-1-[0-9a-f]{8}$`,
+      ),
     );
     const fail = evidenceFileBase(
       "mcp-1",
@@ -235,11 +237,15 @@ describe("evidence", () => {
       port: 2239,
       timeoutMs: 300_000,
     };
-    const scenarios = [{ code: "mcp-1" }] as Parameters<typeof formatE2eCommand>[0];
+    const scenarios = [{ code: "mcp-1" }] as Parameters<
+      typeof formatE2eCommand
+    >[0];
 
     try {
       delete process.env.OPENADT_MCP_REDACT;
-      expect(formatDestination("BHF_200_PPLENKOV_EN")).toBe("BHF_200_PPLENKOV_EN");
+      expect(formatDestination("BHF_200_PPLENKOV_EN")).toBe(
+        "BHF_200_PPLENKOV_EN",
+      );
       expect(formatE2eCommand(scenarios, ctx)).toBe(
         "bun run e2e -- mcp-1 --destination BHF_200_PPLENKOV_EN",
       );

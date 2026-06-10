@@ -2,11 +2,14 @@
  * MCP tool contract for getting inactive objects.
  * MCP layer on top of ADT LSP activation service.
  */
-import { mcpTool, type } from "../../../mcp/contract/contract-core.js";
+import { mcpTool, type, Infer } from "../../../mcp/contract/contract-core.js";
 import { getInactiveObjects } from "../../services/adtLs/activation/getInactiveObjects.js";
 import type { LspTransport } from "../../../lsp/client/lsp-transport.js";
 import { callLspContract } from "../../../lsp/client/call-lsp-contract.js";
-import { AgentErrorCode, agentError } from "../../../service/agent/error-codes.js";
+import {
+  AgentErrorCode,
+  agentError,
+} from "../../../service/agent/error-codes.js";
 
 export const adt_get_inactive_objects = mcpTool({
   name: "adt_get_inactive_objects",
@@ -40,7 +43,7 @@ export const inputSchema = {
     },
   },
   required: ["destination"],
-};
+} as const;
 
 export function createHandler(transport: LspTransport) {
   return {
@@ -82,11 +85,11 @@ export function createHandler(transport: LspTransport) {
       }
 
       try {
-        const result = await callLspContract(
-          getInactiveObjects,
-          transport,
-          { destination, package: pkg, objectType },
-        );
+        const result = await callLspContract(getInactiveObjects, transport, {
+          destination,
+          package: pkg,
+          objectType,
+        });
         return { success: true, data: result };
       } catch (err) {
         const message = err instanceof Error ? err.message : String(err);

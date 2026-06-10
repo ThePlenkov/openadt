@@ -1,9 +1,15 @@
 /**
  * HoverToolSet for MCP registry.
  */
-import type { McpToolRegistry, McpContext } from "../../../mcp/client/registry.js";
+import type {
+  McpToolRegistry,
+  McpContext,
+} from "../../../mcp/client/registry.js";
 import { McpToolSet } from "../../../mcp/client/registry.js";
-import { adt_get_hover, inputSchema as adt_get_hover_schema } from "../tools/adt_get_hover.js";
+import {
+  adt_get_hover,
+  inputSchema as adt_get_hover_schema,
+} from "../tools/adt_get_hover.js";
 import { createHandler as adt_get_hover_handler } from "../tools/adt_get_hover.js";
 
 export class HoverToolSet extends McpToolSet {
