@@ -45,3 +45,22 @@ Splitting `sap-adt-mcp-launcher` into `@openadt/adt-lsp-mcp` broke e2e in **laye
 - [ ] LSP method namespace matches `@openadt/adt-services` contracts
 - [ ] Object-modify tools: ADT path → getLsUri → repotree URI
 - [ ] E2e runner uses framed stdio client
+
+## Evidence wiring (c4768ce — not covered by 04b2ba2 retrospect)
+
+Separate failure mode: scenarios **passed** but left **no evidence** because agents bypassed the /e2e skill.
+
+| Symptom | Root cause |
+| ------- | ---------- |
+| No `.e2e/results/` after “successful” adt-1 run | `devin -p` + package `bun run mcp:e2e` without `--evidence` |
+| Agent metadata missing in evidence | `OPENADT_E2E_AGENT` not set — use skill entry, not bare `devin -p` |
+| `scripts/e2e.ts` import errors | Stale `ai-tests/framework/` paths; framework lives at `e2e/framework/` |
+| Wrong dispatch for adt-* | `bun run e2e -- adt-1 …` rejected — use `bun run adt:e2e` (suite guard in dispatch) |
+
+**Correct paths:**
+
+- Local with evidence: `bun run adt:e2e -- adt-N --destination <ID>` (`OPENADT_E2E_EVIDENCE=1` always on).
+- External agent: `bun run adt:e2e -- adt-N --destination <ID> --acp --agent devin` or `adt:e2e:dispatch`.
+- Package-local debug only: `cd tools/adt-lsp-mcp && bun run mcp:e2e -- … --evidence`.
+
+See experience: `.agents/memory/experience/2026-06-11-adt-lsp-e2e-evidence-bypass.md`.
