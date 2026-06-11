@@ -3,7 +3,7 @@
  * Update tool imports to use shared packages.
  */
 import { readFileSync, writeFileSync } from 'node:fs'
-import { readdirSync } from 'node:fs'
+import { readdirSync, type Dirent } from 'node:fs'
 import { fileURLToPath } from 'node:url'
 import { dirname, join } from 'node:path'
 
@@ -12,13 +12,13 @@ const __dirname = dirname(__filename)
 
 const files = readdirSync(__dirname, { withFileTypes: true })
   .filter(
-    (dirent) =>
+    (dirent: Dirent) =>
       dirent.isFile() &&
       dirent.name.endsWith('.ts') &&
       dirent.name !== 'index.ts' &&
-      dirent.name !== 'update-imports.mjs'
+      dirent.name !== 'update-imports.ts'
   )
-  .map((dirent) => dirent.name)
+  .map((dirent: Dirent) => dirent.name)
 
 for (const file of files) {
   const filePath = join(__dirname, file)

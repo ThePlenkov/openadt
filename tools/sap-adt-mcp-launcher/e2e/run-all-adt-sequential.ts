@@ -16,7 +16,7 @@ const adtScenarios = allScenarios.filter((s) => s.code.startsWith('adt-'))
 
 if (opts.scenario) {
   console.error(
-    'Error: run-all-adt-sequential.mjs runs all ADT scenarios. Use run-adt.mjs for single scenario.'
+    'Error: run-all-adt-sequential.ts runs all ADT scenarios. Use run-adt.ts for single scenario.'
   )
   process.exit(1)
 }
@@ -33,13 +33,20 @@ console.log(`=== Sequential ADT Scenario Runner ===`)
 console.log(`destination: ${destination}`)
 console.log(`scenarios: ${adtScenarios.length} ADT scenarios\n`)
 
+interface ScenarioResult {
+  code: string
+  id: string
+  passed: boolean
+  exitCode: number
+}
+
 // Run each scenario sequentially
-const results = []
+const results: ScenarioResult[] = []
 for (const scenario of adtScenarios) {
   console.log(`\n--- Running ${scenario.code} ${scenario.id} ---`)
 
   const scenarioArgs = [
-    'tools/sap-adt-mcp-launcher/ai-tests/run-adt.mjs',
+    'tools/sap-adt-mcp-launcher/ai-tests/run-adt.ts',
     '--destination',
     destination,
     '--scenario',
