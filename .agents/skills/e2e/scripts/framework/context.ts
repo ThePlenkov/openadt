@@ -108,6 +108,7 @@ export function parseCli(argv: string[]): CliOptions {
   const args: Record<string, string | boolean | number> = {}
   const frameworkFlags = new Set([
     '--scenario',
+    '--config',
     '--list',
     '--evidence',
     '--evidence-dir',
@@ -118,6 +119,7 @@ export function parseCli(argv: string[]): CliOptions {
     '--executor',
     '--prompt',
     '--autoclean',
+    '--suite',
   ])
 
   for (let i = 0; i < argv.length; i++) {
@@ -142,9 +144,9 @@ export function parseCli(argv: string[]): CliOptions {
     }
   }
 
-  // Read project config (TESTING.md frontmatter or .e2e-agent.yaml)
+  // Read runner options (e2e.config.yaml or TESTING.md frontmatter)
   const repoRoot = resolveRepoRoot(process.cwd())
-  const projectConfig = readE2eAgentConfig(repoRoot)
+  const projectConfig = readE2eAgentConfig(repoRoot, argv)
 
   return {
     scenario: get('--scenario') ?? positionalScenario(argv),

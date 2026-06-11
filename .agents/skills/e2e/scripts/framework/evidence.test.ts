@@ -16,7 +16,6 @@ import {
   EVIDENCE_PASS_MARK,
   evidenceFileBase,
   formatDestination,
-  formatE2eCommand,
   resolveRepoRoot,
   writeEvidenceReport,
 } from './evidence'
@@ -25,7 +24,7 @@ import type { ScenarioResult } from './types'
 const frameworkDir = dirname(fileURLToPath(import.meta.url))
 
 describe('evidence', () => {
-  test('resolveRepoRoot finds monorepo root from launcher ai-tests', () => {
+  test('resolveRepoRoot finds consuming repo root (skips nested skill package)', () => {
     const root = resolveRepoRoot(frameworkDir)
     expect(root).toMatch(/openadt$/i)
     expect(root).not.toMatch(/sap-adt-mcp-launcher$/)
@@ -51,10 +50,7 @@ describe('evidence', () => {
     }
   })
 
-  function buildGivenWhenThenReportInput(
-    root: string,
-    results: ScenarioResult[]
-  ): WriteEvidenceReportInput {
+  function buildGivenWhenThenReportInput(root: string, results: ScenarioResult[]) {
     const { runId, path } = createEvidencePath(root, 'mcp-1', true)
     return {
       path,
@@ -64,11 +60,9 @@ describe('evidence', () => {
       exitCode: 0,
       opts: {
         evidence: true,
-        resolveDestination: false,
-        importFrom: 'adtls',
-        port: 2239,
-        timeoutMs: 300_000,
         list: false,
+        executor: 'local',
+        args: {},
       },
       ctx: {
         destination: 'ABC_200_USER_EN',
@@ -91,7 +85,7 @@ describe('evidence', () => {
         },
       ],
       results,
-      mcpMode: 'standalone',
+      serviceMode: 'test-suite',
     }
   }
 
@@ -103,8 +97,7 @@ describe('evidence', () => {
     expect(md).toContain('destinations_include')
     expect(md).toContain('📦 Response payload')
     expect(md).toContain('**Destination:** ABC_200_USER_EN')
-    expect(md).toContain('**Command:** `bun run e2e -- mcp-1 --destination ABC_200_USER_EN`')
-    expect(md).toContain('tools/sap-adt-mcp-launcher/e2e/scenarios/mcp-1-list-destinations.md')
+    expect(md).toContain('mcp-1-list-destinations.md')
     expect(md).toContain(`**Agent:** ${DEFAULT_E2E_AGENT}`)
     expect(md).toContain(`**Model / LLM:** ${DEFAULT_E2E_MODEL}`)
     expect(md).toContain('**Execution:** framework')
@@ -161,11 +154,9 @@ describe('evidence', () => {
         exitCode: 0,
         opts: {
           evidence: true,
-          resolveDestination: false,
-          importFrom: 'adtls',
-          port: 2239,
-          timeoutMs: 300_000,
           list: false,
+          executor: 'local',
+          args: {},
           agent: 'cursor',
           model: 'Auto',
         },
@@ -198,7 +189,7 @@ describe('evidence', () => {
             steps: [],
           },
         ],
-        mcpMode: 'standalone',
+        serviceMode: 'test-suite',
       })
       const md = readFileSync(path, 'utf8')
       expect(md).toContain('**Agent:** cursor')
@@ -211,12 +202,10 @@ describe('evidence', () => {
 
   test('resolveE2eAgent and resolveE2eModel apply defaults and trim', () => {
     const base = {
-      resolveDestination: false,
-      importFrom: 'adtls',
-      port: 2239,
-      timeoutMs: 300_000,
       list: false,
       evidence: false,
+      executor: 'local' as const,
+      args: {},
     }
     expect(resolveE2eAgent(base)).toBe(DEFAULT_E2E_AGENT)
     expect(resolveE2eModel(base)).toBe(DEFAULT_E2E_MODEL)
@@ -226,32 +215,16 @@ describe('evidence', () => {
     expect(resolveE2eModel({ ...base, model: '  gpt-5  ' })).toBe('gpt-5')
   })
 
-  test('formatDestination and formatE2eCommand redact only when OPENADT_MCP_REDACT=1', () => {
-    const prev = process.env.OPENADT_MCP_REDACT
-    const ctx = {
-      destination: 'BHF_200_PPLENKOV_EN',
-      pattern: 'CL_ABAP*',
-      importFrom: 'adtls',
-      port: 2239,
-      timeoutMs: 300_000,
-    }
-    const scenarios = [{ code: 'mcp-1' }] as Parameters<typeof formatE2eCommand>[0]
-
+  test('formatDestination redacts only when E2E_REDACT=1', () => {
+    const prev = process.env.E2E_REDACT
     try {
-      delete process.env.OPENADT_MCP_REDACT
-      expect(formatDestination('BHF_200_PPLENKOV_EN')).toBe('BHF_200_PPLENKOV_EN')
-      expect(formatE2eCommand(scenarios, ctx)).toBe(
-        'bun run e2e -- mcp-1 --destination BHF_200_PPLENKOV_EN'
-      )
-
-      process.env.OPENADT_MCP_REDACT = '1'
-      expect(formatDestination('BHF_200_PPLENKOV_EN')).toBe('<destination>')
-      expect(formatE2eCommand(scenarios, ctx)).toBe(
-        'bun run e2e -- mcp-1 --destination <destination>'
-      )
+      delete process.env.E2E_REDACT
+      expect(formatDestination('ABC_200_USER_EN')).toBe('ABC_200_USER_EN')
+      process.env.E2E_REDACT = '1'
+      expect(formatDestination('ABC_200_USER_EN')).toBe('<destination>')
     } finally {
-      if (prev === undefined) delete process.env.OPENADT_MCP_REDACT
-      else process.env.OPENADT_MCP_REDACT = prev
+      if (prev === undefined) delete process.env.E2E_REDACT
+      else process.env.E2E_REDACT = prev
     }
   })
 })

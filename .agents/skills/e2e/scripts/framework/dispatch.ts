@@ -1,7 +1,6 @@
 import { randomBytes } from 'node:crypto'
 import { mkdirSync, writeFileSync } from 'node:fs'
-import { dirname, join } from 'node:path'
-import { fileURLToPath } from 'node:url'
+import { join } from 'node:path'
 import type { CliOptions } from './context'
 import {
   ACP_AGENTS_URL,
@@ -11,34 +10,29 @@ import {
   resolveE2eModel,
 } from './context'
 import { defaultEvidenceRoot } from './evidence'
-import { filterScenarios, loadScenariosFromRoot } from './scenarios'
-import type { E2eSuiteMeta } from './evidence'
+import { filterScenarios, loadScenariosFromDir } from './scenarios'
+import type { ProjectE2eConfig } from './project-config'
+import { resolveSuiteId, suiteDir } from './project-config'
+import type { RunContext } from './types'
 
 export type E2eDispatchPayload = {
   version: 1
   runId: string
   createdAt: string
   executor: 'acp'
-  /** ACP registry agent id — from --agent or ACP_AGENT env. */
   acpAgent: string
   dispatchedFrom: string
   repoRoot: string
   scenario: string
   scenarioFile: string
-  ctx: Record<string, any>
-  command: {
-    /** Exact local runner command for the external agent to execute. */
-    local: string
-  }
+  ctx: Record<string, unknown>
+  command: { local: string }
   prompt: string
   env: Record<string, string>
   evidenceDir: string
   skillPath: string
   specPath: string
-  acpDocs: {
-    agents: string
-    getStarted: string
-  }
+  acpDocs: { agents: string; getStarted: string }
   status: 'pending'
 }
 
@@ -49,7 +43,6 @@ function dispatchTimestamp(at: Date = new Date()): string {
     .replace(/:/g, '-')
 }
 
-/** `<iso-datetime>-dispatch-<test_id>-<8hex>` */
 export function dispatchRunId(testId: string, at: Date = new Date()): string {
   const suffix = randomBytes(4).toString('hex')
   const safeId = testId.replace(/[^\w.-]+/g, '-')
@@ -66,18 +59,20 @@ function shellQuote(value: string): string {
 }
 
 function buildLocalRunCommand(
-  runnerScript: string,
   scenario: string,
-  ctx: Record<string, any>,
+  configPath: string,
+  ctx: RunContext,
   agent: string,
   model: string
 ): string {
   const parts = [
     'bun',
+    '.agents/skills/e2e/cli.ts',
     'run',
-    runnerScript,
-    '--',
     scenario,
+    '--config',
+    shellQuote(configPath),
+    '--evidence',
     ...Object.entries(ctx)
       .filter(([k]) => k !== 'prompt')
       .flatMap(([k, v]) => [`--${k}`, shellQuote(String(v))]),
@@ -93,7 +88,7 @@ function buildLocalRunCommand(
 function buildAcpPrompt(input: {
   scenario: string
   scenarioFilePath: string
-  ctx: Record<string, any>
+  ctx: RunContext
   localCommand: string
   acpAgent: string
   specPath?: string
@@ -105,7 +100,7 @@ function buildAcpPrompt(input: {
   const lines = [
     `Run E2E scenario ${input.scenario}${ctxSummary ? ` with context: ${ctxSummary}` : ''}.`,
     '',
-    'Follow the e2e skill contract:',
+    'Use the e2e-agent CLI only (do not import framework modules):',
     `1. Read scenario: ${input.scenarioFilePath}`,
     `2. Execute: ${input.localCommand}`,
     '3. Report PASS/FAIL, exit code, and E2E_EVIDENCE_FILE path.',
@@ -115,22 +110,20 @@ function buildAcpPrompt(input: {
     '',
     `ACP agent: ${input.acpAgent} (${ACP_AGENTS_URL})`,
   ]
-  if (input.specPath) {
-    lines.push('', `Spec: ${input.specPath}`)
-  }
+  if (input.specPath) lines.push('', `Project spec: ${input.specPath}`)
   return lines.join('\n')
+}
+
+export type DispatchBuildConfig = {
+  configPath: string
+  projectConfig: ProjectE2eConfig
+  usageExample: string
 }
 
 export function buildE2eDispatch(
   opts: CliOptions,
   repoRoot: string,
-  config: {
-    e2eRoot: string
-    runnerScript: string
-    suite?: E2eSuiteMeta
-    usageExample: string
-    specPath?: string
-  }
+  config: DispatchBuildConfig
 ): E2eDispatchPayload {
   if (opts.list) {
     throw new Error('Dispatch does not support --list; run without --acp.')
@@ -140,33 +133,28 @@ export function buildE2eDispatch(
     throw new Error(`Dispatch requires a scenario code. Usage: ${config.usageExample}`)
   }
   const acpAgent = resolveAcpAgent(opts)
-  const scenarios = filterScenarios(loadScenariosFromRoot(config.e2eRoot, scenarioKey), scenarioKey)
-  const testId = scenarios.map((s) => s.code).join('_')
+  const suiteId = resolveSuiteId(config.projectConfig, scenarioKey)
+  const suite = config.projectConfig.suites[suiteId]!
+  const scenarios = filterScenarios(loadScenariosFromDir(suiteDir(repoRoot, suite)), scenarioKey)
   const scenario = scenarios[0]!
   const model = resolveE2eModel(opts)
   const evidenceDir = opts.evidenceRoot ?? defaultEvidenceRoot(repoRoot)
   const ctx = buildRunContext(opts)
-  const localCommand = buildLocalRunCommand(
-    config.runnerScript,
-    scenario.code,
-    ctx,
-    acpAgent,
-    model
-  )
-  const scenarioFilePath = config.suite
-    ? `${config.suite.scenarioFilePrefix}${scenario.file}`
-    : `${config.e2eRoot}/${scenario.file}`
+  const relConfig = config.configPath.startsWith(repoRoot)
+    ? config.configPath.slice(repoRoot.length + 1)
+    : config.configPath
+  const localCommand = buildLocalRunCommand(scenario.code, relConfig, ctx, acpAgent, model)
+  const scenarioFilePath = join(suite.dir, scenario.file)
   const prompt = buildAcpPrompt({
     scenario: scenario.code,
     scenarioFilePath,
     ctx,
     localCommand,
     acpAgent,
-    specPath: config.specPath,
+    specPath: config.projectConfig.specPath,
   })
   const env = buildDispatchEnv({ acpAgent, ctx, model: opts.model })
-  const runId = dispatchRunId(testId)
-  const dispatchedFrom = process.env.E2E_DISPATCHED_FROM?.trim() || 'cursor'
+  const runId = dispatchRunId(scenario.code)
 
   return {
     version: 1,
@@ -174,7 +162,7 @@ export function buildE2eDispatch(
     createdAt: new Date().toISOString(),
     executor: 'acp',
     acpAgent,
-    dispatchedFrom,
+    dispatchedFrom: process.env.E2E_DISPATCHED_FROM?.trim() || 'cursor',
     repoRoot,
     scenario: scenario.code,
     scenarioFile: scenario.file,
@@ -184,18 +172,15 @@ export function buildE2eDispatch(
     prompt,
     evidenceDir,
     skillPath: '.agents/skills/e2e/SKILL.md',
-    specPath: config.specPath || '',
-    acpDocs: {
-      agents: ACP_AGENTS_URL,
-      getStarted: ACP_GET_STARTED_URL,
-    },
+    specPath: config.projectConfig.specPath ?? '',
+    acpDocs: { agents: ACP_AGENTS_URL, getStarted: ACP_GET_STARTED_URL },
     status: 'pending',
   }
 }
 
 function buildDispatchEnv(args: {
   acpAgent: string
-  ctx: Record<string, any>
+  ctx: RunContext
   model: string | undefined
 }): Record<string, string> {
   const env: Record<string, string> = {
@@ -203,7 +188,6 @@ function buildDispatchEnv(args: {
     E2E_EVIDENCE: '1',
     ACP_AGENT: args.acpAgent,
   }
-  // Add dynamic context as env vars
   Object.entries(args.ctx)
     .filter(([k]) => k !== 'prompt')
     .forEach(([k, v]) => {
@@ -236,14 +220,8 @@ export function formatDispatchInstructions(payload: E2eDispatchPayload): string 
     `ACP agent:   ${payload.acpAgent}`,
     `Dispatch:    ${dispatchPath}`,
     '',
-    'Do not run locally — hand off via Agent Client Protocol (ACP).',
-    '',
-    '1. Agent list: ' + payload.acpDocs.agents,
-    '2. Protocol:   ' + payload.acpDocs.getStarted,
-    `3. Target agent id: ${payload.acpAgent} (from --agent or env ACP_AGENT)`,
-    '',
-    'Submit the prompt below through your ACP client (session/prompt).',
-    'The external agent runs this command in the repo checkout:',
+    'Submit the prompt below through your ACP client.',
+    'The external agent runs:',
     '',
     payload.command.local,
     '',
@@ -251,8 +229,7 @@ export function formatDispatchInstructions(payload: E2eDispatchPayload): string 
     payload.prompt,
     '---',
     '',
-    'When the ACP agent completes, read E2E_EVIDENCE_FILE from its output under .e2e/results/.',
-    'No ACP CLI is wired in this repo; the JSON dispatch file is the handoff contract.',
+    'When complete, read E2E_EVIDENCE_FILE from output under .e2e/results/.',
   ]
   return lines.join('\n')
 }
@@ -263,15 +240,14 @@ export type RunE2eDispatchOutcome = {
 }
 
 export function runE2eDispatch(
-  build: (opts: CliOptions, repoRoot: string, config: any) => E2eDispatchPayload,
+  build: (opts: CliOptions, repoRoot: string, config: DispatchBuildConfig) => E2eDispatchPayload,
   opts: CliOptions,
   repoRoot: string,
-  config: any
+  config: DispatchBuildConfig
 ): RunE2eDispatchOutcome {
   try {
     const payload = build(opts, repoRoot, config)
-    const dispatchRoot = defaultDispatchRoot(repoRoot)
-    const dispatchPath = writeDispatchFile(dispatchRoot, payload)
+    const dispatchPath = writeDispatchFile(defaultDispatchRoot(repoRoot), payload)
     console.log(formatDispatchInstructions(payload))
     console.log(`\nE2E_DISPATCH_FILE=${dispatchPath}`)
     return { exitCode: 0, dispatchPath }

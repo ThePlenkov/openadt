@@ -1,5 +1,6 @@
 import { describe, expect, test } from 'bun:test'
 import { getCliFlag, parseCli, resolveAcpAgent, resolveE2eExecutor } from './context'
+import type { CliOptions } from './context'
 
 describe('getCliFlag', () => {
   test('reads --flag value form', () => {
@@ -22,40 +23,17 @@ describe('resolveE2eExecutor', () => {
     expect(resolveE2eExecutor(['mcp-1', '--destination', 'X'])).toBe('local')
   })
 
-  test('accepts --command=acp', () => {
-    expect(resolveE2eExecutor(['mcp-1', '--command=acp'])).toBe('acp')
-  })
-
-  test('accepts --command acp', () => {
-    expect(resolveE2eExecutor(['mcp-1', '--command', 'acp'])).toBe('acp')
-  })
-
-  test('accepts --executor acp', () => {
-    expect(resolveE2eExecutor(['--executor', 'acp'])).toBe('acp')
-  })
-
-  test('accepts --acp boolean alias', () => {
-    expect(resolveE2eExecutor(['mcp-2', '--acp'])).toBe('acp')
-  })
-
-  test('maps cursor alias to local', () => {
-    expect(resolveE2eExecutor(['--command', 'cursor'])).toBe('local')
-  })
-
-  test('rejects unknown executor', () => {
-    expect(() => resolveE2eExecutor(['--command', 'codex'])).toThrow(/Unknown executor/)
+  test('accepts --acp', () => {
+    expect(resolveE2eExecutor(['mcp-1', '--acp'])).toBe('acp')
   })
 })
 
 function baseCliOptions(overrides: Partial<CliOptions> = {}): CliOptions {
   return {
-    resolveDestination: false,
-    importFrom: 'adtls',
-    port: 2239,
-    timeoutMs: 300_000,
     list: false,
     evidence: false,
     executor: 'acp',
+    args: {},
     ...overrides,
   }
 }
@@ -70,8 +48,8 @@ describe('resolveAcpAgent', () => {
   })
 })
 
-describe('parseCli executor', () => {
-  test('includes executor from argv', () => {
+describe('parseCli', () => {
+  test('parses scenario and dynamic args', () => {
     const opts = parseCli([
       'mcp-1',
       '--acp',
@@ -82,7 +60,13 @@ describe('parseCli executor', () => {
     ])
     expect(opts.executor).toBe('acp')
     expect(opts.scenario).toBe('mcp-1')
-    expect(opts.destination).toBe('ABC_100_USER_EN')
+    expect(opts.args.destination).toBe('ABC_100_USER_EN')
     expect(opts.agent).toBe('cursor')
+  })
+
+  test('does not treat --config as dynamic arg', () => {
+    const opts = parseCli(['mcp-1', '--config', 'e2e.config.yaml', '--destination', 'X'])
+    expect(opts.args.config).toBeUndefined()
+    expect(getCliFlag(['mcp-1', '--config', 'e2e.config.yaml'], '--config')).toBe('e2e.config.yaml')
   })
 })

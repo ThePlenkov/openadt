@@ -12,6 +12,21 @@ import { resolveE2eAgent, resolveE2eExecution, resolveE2eModel, type CliOptions 
 import { substituteValue } from './template'
 import type { AssertCheck, RunContext, Scenario, ScenarioResult } from './types'
 import { load as yamlLoad } from 'js-yaml'
+import { resolveConfigPath } from './project-config'
+
+const NESTED_SKILL_PACKAGE = 'e2e-ai-testing-skill'
+
+function isConsumingRepoRoot(dir: string): boolean {
+  if (existsSync(join(dir, 'pom.xml'))) return true
+  const pkgPath = join(dir, 'package.json')
+  if (!existsSync(pkgPath)) return false
+  try {
+    const name = (JSON.parse(readFileSync(pkgPath, 'utf8')) as { name?: string }).name
+    return name !== NESTED_SKILL_PACKAGE
+  } catch {
+    return true
+  }
+}
 
 export function resolveRepoRoot(start: string): string {
   if (process.env.E2E_REPO?.trim()) {
@@ -19,9 +34,7 @@ export function resolveRepoRoot(start: string): string {
   }
   let dir = start
   for (let i = 0; i < 12; i++) {
-    if (existsSync(join(dir, 'package.json')) || existsSync(join(dir, 'pom.xml'))) {
-      return dir
-    }
+    if (isConsumingRepoRoot(dir)) return dir
     const parent = join(dir, '..')
     if (parent === dir) break
     dir = parent
@@ -233,20 +246,17 @@ export type E2eAgentConfig = {
   autoclean?: boolean
 }
 
-/** Read e2e-agent configuration from TESTING.md frontmatter or .e2e-agent.yaml */
-export function readE2eAgentConfig(repoRoot: string): E2eAgentConfig {
+/** Read runner options from e2e.config.yaml and TESTING.md frontmatter. */
+export function readE2eAgentConfig(repoRoot: string, argv: string[] = []): E2eAgentConfig {
   const config: E2eAgentConfig = {}
 
-  // Try .e2e-agent.yaml first
-  const yamlConfigPath = join(repoRoot, '.e2e-agent.yaml')
-  if (existsSync(yamlConfigPath)) {
-    try {
-      const yamlContent = readFileSync(yamlConfigPath, 'utf-8')
-      const parsed = yamlLoad(yamlContent) as E2eAgentConfig
-      Object.assign(config, parsed)
-    } catch (err) {
-      // Ignore YAML parse errors
-    }
+  try {
+    const yamlConfigPath = resolveConfigPath(repoRoot, argv)
+    const yamlContent = readFileSync(yamlConfigPath, 'utf-8')
+    const parsed = yamlLoad(yamlContent) as E2eAgentConfig
+    if (parsed.autoclean !== undefined) config.autoclean = parsed.autoclean
+  } catch {
+    // No project config — fall through to TESTING.md frontmatter
   }
 
   // Try TESTING.md frontmatter

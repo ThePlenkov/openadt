@@ -2,7 +2,7 @@ import { describe, expect, test } from 'bun:test'
 import {
   expectedScenarioFilename,
   filterScenarios,
-  loadScenarios,
+  loadScenariosFromDir,
   normalizeScenarioCode,
   parseScenarioMarkdown,
   toScenario,
@@ -45,7 +45,7 @@ describe('scenarios', () => {
     expect(s.code).toBe('mcp-99')
     expect(s.file).toBe('mcp-99-demo.md')
     expect(s.intent).toBe(body)
-    expect(() => toScenario('demo.md', meta, body)).toThrow(/mcp-N-<id>\.md/)
+    expect(() => toScenario('demo.md', meta, body)).toThrow(/prefix-N-<id>\.md/)
     expect(() => toScenario('mcp-99-wrong-slug.md', meta, body)).toThrow(/expected mcp-99-demo\.md/)
   })
 
@@ -55,9 +55,9 @@ describe('scenarios', () => {
     )
   })
 
-  test('loadScenarios loads renamed scenario files', () => {
-    const root = join(import.meta.dir, '..')
-    const all = loadScenarios(root)
+  test('loadScenariosFromDir loads launcher scenario files', () => {
+    const dir = join(import.meta.dir, '..', '..', '..', '..', '..', 'e2e', 'scenarios', 'launcher')
+    const all = loadScenariosFromDir(dir)
     expect(all.length).toBeGreaterThanOrEqual(5)
     const mcp1 = all.find((s) => s.code === 'mcp-1')
     expect(mcp1?.file).toBe('mcp-1-list-destinations.md')
