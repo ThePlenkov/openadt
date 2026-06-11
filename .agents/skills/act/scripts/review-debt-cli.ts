@@ -35,7 +35,7 @@ Commands:
 
 Examples:
   bun run act:debt:query -- --status open --limit 25 --format tsv
-  bun run act:debt:plan -- --limit 25 --out /tmp/agent_$$/debt-batch-plan.md
+  bun run act:debt:plan -- --limit 25 --out tmp/agent_$$/debt-batch-plan.md
   bun run act:debt:done -- --status done --fix-pr 99 --thread-id PRRT_…`)
   process.exit(1)
 }

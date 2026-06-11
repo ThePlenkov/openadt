@@ -12,7 +12,7 @@ Where:
 
 - `project` — workspace folder name (fixed; identifies the project context)
 - `repotree-v1` — ABAP repository version root (fixed)
-- `{destination}` — SAP system destination ID (e.g., `S0D_200_PPLENKOV_EN`)
+- `{destination}` — SAP system destination ID (e.g., `ABC_200_USER_EN`)
 - `{path-to-file}` — ABAP object path in the repository
 - `{extension}` — file type extension:
   - `.clas.abap` — ABAP class
@@ -27,13 +27,13 @@ Where:
 **Class:**
 
 ```text
-abap://project/repotree-v1/S0D_200_PPLENKOV_EN/System%20Library/ZCA_OTEL/Source%20Code%20Library/Classes/ZCL_OTEL/zcl_otel.clas.abap
+abap://project/repotree-v1/ABC_200_USER_EN/System%20Library/ZCA_DEMO/Source%20Code%20Library/Classes/ZCL_DEMO/zcl_demo.clas.abap
 ```
 
 **Interface:**
 
 ```text
-abap://project/repotree-v1/S0D_200_PPLENKOV_EN/System%20Library/ZCA_OTEL/Source%20Code%20Library/Interfaces/ZIF_OTEL/zif_otel.intf.abap
+abap://project/repotree-v1/ABC_200_USER_EN/System%20Library/ZCA_DEMO/Source%20Code%20Library/Interfaces/ZIF_DEMO/zif_demo.intf.abap
 ```
 
 ## URL Encoding
@@ -52,10 +52,10 @@ The file does **not** need to be open in VS Code editor. SAP ADT extension (`sap
 The path reflects the ABAP repository hierarchy as exposed by SAP ADT backend:
 
 - Repository root categories (e.g., `System Library`, `Source Code Library`) — determined by SAP system configuration
-- Package name (e.g., `ZCA_OTEL`)
+- Package name (e.g., `ZCA_DEMO`)
 - Object type folder (e.g., `Classes`, `Interfaces`, `Programs`)
 - Object name folder
-- Filename with extension (e.g., `zcl_otel.clas.abap`)
+- Filename with extension (e.g., `zcl_demo.clas.abap`)
 
 **How to find the correct path:**
 

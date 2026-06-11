@@ -20,15 +20,17 @@ After adt-1/adt-2 passed locally, an agent ran adt-lsp-mcp e2e via **`devin -p`*
 
 | Wrong | Right |
 | ----- | ----- |
-| `devin -p` + `cd tools/adt-lsp-mcp && bun run mcp:e2e -- --scenario adt-1 …` | `OPENADT_E2E_AGENT=devin bun run adt:e2e -- adt-1 --destination <ID>` |
+| `devin -p` + `cd tools/adt-lsp-mcp && bun run mcp:e2e -- --scenario adt-1 …` | `OPENADT_E2E_AGENT=devin bun run adt:e2e -- adt-1` (+ operator `--destination` at runtime) |
 | Bare package `mcp:e2e` for agent runs | Root `bun run adt:e2e` (sets `OPENADT_E2E_EVIDENCE=1`, auto `--evidence` + `--evidence-dir`) |
-| Manual Devin prompt without dispatch | `bun run adt:e2e -- adt-1 --destination <ID> --acp --agent devin` → run `command.local` from `.e2e/dispatch/<run-id>.json` |
+| Manual Devin prompt without dispatch | `bun run adt:e2e -- adt-1 --acp --agent devin` → run `command.local` from `.e2e/dispatch/<run-id>.json` |
 
 Package-local only when debugging framework internals:
 
 ```bash
-cd tools/adt-lsp-mcp && bun run mcp:e2e -- --scenario adt-1 --destination <ID> --evidence
+cd tools/adt-lsp-mcp && bun run mcp:e2e -- --scenario adt-1 --evidence
 ```
+
+(operator supplies `--destination` locally; not recorded here)
 
 ## Prevention
 

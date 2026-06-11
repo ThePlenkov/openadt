@@ -9,7 +9,7 @@ Live acceptance tests for **real SAP landscapes**. Scenarios live in `e2e/scenar
 | Goal                  | Contract                                                                                                                  |
 | --------------------- | ------------------------------------------------------------------------------------------------------------------------- |
 | Agent-readable        | **One `scenarios/mcp-N-<id>.md` per scenario** — markdown body is the agent brief; YAML frontmatter holds machine `steps` |
-| Landscape-agnostic    | Scenario files use placeholders only (`{{destination}}`, `{{pattern}}`); no `BHF`, `S0D`, or real hostnames in git        |
+| Landscape-agnostic    | Scenario files use placeholders only (`{{destination}}`, `{{pattern}}`); no real SIDs, usernames, or hostnames in git — fixtures `ABC`, `DEV` only |
 | OpenADT `adt_*` focus | Default suite exercises OpenADT-owned tools; SAP `abap_*` scenarios are optional and separate                             |
 | Real system           | Requires SAP ADT VS Code extension, `~/.adtls` logon (or `--import-from=openadt`), and SSO approval on cold start         |
 
@@ -92,14 +92,14 @@ Agents use **only** the generic CLI — see [.agents/skills/e2e/SKILL.md](../.ag
 ```bash
 bun run e2e -- list
 bun run e2e -- show adtls-1
-bun run e2e -- run adtls-1 --destination BHF
+bun run e2e -- run adtls-1 --destination ABC
 bun run e2e -- run mcp-1 --destination ABC_200_USER_EN
-bun run e2e -- dispatch mcp-1 --destination BHF --acp --agent devin
+bun run e2e -- dispatch mcp-1 --destination ABC --acp --agent devin
 ```
 
 | OpenADT param (→ adapter) | Meaning |
 | ------------------------- | ------- |
-| `--destination`           | Full id or partial SID (`BHF` → resolved via `~/.adtls/destinations.json`) |
+| `--destination`           | Full id or partial SID (`ABC` → resolved via `~/.adtls/destinations.json`) |
 | `--import-from`           | MCP launcher import mode (default `adtls`) |
 | `--timeout-ms`            | Run budget (default `300000`) |
 | `--port`                  | MCP launcher port (default `2239`) |
@@ -118,7 +118,7 @@ Exit `0` when all steps pass; `1` on missing destination, spawn failure, or asse
 ### ACP dispatch
 
 ```bash
-bun run e2e -- dispatch adtls-1 --destination BHF --acp --agent devin
+bun run e2e -- dispatch adtls-1 --destination ABC --acp --agent devin
 ```
 
 Stdout ends with `E2E_DISPATCH_FILE=<path>`. External agent runs `command.local` from the JSON payload. No ACP API is wired in this repo.
@@ -126,7 +126,7 @@ Stdout ends with `E2E_DISPATCH_FILE=<path>`. External agent runs `command.local`
 ## `/e2e` entry (evidence)
 
 ```bash
-/e2e adtls-1 BHF   →   bun run e2e -- run adtls-1 --destination BHF
+/e2e adtls-1 ABC   →   bun run e2e -- run adtls-1 --destination ABC
 ```
 
 - `run` always writes evidence to `.e2e/results/` and prints `E2E_EVIDENCE_FILE=`.

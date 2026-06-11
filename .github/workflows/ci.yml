@@ -69,6 +69,9 @@ jobs:
       - name: Verify spec sync
         run: bun scripts/verify-spec-sync.ts
 
+      - name: Verify fixtures only
+        run: bun scripts/verify-fixtures-only.ts
+
       - name: Verify package docs
         run: bun scripts/verify-package-docs.ts
 

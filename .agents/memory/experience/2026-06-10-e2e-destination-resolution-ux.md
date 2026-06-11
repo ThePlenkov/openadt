@@ -1,16 +1,18 @@
 # E2E destination resolution UX friction
 
+> Landscape ids omitted — live values live in `~/.adtls/destinations.json` only.
+
 ## Context
-User ran `/e2e adt-1 BHF` expecting the agent to handle destination resolution automatically. The actual destination ID in `~/.adtls/destinations.json` was `BHF_200_PPLENKOV_EN`, not just `BHF`.
+User ran `/e2e adt-1` with a **partial SID** only, expecting the agent to resolve it automatically. The matching row in `~/.adtls/destinations.json` used the full `SID_CLIENT_USER_LANG` form, not the short hint.
 
 ## Problem
-- User provided partial destination name (`BHF`) but e2e runner required full ID or explicit `--resolve-destination --system BHF` flag
-- Current e2e skill requires agent to ask user for full `SID_CLIENT_USER_LANG` format or manually add resolution flags
+- Partial input was not enough for the runner at the time; it needed the full id or explicit `--resolve-destination --system <partial-sid>`
+- Skill/docs pushed agents to ask for full `SID_CLIENT_USER_LANG` or hand-add resolution flags
 - No memory of last-used destination
-- Agent cannot intelligently guess destination from partial input or context
+- Agent could not infer the full id from partial input alone
 
 ## Resolution used
-Manually added `--resolve-destination --system BHF` to resolve partial system name to full destination ID from adtls store.
+Manually added `--resolve-destination --system <partial-sid>` so the runner could look up the full destination id in the adtls store.
 
 ## User preference
-User wants LLM/agent to decide destination via skill - either by guessing what user means from partial input, or remembering last-used destination. Destination identity should not be hardcoded by user or used by LLM.
+User wants the agent/skill to handle destination choice — infer partial input or remember the last destination. Real landscape ids must not be hardcoded in repo docs, memory, or agent prompts.

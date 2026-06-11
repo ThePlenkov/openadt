@@ -9,11 +9,10 @@ object's source**, although VS Code can (`adt-vscode.openAbapObject`). Goal: let
 read ABAP objects by name, **reusing `adt-lsc`'s LSP methods** (explicit requirement: do not
 duplicate the ADT client via a bare `openadt fetch`). In short — emulate VS Code without VS Code.
 
-Decisive fact: the user's sibling project **`arc-1-lsp`** already did this on top of the same
-`adt-ls` and **live-verified it against a4h**. Its docs are ground truth:
-`C:\Users\pplenkov\Documents\GitHub\arc-1-lsp\docs\adt-ls-reference.md`,
-`docs\research\adt-ls-capability-map.md`; the working wrappers are `src\adt-ls\repository.ts`.
-We reuse them, adapted to OpenADT's transport.
+Decisive fact: the sibling project **`arc-1-lsp`** already did this on top of the same
+`adt-ls` stack and live-verified the read flow. Its docs (`adt-ls-reference.md`,
+`adt-ls-capability-map.md`) and wrappers (`repository.ts`) are ground truth — reuse them,
+adapted to OpenADT's transport.
 
 ## Verified by-name read flow (= `openAbapObject`)
 

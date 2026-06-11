@@ -21,7 +21,7 @@ Before claiming “N issues fixed”: name the **source**, query it on **current
 
 - **Loopback bind** (`127.0.0.1`, SSO callback, hub TLS probe) is intentional — not SSRF. Details: [.codacy/instructions/review.md](.codacy/instructions/review.md).
 - **TOML keys** like `http_truststore_password` are field names, not secrets — Semgrep hard-coded-password rules are disabled in [`.semgrep.yaml`](.semgrep.yaml).
-- **Fixtures only** in repo: `DEV`, `DEVELOPER`, `dev-ms.example.com`, `p:CN=SAPServiceDEV`. No real landscape in commits.
+- **Fixtures only** in repo: `DEV`, `DEVELOPER`, `dev-ms.example.com`, `p:CN=SAPServiceDEV`. No real landscape in commits. **Memory/backlog:** omit ids — never substitute fixtures for redacted live values ([mental-model](.agents/memory/mental-models/agent-memory-landscape-redaction.md)).
 
 ## Durable learnings (one sink each)
 

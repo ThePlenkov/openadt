@@ -59,8 +59,8 @@ Separate failure mode: scenarios **passed** but left **no evidence** because age
 
 **Correct paths:**
 
-- Local with evidence: `bun run adt:e2e -- adt-N --destination <ID>` (`OPENADT_E2E_EVIDENCE=1` always on).
-- External agent: `bun run adt:e2e -- adt-N --destination <ID> --acp --agent devin` or `adt:e2e:dispatch`.
+- Local with evidence: `bun run adt:e2e -- adt-N` (+ operator `--destination` at runtime; `OPENADT_E2E_EVIDENCE=1` always on).
+- External agent: `bun run adt:e2e -- adt-N --acp --agent devin` or `adt:e2e:dispatch`.
 - Package-local debug only: `cd tools/adt-lsp-mcp && bun run mcp:e2e -- … --evidence`.
 
 See experience: `.agents/memory/experience/2026-06-11-adt-lsp-e2e-evidence-bypass.md`.

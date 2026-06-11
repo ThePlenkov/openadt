@@ -48,3 +48,4 @@ Reflect on what just happened. Three escalation levels:
 2. **Always record** — every mode writes experience. `--plan` adds backlog. `--fix` adds backlog + code.
 3. **Link sources** — backlog items reference the experience entry they came from.
 4. **Merge, don't duplicate** — if an observation or experience on the same topic exists, update it.
+5. **Redact before write** — [memory landscape rules](../memory/mental-models/agent-memory-landscape-redaction.md): omit landscape ids from experience/backlog; never paste fixtures in place of redacted real ids.

@@ -50,11 +50,11 @@ merge-ready until:
 
 ```bash
 # P5: rate every check-run + review finding 0–5 into review_scores.csv
-mkdir -p /tmp/agent_$$ && cd /workspace/<repo>
-bun .agents/skills/act/scripts/extract-findings.ts OWNER REPO PR > /tmp/agent_$$/findings.jsonl
-# write /tmp/agent_$$/scores.tsv (finding_id<TAB>0-5<TAB>why)
+mkdir -p tmp/agent_$$   # repo ./tmp/ only — never system /tmp
+bun .agents/skills/act/scripts/extract-findings.ts OWNER REPO PR > tmp/agent_$$/findings.jsonl
+# write tmp/agent_$$/scores.tsv (finding_id<TAB>0-5<TAB>why)
 bun .agents/skills/act/scripts/submit-scores.ts OWNER REPO PR --evaluator <model-id> \
-  --findings /tmp/agent_$$/findings.jsonl --scores /tmp/agent_$$/scores.tsv
+  --findings tmp/agent_$$/findings.jsonl --scores tmp/agent_$$/scores.tsv
 ```
 
 # P6: retrospective (or skip with reason)

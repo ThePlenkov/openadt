@@ -30,15 +30,15 @@ Config defaults via `E2E_CONFIG` or `e2e.config.yaml` at repo root when omitted.
 ```bash
 bun run e2e -- list
 bun run e2e -- show adtls-1
-bun run e2e -- run adtls-1 --destination BHF
-bun run e2e -- run mcp-1 --destination BHF
+bun run e2e -- run adtls-1 --destination ABC
+bun run e2e -- run mcp-1 --destination ABC
 ```
 
 Project profile: `e2e.config.yaml`. Product spec: `specs/mcp-ai-testing.md`.
 
 ## On `/e2e <code> [params]`
 
-1. Map user params to CLI flags (e.g. `--destination BHF`).
+1. Map user params to CLI flags (e.g. `--destination ABC` or full `ABC_200_USER_EN`).
 2. Run `e2e-agent run <code> --config <project-config> …` (or `dispatch` with `--acp`).
 3. Read stdout: exit code, `E2E_EVIDENCE_FILE=…`.
 4. Report PASS/FAIL, Given/When/Then summary, assertion highlights from evidence.

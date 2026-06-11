@@ -28,7 +28,7 @@ Run ABAP Unit Tests:
 
 - `abap_run_unit_tests` expects URIs in VS Code ABAP virtual filesystem format (see docs/abap-uri-format.md)
 - Format: `abap://project/repotree-v1/{destination}/{path-to-file}.clas.abap`
-- Example: `abap://project/repotree-v1/S0D_200_PPLENKOV_EN/System%20Library/Package/Class/class.clas.abap`
+- Example: `abap://project/repotree-v1/ABC_200_USER_EN/System%20Library/Package/Class/class.clas.abap`
 - URL-encode paths with spaces as `%20`
 - File does NOT need to be open in VS Code — SAP ADT extension loads it from backend
 - Returns "No tests found" (OK) or test execution results

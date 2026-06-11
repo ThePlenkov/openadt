@@ -196,15 +196,15 @@ only judges; the scripts do the fetch/join/CSV work in two tool calls. Full
 contract: [RATING_FLOW.md](references/RATING_FLOW.md).
 
 ```bash
-# prepare scratch dir once
-mkdir -p /tmp/agent_$$
+# prepare scratch dir once (repo ./tmp/ — never system /tmp)
+mkdir -p tmp/agent_$$
 
 # 1. one call — dump every finding with full metadata
-bun scripts/extract-findings.ts OWNER REPO PR > /tmp/agent_$$/findings.jsonl
-# 2. read findings, write /tmp/agent_$$/scores.tsv  (finding_id<TAB>0-5<TAB>why)
+bun scripts/extract-findings.ts OWNER REPO PR > tmp/agent_$$/findings.jsonl
+# 2. read findings, write tmp/agent_$$/scores.tsv  (finding_id<TAB>0-5<TAB>why)
 # 3. one call — join + upsert review_scores.csv (no GitHub writes)
 bun scripts/submit-scores.ts OWNER REPO PR --evaluator <model-id> \
-  --findings /tmp/agent_$$/findings.jsonl --scores /tmp/agent_$$/scores.tsv
+  --findings tmp/agent_$$/findings.jsonl --scores tmp/agent_$$/scores.tsv
 ```
 
 Scoring is **CSV-only** — it posts no reactions or comments (those are P1–P4).
@@ -267,7 +267,7 @@ prefix paths with `.agents/skills/act/` (or use `bun run act:debt:*` for ledger 
 | ---------------------------- | --------------------------------------------------------- | ------------------------------------------- |
 | **PR state + open threads**  | `bash scripts/pr-state.sh OWNER REPO PR`                  | `gh pr view --json ...` ×4 + `gh pr checks` |
 | **Verify a CLI claim**       | `bun scripts/derive-cli-surface.ts --check "openadt X"`   | `grep` across `apps/**.java` + reads        |
-| **Post N thread replies**    | `bash scripts/reply-threads.sh --file /tmp/agent_*/replies.tsv` | N × `gh api graphql addPullRequestReview…` |
+| **Post N thread replies**    | `bash scripts/reply-threads.sh --file tmp/agent/replies.tsv` | N × `gh api graphql addPullRequestReview…` |
 | **Resolve open threads (P4)**| `bash scripts/resolve-open-threads.sh OWNER REPO PR`      | unchanged                                   |
 | **Extract findings (P5)**    | `bun scripts/extract-findings.ts OWNER REPO PR`           | N × `gh api` check-runs/annotations/comments reads |
 | **Submit scores (P5)**       | `bun scripts/submit-scores.ts … --findings F --scores S`   | per-finding parse + CSV writes (local, no API) |
@@ -276,12 +276,8 @@ prefix paths with `.agents/skills/act/` (or use `bun run act:debt:*` for ledger 
 | **Mark debt done (D6)**      | `bun run act:debt:done -- --status done …`                | Editing `ledger.jsonl` by hand |
 | **Archive harvests (post-D7)**| `bun run harvest:archive`                                 | Hand-moving files into `archive/` |
 
-**Scratch artifacts (e.g. `replies.tsv`) MUST live outside the worktree** —
-use an absolute path under the cloud-agent pre-approved `/tmp/agent_*/`. The
-pre-commit `nx format:write --uncommitted && git update-index --again` hook
-re-stages any scratch file you leave at the worktree root, and `.gitignore`
-allowlists turn into an ever-growing list. `reply-threads.sh --file` accepts
-absolute paths; nothing else has to change.
+**Scratch artifacts (e.g. `replies.tsv`, `findings.jsonl`) MUST live under repo `./tmp/`** —
+e.g. `tmp/agent/<run>/`. **Not** system `/tmp` (cloud agents may write outside the clone). **Not** `scripts/` or repo root. `tmp/` is gitignored. `reply-threads.sh --file` accepts repo-relative or absolute paths under the clone.
 
 **`replies.tsv` format** (one row per thread). TAB separates the thread ID
 from the body; newlines and tabs in the body must be escaped as `\n` and `\t`

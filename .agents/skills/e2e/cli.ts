@@ -23,8 +23,8 @@ Config resolution (first wins): --config, E2E_CONFIG env, e2e.config.yaml at rep
 Examples (OpenADT — see specs/mcp-ai-testing.md):
   bun run e2e -- list
   bun run e2e -- show adtls-1
-  bun run e2e -- run adtls-1 --destination BHF
-  bun run e2e -- run mcp-1 --destination BHF --acp --agent devin
+  bun run e2e -- run adtls-1 --destination ABC
+  bun run e2e -- run mcp-1 --destination ABC --acp --agent devin
 
 Agents: use only these commands. Do not import scripts/framework/*.
 `

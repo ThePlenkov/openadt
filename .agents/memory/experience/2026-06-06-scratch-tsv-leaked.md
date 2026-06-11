@@ -14,7 +14,7 @@ Wrote scratch files in the worktree at all. The pre-commit hook re-staging was a
 
 ## Proposed fix
 
-Use the cloud-agent pre-approved scratch dir `/tmp/agent_*/` for everything the `/act` helpers need as input or produce as output. `reply-threads.sh --file /tmp/agent_*/replies.tsv` works; nothing in the worktree, nothing to leak, nothing to `.gitignore`.
+Use repo **`./tmp/`** (e.g. `tmp/agent/<run>/`) for everything the `/act` helpers need as input or output — **not** system `/tmp`. `reply-threads.sh --file tmp/agent/replies.tsv` works; `tmp/` is gitignored; nothing at repo root to leak or re-stage.
 
 ## Scope
 

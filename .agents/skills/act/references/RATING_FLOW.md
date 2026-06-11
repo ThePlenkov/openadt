@@ -18,7 +18,7 @@ scripts. The agent never re-echoes data a script already holds. See
 ### 1. Extract — 1 tool call (max context, zero reasoning)
 
 ```bash
-bun scripts/extract-findings.ts OWNER REPO PR > /tmp/agent_xyz/findings.jsonl
+bun scripts/extract-findings.ts OWNER REPO PR > tmp/agent_xyz/findings.jsonl
 ```
 
 Emits one finding per line — check-run annotations (`code_scan`) and top-level
@@ -57,15 +57,15 @@ review:202	2	Valid but low-impact style nit
 Rating scale: **0** noise/false-positive · **1** marginal · **2** obvious/low
 impact · **3** correct, real · **4** subtle catch · **5** would prevent an
 incident. No URLs, summaries, tool names, latency, or evaluator-per-row — the
-submit step joins all of that. Write to `/tmp/agent_xyz/scores.tsv`.
+submit step joins all of that. Write to `tmp/agent_xyz/scores.tsv`.
 
 ### 3. Submit — 1 tool call (join + upsert, no network)
 
 ```bash
 bun scripts/submit-scores.ts OWNER REPO PR \
   --evaluator claude-opus-4.8 \
-  --findings /tmp/agent_xyz/findings.jsonl \
-  --scores  /tmp/agent_xyz/scores.tsv
+  --findings tmp/agent_xyz/findings.jsonl \
+  --scores  tmp/agent_xyz/scores.tsv
 ```
 
 Joins each score onto its finding by `finding_id`, names the evaluator **once**
@@ -113,6 +113,5 @@ confidence over time.
 ## Wiring
 
 This is **P5** in [SKILL.md](SKILL.md) — after P4 resolve, before P6 evaluation.
-Scratch (`findings.jsonl`, `scores.tsv`) lives under `/tmp/agent_*/`, never in the
-worktree (the pre-commit hook re-stages worktree scratch). Only
+Scratch (`findings.jsonl`, `scores.tsv`) lives under repo **`./tmp/`** (never system `/tmp`, never `scripts/` or repo root). Only
 `review_scores.csv` is committed.

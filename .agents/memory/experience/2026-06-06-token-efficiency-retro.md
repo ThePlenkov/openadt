@@ -16,7 +16,7 @@ A single `/act` on PR #50 accumulated several token-inefficient patterns: scratc
 
 ## Proposed fix
 
-- Never write scratch `.tsv` inside the worktree — use `/tmp/agent_*/`.
+- Never write scratch `.tsv` at repo root — use **`./tmp/`** (not system `/tmp`).
 - Call `pr-state.sh` once at start; re-invoke only after push/rebase/new commit.
 - Write `test.each` from the start whenever two test cases have similar shape.
 - Replace `sleep N && gh pr view` polling with `gh pr checks --watch`.

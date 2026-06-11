@@ -34,7 +34,7 @@ Invoke via `/e2e` — the agent runs **`e2e-agent` CLI commands only** (see [SKI
 
 ```bash
 bun run e2e -- list
-bun run e2e -- run adtls-1 --destination BHF
+bun run e2e -- run adtls-1 --destination ABC
 ```
 
 OpenADT adapter: `e2e/openadt-adapter.ts`. Config: `e2e.config.yaml` at repo root.
@@ -57,11 +57,9 @@ The **adtls_** prefix is used instead of **adt_** to avoid confusion with genera
 
 ### Destination Resolution
 
-When executing E2E scenarios that require a SAP destination, the agent passes `--destination` to `e2e-agent run` (e.g. `/e2e adtls-1 BHF` → `bun run e2e -- run adtls-1 --destination BHF`). The **OpenADT adapter** resolves partial SIDs (e.g. `BHF` → `BHF_200_USER_EN`) from `~/.adtls/destinations.json`.
+When executing E2E scenarios that require a SAP destination, the agent passes `--destination` to `e2e-agent run` (e.g. `/e2e adtls-1 ABC` → `bun run e2e -- run adtls-1 --destination ABC`). The **OpenADT adapter** resolves partial SIDs (e.g. `ABC` → `ABC_200_USER_EN`) from `~/.adtls/destinations.json`.
 
-Common destinations:
-- **BHF** - Sandbox environment (most isolated)
-- **S0D** - Development environment
+**Never commit real system IDs, usernames, or hostnames** — use fictional fixtures only (`ABC`, `DEV`, `ABC_200_USER_EN`). Live destinations are supplied at run time by the operator.
 
 The scenario steps use `{{destination}}` placeholder which gets substituted with the actual destination value from RunContext.
 

@@ -59,7 +59,7 @@ function resolveDestinationId(opts: DestinationOptions): string {
   }
   if (!opts.resolveDestination && !opts.system) {
     throw new Error(
-      'Missing destination. Pass --destination SID_CLIENT_USER_LANG or a partial SID (e.g. BHF).'
+      'Missing destination. Pass --destination SID_CLIENT_USER_LANG or a partial SID (e.g. ABC).'
     )
   }
   const path = join(homedir(), '.adtls', 'destinations.json')

@@ -4,7 +4,7 @@
  *
  * Usage:
  *   bun run act:debt:done -- --thread-id PRRT_… --status done --fix-pr 99
- *   bun run act:debt:done -- --fix-pr 99 --status done --threads-file /tmp/agent/threads.txt
+ *   bun run act:debt:done -- --fix-pr 99 --status done --threads-file tmp/agent/threads.txt
  *   bun run act:debt:done -- --status wontfix --thread-id PRRT_… --notes "out of scope"
  */
 import { readFileSync } from 'node:fs'

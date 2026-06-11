@@ -64,4 +64,9 @@ After a session with multiple related experiences or facts, consolidate them int
 3. **No implementation in experience** — record what happened and why, not the fix (fix goes in code)
 4. **Consolidate aggressively** — if 3+ facts/experiences say the same thing, write one observation
 5. **Mental-models are curated** — only promote an observation to mental-model if it's proven and durable
-6. **PII safety** — redact system IDs, hostnames, credentials before committing
+6. **Landscape redaction — omit, never fictionalize** — see [mental-model](../memory/mental-models/agent-memory-landscape-redaction.md)
+   - **experience / observations / mental-models / backlog:** no concrete SAP SIDs, destination ids, `--destination` values, or `/e2e … <sid>` examples. Describe roles: "partial SID", "operator `~/.adtls` store".
+   - **Never replace** a redacted real id with a fixture (`ABC`, `BHF→ABC`) and leave it reads like history — that invents false sessions.
+   - **facts/** only: format docs may use template `SID_CLIENT_USER_LANG` and one fixture example (`ABC_200_USER_EN`) for syntax — not live-run narratives.
+7. **Scratch under `./tmp/`** — never system `/tmp` (see AGENTS.md rule 5)
+8. **PII safety** — redact credentials, home paths, corporate hostnames before committing

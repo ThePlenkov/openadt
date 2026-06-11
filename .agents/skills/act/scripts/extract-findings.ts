@@ -11,7 +11,7 @@
  * stderr. The script does all fetch/parse/latency work so the agent spends no
  * tool calls on mechanics — see AGENTS.md "Script over steps".
  *
- * Usage: extract-findings.ts OWNER REPO PR_NUMBER > /tmp/agent_xyz/findings.jsonl
+ * Usage: extract-findings.ts OWNER REPO PR_NUMBER > tmp/agent_xyz/findings.jsonl
  *
  * detection_latency_ms is (detected − committed). For code_scan that is tool
  * latency; for code_review it includes reviewer availability — split by
