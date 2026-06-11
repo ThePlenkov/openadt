@@ -36,9 +36,13 @@ export const adt_find_references = tool({
       const objectUri = lsUriResult?.uri || args.uri
 
       const lspResult = await callLspContract(findReferences, transport, {
-        destination: args.destination,
-        uri: objectUri,
+        textDocument: {
+          uri: objectUri,
+        },
         position: args.position,
+        context: {
+          includeDeclaration: true,
+        },
       })
 
       return {

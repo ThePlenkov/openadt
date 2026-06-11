@@ -3,6 +3,7 @@
  * Uses MCP SDK pattern with Zod schema.
  */
 import { z } from 'zod'
+import { LSP_METHOD_REPOSITORY_GET_LS_URI } from '@openadt/adt-config'
 import { tool } from '@openadt/mcp-tools'
 import { getPackageName } from '@openadt/adt-services'
 import type { LspTransport } from '@openadt/lsp-client'
@@ -21,9 +22,16 @@ export const adt_get_package_name = tool({
   inputSchema: schema,
   handler: async (args: z.infer<typeof schema>, transport: LspTransport) => {
     try {
+      // Convert ADT path to repotree URI if needed
+      const lsUriResult = (await transport.sendRequest(LSP_METHOD_REPOSITORY_GET_LS_URI, {
+        destination: args.destination,
+        adtUri: args.uri,
+      })) as { uri?: string }
+      const objectUri = lsUriResult?.uri || args.uri
+
       const lspResult = await callLspContract(getPackageName, transport, {
         destination: args.destination,
-        uri: args.uri,
+        uri: objectUri,
       })
 
       return {

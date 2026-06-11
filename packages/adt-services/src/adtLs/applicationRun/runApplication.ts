@@ -1,20 +1,13 @@
 /**
  * Application run contract.
- * LSP method: adtLs/applicationRun/runApplication
+ * LSP method: adtLs/run/runApplication
  */
 import { lspEndpoint, type, type LspEndpoint } from '@openadt/lsp-client'
 
 export const runApplication: LspEndpoint = lspEndpoint({
-  method: 'adtLs/applicationRun/runApplication',
+  method: 'adtLs/run/runApplication',
   types: {
-    params: type<{
-      destination: string
-      uri: string
-    }>(),
-    response: type<{
-      success: boolean
-      output: string
-      exitCode?: number
-    }>(),
+    params: type<{ uri: string }>(),
+    response: type<string>(),
   },
 })

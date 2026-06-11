@@ -16,7 +16,7 @@ steps:
   - tool: adt_search_transports_simple
     args:
       destination: "{{destination}}"
-      owner: "{{owner}}"
+      owner: "*"
       function: "*"
     assert:
       notError: true

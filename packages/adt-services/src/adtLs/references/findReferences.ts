@@ -1,29 +1,33 @@
 /**
  * Find references contract.
- * LSP method: adtLs/references/findReferences
+ * LSP method: textDocument/references (standard LSP)
  */
 import { lspEndpoint, type, type LspEndpoint } from '@openadt/lsp-client'
 
 export const findReferences: LspEndpoint = lspEndpoint({
-  method: 'adtLs/references/findReferences',
+  method: 'textDocument/references',
   types: {
     params: type<{
-      destination: string
-      uri: string
-      position?: {
+      textDocument: {
+        uri: string
+      }
+      position: {
         line: number
         character: number
       }
+      context?: {
+        includeDeclaration?: boolean
+      }
     }>(),
-    response: type<{
-      success: boolean
-      locations: Array<{
-        uri: string
-        range: {
-          start: { line: number; character: number }
-          end: { line: number; character: number }
-        }
-      }>
-    }>(),
+    response:
+      type<
+        Array<{
+          uri: string
+          range: {
+            start: { line: number; character: number }
+            end: { line: number; character: number }
+          }
+        }>
+      >(),
   },
 })
