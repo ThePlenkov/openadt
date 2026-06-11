@@ -13,7 +13,7 @@ import picocli.CommandLine.Command;
 @Command(
     name = "adt",
     mixinStandardHelpOptions = true,
-    description = "OpenADT ADT commands for ABAP development",
+    description = "OpenADT agent foundation surface — ADT commands for ABAP development",
     subcommands = {}
 )
 public class AdtCommand implements Runnable {
