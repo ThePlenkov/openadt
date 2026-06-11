@@ -6,6 +6,12 @@ export type EnvVarName = string & { readonly __envVarName: unique symbol }
 /** Create a typed env-var name constant. */
 export const envVar = (name: string): EnvVarName => name as EnvVarName
 
+/** Treat common truthy strings (1, true, yes, on) as enabled. */
+export function isTruthyEnv(value: string | undefined): boolean {
+  if (!value) return false
+  return /^(1|true|yes|on)$/i.test(value.trim())
+}
+
 export type WindowsEnvDefaults = Record<EnvVarName, string>
 
 /** Branded workspace path — distinguishes filesystem paths from env-var names at the type level. */

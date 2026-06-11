@@ -8,7 +8,25 @@
     "noEmit": true,
     "skipLibCheck": true,
     "allowImportingTsExtensions": true,
+    "baseUrl": ".",
+    "paths": {
+      "@openadt/adt-infra": ["../../packages/adt-infra/src/index.ts"],
+      "@openadt/adt-config": ["../../packages/adt-config/src/index.ts"],
+      "@openadt/lsp-client": ["../../packages/lsp-client/src/index.ts"]
+    },
+    "ignoreDeprecations": "6.0",
     "types": ["bun-types"]
   },
-  "include": ["src/**/*.ts"]
+  "include": ["src/**/*.ts"],
+  "exclude": [
+    "node_modules",
+    "dist",
+    "src/cli/**",
+    "src/mcp-dev-stdio-bin.ts",
+    "src/openadt-mcp-bin.ts",
+    "src/main.ts",
+    "src/test-mcp-stdio.ts",
+    "src/mcp/stdio-proxy.ts",
+    "src/mcp/stdio-proxy.test.ts"
+  ]
 }
