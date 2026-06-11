@@ -670,7 +670,7 @@ export function createStdioMcpBridge(): StdioMcpBridge {
     return true
   }
 
-  function rewriteForwardedMessage(
+  const rewriteForwardedMessage = (
     msg: string,
     request: ParsedRpc | undefined,
     injectMethod: string | undefined,

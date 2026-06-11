@@ -66,17 +66,6 @@ function computeLiveThreadIds(): LiveThreadIds {
     },
   }
 }
-    live.add(row.thread_id)
-  }
-  return {
-    live,
-    totals: {
-      harvested: all.length,
-      open: all.filter((r) => (overlays.get(r.thread_id)?.status ?? r.status) === 'open').length,
-      archived: 0,
-    },
-  }
-}
 
 function archivedCount(): number {
   const dir = archiveDir()
