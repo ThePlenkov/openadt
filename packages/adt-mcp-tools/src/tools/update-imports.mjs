@@ -25,10 +25,7 @@ for (const file of files) {
   let content = readFileSync(filePath, 'utf-8')
 
   // Replace imports with shared packages
-  content = content.replace(
-    /from ['"`]\.\.\/tool-factory\.js['"`];/g,
-    "from '@openadt/mcp-tools';"
-  )
+  content = content.replace(/from ['"`]\.\.\/tool-factory\.js['"`];/g, "from '@openadt/mcp-tools';")
 
   content = content.replace(
     /from ['"`]\.\.\/\.\.\/services\/adtLs\/[^/]+\/[^/]+\.js['"`];/g,
