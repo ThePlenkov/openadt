@@ -20,6 +20,36 @@ steps:
     assert:
       contentContains: "| Name | Type | Description |"
       notError: true
+  - tool: adt_quick_search
+    args:
+      destination: "{{destination}}"
+      searchTerm: "Z*"
+      format: "json"
+    assert:
+      contentContains:
+        - "references"
+        - "name"
+        - "type"
+      notError: true
+  - tool: adt_quick_search
+    args:
+      destination: "{{destination}}"
+      searchTerm: "Z*"
+      format: "compact"
+    assert:
+      contentContains:
+        - "("
+        - ")"
+      notError: true
+  - tool: adt_quick_search
+    args:
+      destination: "{{destination}}"
+      searchTerm: "CL_ABAP*"
+      types: ["CLAS"]
+      maxResults: 5
+    assert:
+      contentContains: "| Name | Type | Description |"
+      notError: true
 ---
 
 # Quick search in ABAP repository

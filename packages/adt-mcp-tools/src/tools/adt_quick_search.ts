@@ -15,10 +15,19 @@ const schema = z.object({
     .string()
     .describe('SAP destination id (SID_CLIENT_USER_LANG, e.g. ABC_200_USER_EN)'),
   searchTerm: z.string().describe('Search pattern (LSP field: pattern)'),
+  types: z.array(z.string()).optional().describe('Object type filters (e.g., ["CLAS", "PROG"])'),
+  maxResults: z.number().optional().describe('Maximum number of results to return'),
+  format: z
+    .enum(['json', 'markdown', 'compact'])
+    .optional()
+    .describe('Output format: markdown table (default), json, or compact text'),
 })
 
 // Format QuickSearchResult as text
-function formatQuickSearchResult(result: QuickSearchResult): string {
+function formatQuickSearchResult(
+  result: QuickSearchResult,
+  format: 'json' | 'markdown' | 'compact' = 'markdown'
+): string {
   if (result.message) {
     return `Message: ${result.message.label || ''} ${result.message.detail || ''}`
   }
@@ -27,11 +36,25 @@ function formatQuickSearchResult(result: QuickSearchResult): string {
     return 'No results found.'
   }
 
-  const head = '| Name | Type | Description |\n|------|------|-------------|'
-  const rows = result.references.map(
-    (r) => `| ${r.name} | ${r.type ?? '?'} | ${r.description ?? ''} |`
-  )
-  return [head, ...rows].join('\n')
+  if (format === 'markdown') {
+    const head = '| Name | Type | Description |\n|------|------|-------------|'
+    const rows = result.references.map(
+      (r) => `| ${r.name} | ${r.type ?? '?'} | ${r.description ?? ''} |`
+    )
+    return [head, ...rows].join('\n')
+  }
+
+  if (format === 'compact') {
+    return result.references
+      .map((r) => {
+        const desc = r.description ? ` — ${r.description}` : ''
+        return `${r.name}${desc} (${r.type ?? '?'})`
+      })
+      .join('\n')
+  }
+
+  // Default to JSON
+  return JSON.stringify({ references: result.references }, null, 2)
 }
 
 // Tool definition for MCP SDK registration
@@ -45,13 +68,18 @@ export const adt_quick_search = tool({
       const lspResult = await callLspContract(quickSearch, transport, {
         destination: args.destination,
         pattern: args.searchTerm,
+        types: args.types,
+        maxResults: args.maxResults,
       })
 
       return {
         content: [
           {
             type: 'text',
-            text: formatQuickSearchResult(lspResult as QuickSearchResult),
+            text: formatQuickSearchResult(
+              lspResult as QuickSearchResult,
+              args.format || 'markdown'
+            ),
           },
         ],
       }

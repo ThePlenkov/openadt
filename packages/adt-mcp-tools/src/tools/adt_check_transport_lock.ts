@@ -27,7 +27,7 @@ const schema = z.object({
 export const adt_check_transport_lock = tool({
   name: 'adt_check_transport_lock',
   description:
-    'Check if an ABAP object requires transport recording. Uses adtLs/cts/transport/checkTransportForObjectLock after getLsUri. Pass ADT path from adt_quick_search as uri.',
+    'Check if an ABAP object requires transport recording. This tool calls getLsUri internally to resolve the repotree URI; do NOT call adt_get_ls_uri first. Pass ADT path from adt_quick_search as uri. For workflow guidance, call MCP prompt "adt_lsp_workflow".',
   inputSchema: schema,
   handler: async (args: z.infer<typeof schema>, transport: LspTransport) => {
     try {

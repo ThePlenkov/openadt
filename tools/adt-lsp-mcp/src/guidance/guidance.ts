@@ -51,11 +51,11 @@ Transport LSP methods live under **\`adtLs/cts/transport/\`**, not \`adtLs/trans
 | ---- | ------- |
 | \`adt_search_transports_simple\` | List modifiable transports for destination |
 | \`adt_search_transports\` | Advanced transport search |
-| \`adt_check_transport_lock\` | Check if object needs transport recording (calls getLsUri internally) |
+| \`adt_check_transport_lock\` | Check if object needs transport recording (calls getLsUri internally; do NOT call adt_get_ls_uri first) |
 | \`adt_create_transport\` | Create transport for object lock |
 | \`adt_assign_transport\` | Assign transport to object |
 
-For lock check: after getLsUri, LSP expects \`{ objectInfo: { objectUri }, operationType: 'MODIFICATION' }\`.
+For lock check: tool calls getLsUri internally with your ADT path, then LSP expects \`{ objectInfo: { objectUri }, operationType: 'MODIFICATION' }\`.
 
 Typical workflow: search transports → check lock → create or assign transport.
 

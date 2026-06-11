@@ -6,7 +6,7 @@
 import { spawn, spawnSync, type ChildProcessWithoutNullStreams } from 'node:child_process'
 import { existsSync } from 'node:fs'
 import { join } from 'node:path'
-import { resolveBunExecutable } from '../tools/sap-adt-mcp-launcher/src/resolve-bun.ts'
+import { resolveBunExecutable } from '../tools/sap-adt-mcp-launcher/src/infra/resolve-bun.ts'
 
 export function mcpLauncherPath(repoRoot: string): string {
   // Packaged builds (tsdown) emit `tools/sap-adt-mcp-launcher/dist/main.{mjs,js}`.

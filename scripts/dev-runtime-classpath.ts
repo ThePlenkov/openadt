@@ -3,9 +3,11 @@
  */
 import { spawnSync } from 'node:child_process'
 import { existsSync, readFileSync, statSync } from 'node:fs'
-import { join } from 'node:path'
+import { dirname, join } from 'node:path'
+import { fileURLToPath } from 'node:url'
 
-const repoRoot = join(import.meta.dir, '..')
+const __dirname = dirname(fileURLToPath(import.meta.url))
+const repoRoot = join(__dirname, '..')
 const cliDir = join(repoRoot, 'apps', 'openadt-cli')
 const cpFile = join(cliDir, 'target', 'dev-runtime-classpath.txt')
 const pathSep = process.platform === 'win32' ? ';' : ':'
@@ -18,7 +20,7 @@ export function ensureDevRuntimeClasspath(): void {
   const result = spawnSync(
     'node',
     [
-      join(repoRoot, 'scripts', 'mvnw-runner.mjs'),
+      join(repoRoot, 'scripts', 'mvnw-runner.ts'),
       '-q',
       '-pl',
       'apps/openadt-cli',

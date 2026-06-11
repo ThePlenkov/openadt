@@ -166,7 +166,7 @@ function buildEvidenceMarkdown(input: EvidenceReportInput): string {
   const agent = resolveE2eAgent(input.opts)
   const model = resolveE2eModel(input.opts)
   const lines = [
-    `# 📋 E2E evidence — ${scenarios.map((s) => s.code).join(', ')}`,
+    `# 📋 E2E evidence — ${scenarios.map((s) => `${s.code}: ${s.title}`).join(', ')}`,
     '',
     `**Verdict:** ${verdictLabel(allPassed)}`,
     `**Run id:** 🆔 ${runId}`,
