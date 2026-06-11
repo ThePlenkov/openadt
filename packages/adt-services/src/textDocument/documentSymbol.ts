@@ -1,10 +1,9 @@
 /**
- * Document symbols contract.
- * LSP method: textDocument/documentSymbol (standard LSP)
+ * LSP method: textDocument/documentSymbol
  */
 import { lspEndpoint, type, type LspEndpoint } from '@openadt/lsp-client'
 
-export const documentSymbols: LspEndpoint = lspEndpoint({
+export const documentSymbol: LspEndpoint = lspEndpoint({
   method: 'textDocument/documentSymbol',
   types: {
     params: type<{

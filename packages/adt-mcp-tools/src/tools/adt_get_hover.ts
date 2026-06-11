@@ -4,7 +4,7 @@
  */
 import { z } from 'zod'
 import { tool } from '@openadt/mcp-tools'
-import { getHover } from '@openadt/adt-services'
+import { hover } from '@openadt/adt-services'
 import type { LspTransport } from '@openadt/lsp-client'
 import {
   callLspContract,
@@ -41,7 +41,7 @@ export const adt_get_hover = tool({
             position: args.position,
             symbol: args.symbol,
           })
-          return callLspContract(getHover, transport, {
+          return callLspContract(hover, transport, {
             textDocument: { uri: ctx.repotreeUri },
             position,
           })

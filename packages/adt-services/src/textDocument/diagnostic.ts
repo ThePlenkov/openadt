@@ -1,6 +1,5 @@
 /**
- * Diagnostic contract.
- * LSP method: textDocument/diagnostic (standard LSP pull diagnostics)
+ * LSP method: textDocument/diagnostic
  */
 import { lspEndpoint, type, type LspEndpoint } from '@openadt/lsp-client'
 

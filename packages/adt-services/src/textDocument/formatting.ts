@@ -1,6 +1,5 @@
 /**
- * Formatting contract.
- * LSP method: textDocument/formatting (standard LSP)
+ * LSP method: textDocument/formatting
  */
 import { lspEndpoint, type, type LspEndpoint } from '@openadt/lsp-client'
 

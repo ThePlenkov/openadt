@@ -4,7 +4,7 @@
  */
 import { z } from 'zod'
 import { tool } from '@openadt/mcp-tools'
-import { documentSymbols } from '@openadt/adt-services'
+import { documentSymbol } from '@openadt/adt-services'
 import type { LspTransport } from '@openadt/lsp-client'
 import { callLspContract, withOpenDocument } from '@openadt/lsp-client'
 
@@ -26,7 +26,7 @@ export const adt_document_symbols = tool({
         transport,
         { destination: args.destination, uri: args.uri },
         async (ctx) =>
-          callLspContract(documentSymbols, transport, {
+          callLspContract(documentSymbol, transport, {
             textDocument: { uri: ctx.repotreeUri },
           })
       )

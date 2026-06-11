@@ -1,10 +1,9 @@
 /**
- * Find references contract.
- * LSP method: textDocument/references (standard LSP)
+ * LSP method: textDocument/references
  */
 import { lspEndpoint, type, type LspEndpoint } from '@openadt/lsp-client'
 
-export const findReferences: LspEndpoint = lspEndpoint({
+export const references: LspEndpoint = lspEndpoint({
   method: 'textDocument/references',
   types: {
     params: type<{

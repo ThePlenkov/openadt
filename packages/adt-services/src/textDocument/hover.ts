@@ -1,10 +1,9 @@
 /**
- * Get hover contract.
- * LSP method: textDocument/hover (standard LSP)
+ * LSP method: textDocument/hover
  */
 import { lspEndpoint, type, type LspEndpoint } from '@openadt/lsp-client'
 
-export const getHover: LspEndpoint = lspEndpoint({
+export const hover: LspEndpoint = lspEndpoint({
   method: 'textDocument/hover',
   types: {
     params: type<{

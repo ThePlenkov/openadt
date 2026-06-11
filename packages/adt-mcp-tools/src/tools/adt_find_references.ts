@@ -4,7 +4,7 @@
  */
 import { z } from 'zod'
 import { tool } from '@openadt/mcp-tools'
-import { findReferences } from '@openadt/adt-services'
+import { references } from '@openadt/adt-services'
 import type { LspTransport } from '@openadt/lsp-client'
 import {
   callLspContract,
@@ -54,7 +54,7 @@ export const adt_find_references = tool({
           })
 
           return callLspContract(
-            findReferences,
+            references,
             transport,
             {
               textDocument: { uri: ctx.repotreeUri },
