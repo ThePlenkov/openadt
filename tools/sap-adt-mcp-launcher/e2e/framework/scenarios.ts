@@ -58,7 +58,7 @@ export function parseScenarioMarkdown(raw: string): {
   return { meta, body }
 }
 
-export function toScenario(file: string, meta: Frontmatter, body: string): Scenario {
+function assertRequiredFrontmatter(file: string, meta: Frontmatter, body: string): void {
   if (!meta.code) {
     throw new Error(`Invalid scenario file: ${file} (missing code: mcp-N or adt-N)`)
   }
@@ -73,18 +73,26 @@ export function toScenario(file: string, meta: Frontmatter, body: string): Scena
       throw new Error(`Invalid scenario file: ${file} (frontmatter requires ${key})`)
     }
   }
-  const code = normalizeScenarioCode(meta.code)
-  const expected = expectedScenarioFilename(code, meta.id)
+}
+
+function assertScenarioFilename(file: string, code: string, id: string): void {
   if (!FILE_RE.test(file)) {
     throw new Error(
       `Invalid scenario file: ${file} (filename must match mcp-N-<id>.md or adt-N-<id>.md)`
     )
   }
+  const expected = expectedScenarioFilename(code, id)
   if (file !== expected) {
     throw new Error(
-      `Invalid scenario file: ${file} (expected ${expected} for code=${code}, id=${meta.id})`
+      `Invalid scenario file: ${file} (expected ${expected} for code=${code}, id=${id})`
     )
   }
+}
+
+export function toScenario(file: string, meta: Frontmatter, body: string): Scenario {
+  assertRequiredFrontmatter(file, meta, body)
+  const code = normalizeScenarioCode(meta.code)
+  assertScenarioFilename(file, code, meta.id)
   return {
     code,
     id: meta.id,

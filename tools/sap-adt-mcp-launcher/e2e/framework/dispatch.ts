@@ -163,16 +163,7 @@ function buildE2eDispatchForSuite(
   )
   const testId = scenarios.map((s) => s.code).join('_')
   const scenario = scenarios[0]!
-  if (suiteConfig.e2eScript === 'adt:e2e' && !isAdtScenarioCode(scenario.code)) {
-    throw new Error(
-      `Scenario ${scenario.code} is not an adt-* scenario. Use bun run e2e for mcp-* scenarios.`
-    )
-  }
-  if (suiteConfig.e2eScript === 'e2e' && isAdtScenarioCode(scenario.code)) {
-    throw new Error(
-      `Scenario ${scenario.code} is an adt-* scenario. Use bun run adt:e2e -- ${scenario.code} … --acp --agent <id>.`
-    )
-  }
+  assertScenarioMatchesSuite(scenario.code, suiteConfig.e2eScript)
   const model = resolveE2eModel(opts)
   const evidenceDir = opts.evidenceRoot ?? defaultEvidenceRoot(repoRoot)
   const localCommand = buildLocalRunCommand(
@@ -189,17 +180,7 @@ function buildE2eDispatchForSuite(
     localCommand,
     acpAgent,
   })
-
-  const env: Record<string, string> = {
-    OPENADT_MCP_DESTINATION: destination,
-    OPENADT_E2E_AGENT: acpAgent,
-    OPENADT_E2E_EVIDENCE: '1',
-    ACP_AGENT: acpAgent,
-  }
-  if (opts.model?.trim()) {
-    env.OPENADT_E2E_MODEL = opts.model.trim()
-  }
-
+  const env = buildDispatchEnv({ acpAgent, destination, model: opts.model })
   const runId = dispatchRunId(testId)
   const dispatchedFrom = process.env.OPENADT_E2E_DISPATCHED_FROM?.trim() || 'cursor'
 
@@ -226,6 +207,35 @@ function buildE2eDispatchForSuite(
     },
     status: 'pending',
   }
+}
+
+function assertScenarioMatchesSuite(code: string, e2eScript: 'e2e' | 'adt:e2e'): void {
+  if (e2eScript === 'adt:e2e' && !isAdtScenarioCode(code)) {
+    throw new Error(
+      `Scenario ${code} is not an adt-* scenario. Use bun run e2e for mcp-* scenarios.`
+    )
+  }
+  if (e2eScript === 'e2e' && isAdtScenarioCode(code)) {
+    throw new Error(
+      `Scenario ${code} is an adt-* scenario. Use bun run adt:e2e -- ${code} … --acp --agent <id>.`
+    )
+  }
+}
+
+function buildDispatchEnv(args: {
+  acpAgent: string
+  destination: string
+  model: string | undefined
+}): Record<string, string> {
+  const env: Record<string, string> = {
+    OPENADT_MCP_DESTINATION: args.destination,
+    OPENADT_E2E_AGENT: args.acpAgent,
+    OPENADT_E2E_EVIDENCE: '1',
+    ACP_AGENT: args.acpAgent,
+  }
+  const model = args.model?.trim()
+  if (model) env.OPENADT_E2E_MODEL = model
+  return env
 }
 
 export function writeDispatchFile(root: string, payload: E2eDispatchPayload): string {

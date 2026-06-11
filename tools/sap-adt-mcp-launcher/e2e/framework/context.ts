@@ -132,47 +132,27 @@ function isPartialDestination(destination: string): boolean {
   return parts.length < 4
 }
 
-export function resolveDestinationId(opts: CliOptions): string {
-  if (opts.destination) {
-    // Auto-enable resolution for partial destinations
-    if (isPartialDestination(opts.destination) && !opts.resolveDestination) {
-      console.error(
-        `[e2e] Partial destination "${opts.destination}" detected, auto-resolving from ~/.adtls/destinations.json`
-      )
-      const resolved = resolveDestinationId({
-        ...opts,
-        destination: undefined,
-        resolveDestination: true,
-        system: opts.destination, // Use partial input as system hint
-      })
-      return resolved
-    }
-    return opts.destination
-  }
+function resolveFromAdtlsStore(opts: CliOptions): string {
   if (!opts.resolveDestination) {
     throw new Error(
       'Missing destination. Pass --destination ABC_200_USER_EN or set OPENADT_MCP_DESTINATION. ' +
         'Use --resolve-destination --system ABC when id is in ~/.adtls/destinations.json.'
     )
   }
-  const system = opts.system
-  if (!system) {
+  if (!opts.system) {
     throw new Error('--resolve-destination requires --system (SID hint, not stored in scenarios).')
   }
   const path = join(homedir(), '.adtls', 'destinations.json')
   if (!existsSync(path)) {
     throw new Error(`No adtls store at ${path}`)
   }
-  const store = JSON.parse(readFileSync(path, 'utf8')) as {
-    destinations?: AdtlsEntry[]
-  }
-  const matches = (store.destinations ?? []).filter((d) => {
-    const p = d.properties ?? {}
-    if (p.systemId?.toUpperCase() !== system.toUpperCase()) return false
-    if (opts.client && p.client !== opts.client) return false
-    if (opts.user && p.user?.toUpperCase() !== opts.user.toUpperCase()) return false
-    return Boolean(d.id?.trim())
-  })
+  const store = JSON.parse(readFileSync(path, 'utf8')) as { destinations?: AdtlsEntry[] }
+  return pickSingleAdtlsMatch(store.destinations ?? [], opts)
+}
+
+function pickSingleAdtlsMatch(destinations: AdtlsEntry[], opts: CliOptions): string {
+  const system = opts.system
+  const matches = destinations.filter((d) => matchesAdtlsEntry(d, opts, system!))
   if (matches.length === 0) {
     throw new Error(`No adtls destination for system=${system}`)
   }
@@ -181,6 +161,36 @@ export function resolveDestinationId(opts: CliOptions): string {
     throw new Error(`Ambiguous adtls match (${ids}); pass --destination explicitly.`)
   }
   return matches[0]!.id!.trim()
+}
+
+function matchesAdtlsEntry(d: AdtlsEntry, opts: CliOptions, system: string): boolean {
+  const p = d.properties ?? {}
+  if (p.systemId?.toUpperCase() !== system.toUpperCase()) return false
+  if (opts.client && p.client !== opts.client) return false
+  if (opts.user && p.user?.toUpperCase() !== opts.user.toUpperCase()) return false
+  return Boolean(d.id?.trim())
+}
+
+function autoResolvePartialDestination(opts: CliOptions): string {
+  console.error(
+    `[e2e] Partial destination "${opts.destination}" detected, auto-resolving from ~/.adtls/destinations.json`
+  )
+  return resolveDestinationId({
+    ...opts,
+    destination: undefined,
+    resolveDestination: true,
+    system: opts.destination,
+  })
+}
+
+export function resolveDestinationId(opts: CliOptions): string {
+  if (opts.destination) {
+    if (isPartialDestination(opts.destination) && !opts.resolveDestination) {
+      return autoResolvePartialDestination(opts)
+    }
+    return opts.destination
+  }
+  return resolveFromAdtlsStore(opts)
 }
 
 export function buildRunContext(opts: CliOptions, destination: string): RunContext {

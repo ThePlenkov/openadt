@@ -39,92 +39,111 @@ export type LogonStateChangedParams = {
 
 let lastLogonFailureMessage: string | undefined
 
+function extractBrowserUrl(params: RequestBrowserBasedLogonParams): string | undefined {
+  return params.params?.[0]?.field?.value
+}
+
+async function handleBrowserLogonRequest(
+  connection: MessageConnection,
+  params: RequestBrowserBasedLogonParams,
+  log: McpLog | undefined
+): Promise<boolean> {
+  const url = extractBrowserUrl(params)
+  log?.info(`SAP logon: opening browser (${params.title ?? params.id})`)
+  console.error('[openadt-mcp] SAP logon: opening browser — complete sign-in if prompted.')
+  if (!isHttpUrl(url)) {
+    log?.warn(
+      url ? `requestBrowserBasedLogon: invalid URL ${url}` : 'requestBrowserBasedLogon: missing URL'
+    )
+    return false
+  }
+  log?.info(`browser URL: ${url}`)
+  openDefaultBrowser(url)
+  return true
+}
+
+function isHttpUrl(url: string | undefined): url is string {
+  if (!url) return false
+  try {
+    const parsed = new URL(url)
+    return parsed.protocol === 'http:' || parsed.protocol === 'https:'
+  } catch {
+    return false
+  }
+}
+
+async function handleLogonInputRequest(
+  connection: MessageConnection,
+  params: RequestLogonInputParams,
+  log: McpLog | undefined
+): Promise<{ id: string; fields: Array<{ key: string; value: string }> } | undefined> {
+  const field = params.params?.[0]
+  if (!field?.field?.key) {
+    log?.warn('requestLogonInput: missing field')
+    return undefined
+  }
+  log?.info(`SAP logon: terminal input (${params.title ?? params.id})`)
+  const value = await promptLogonInputTerminal(
+    params.title ?? 'SAP logon',
+    field.description ?? field.label ?? 'Enter value',
+    Boolean(field.sensitive)
+  )
+  if (!value) {
+    await connection.sendRequest(LSP_METHOD_DESTINATIONS_STOP_LOGON, {
+      destinationId: params.id,
+      cancel: true,
+    })
+    return undefined
+  }
+  return {
+    id: params.id,
+    fields: [{ key: field.field.key, value }],
+  }
+}
+
+function handleShowMessage(
+  params: { message?: string; type?: number },
+  log: McpLog | undefined
+): undefined {
+  const text = params.message ?? ''
+  log?.info(`SAP message: ${text}`)
+  console.error(`[openadt-mcp] SAP: ${text}`)
+  return undefined
+}
+
+function handleWorkspaceConfiguration(params: { items?: Array<{ section?: string }> }): null[] {
+  const count = params.items?.length ?? 0
+  return Array.from({ length: count }, () => null)
+}
+
+function handleLogonStateChanged(params: LogonStateChangedParams, log: McpLog | undefined): void {
+  log?.info(
+    `logon ${params.destinationId}: ${params.logonState}` +
+      (params.message ? ` — ${params.message}` : '')
+  )
+  if (params.logonState === 'pending') {
+    console.error(
+      `[openadt-mcp] Logon pending for ${params.destinationId} — complete SSO or Secure Login if a window opened.`
+    )
+    return
+  }
+  if (params.logonState === 'disconnected' || params.logonState === 'cancelled') {
+    lastLogonFailureMessage = params.message
+  }
+}
+
 /** Register SAP server→client logon handlers (same contract as VS Code extension). */
 export function registerLogonHandlers(connection: MessageConnection, log?: McpLog): void {
-  connection.onRequest(
-    LSP_METHOD_DESTINATIONS_REQUEST_BROWSER_LOGON,
-    async (params: RequestBrowserBasedLogonParams) => {
-      const url = params.params?.[0]?.field?.value
-      log?.info(`SAP logon: opening browser (${params.title ?? params.id})`)
-      console.error('[openadt-mcp] SAP logon: opening browser — complete sign-in if prompted.')
-      if (!url) {
-        log?.warn('requestBrowserBasedLogon: missing URL')
-        return false
-      }
-      try {
-        const parsed = new URL(url)
-        if (parsed.protocol !== 'http:' && parsed.protocol !== 'https:') {
-          log?.warn(`requestBrowserBasedLogon: refusing non-http URL ${url}`)
-          return false
-        }
-      } catch {
-        log?.warn(`requestBrowserBasedLogon: invalid URL ${url}`)
-        return false
-      }
-      log?.info(`browser URL: ${url}`)
-      openDefaultBrowser(url)
-      return true
-    }
+  connection.onRequest(LSP_METHOD_DESTINATIONS_REQUEST_BROWSER_LOGON, (params) =>
+    handleBrowserLogonRequest(connection, params, log)
   )
-
-  connection.onRequest(
-    LSP_METHOD_DESTINATIONS_REQUEST_LOGON_INPUT,
-    async (params: RequestLogonInputParams) => {
-      const field = params.params?.[0]
-      if (!field?.field?.key) {
-        log?.warn('requestLogonInput: missing field')
-        return undefined
-      }
-      log?.info(`SAP logon: terminal input (${params.title ?? params.id})`)
-      const value = await promptLogonInputTerminal(
-        params.title ?? 'SAP logon',
-        field.description ?? field.label ?? 'Enter value',
-        Boolean(field.sensitive)
-      )
-      if (!value) {
-        await connection.sendRequest(LSP_METHOD_DESTINATIONS_STOP_LOGON, {
-          destinationId: params.id,
-          cancel: true,
-        })
-        return undefined
-      }
-      return {
-        id: params.id,
-        fields: [{ key: field.field.key, value }],
-      }
-    }
+  connection.onRequest(LSP_METHOD_DESTINATIONS_REQUEST_LOGON_INPUT, (params) =>
+    handleLogonInputRequest(connection, params, log)
   )
-
-  connection.onRequest('window/showMessage', (params: { message?: string; type?: number }) => {
-    const text = params.message ?? ''
-    log?.info(`SAP message: ${text}`)
-    console.error(`[openadt-mcp] SAP: ${text}`)
-    return undefined
-  })
-
-  connection.onRequest(
-    'workspace/configuration',
-    (params: { items?: Array<{ section?: string }> }) => {
-      const count = params.items?.length ?? 0
-      return Array.from({ length: count }, () => null)
-    }
-  )
-
-  connection.onNotification(
-    LSP_METHOD_DESTINATIONS_LOGON_STATE_CHANGED,
-    (params: LogonStateChangedParams) => {
-      log?.info(
-        `logon ${params.destinationId}: ${params.logonState}` +
-          (params.message ? ` — ${params.message}` : '')
-      )
-      if (params.logonState === 'pending') {
-        console.error(
-          `[openadt-mcp] Logon pending for ${params.destinationId} — complete SSO or Secure Login if a window opened.`
-        )
-      } else if (params.logonState === 'disconnected' || params.logonState === 'cancelled') {
-        lastLogonFailureMessage = params.message
-      }
-    }
+  connection.onRequest('window/showMessage', (params) => handleShowMessage(params, log))
+  connection.onRequest('workspace/configuration', handleWorkspaceConfiguration)
+  connection.onNotification(LSP_METHOD_DESTINATIONS_LOGON_STATE_CHANGED, (params) =>
+    handleLogonStateChanged(params, log)
   )
 }
 

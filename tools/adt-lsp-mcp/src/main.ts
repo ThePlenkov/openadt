@@ -91,76 +91,88 @@ class SimpleMcpServer {
     try {
       const parsed = JSON.parse(body) as JsonRpcRequest
       if (parsed.id === undefined) return
-
-      switch (parsed.method) {
-        case 'initialize':
-          await this.sendResult(parsed.id, {
-            protocolVersion: '2024-11-05',
-            capabilities: { tools: {}, prompts: {} },
-            serverInfo: { name: 'adt-lsp-mcp', version: '0.1.0' },
-            instructions: `Fetch MCP prompt "${ADT_LSP_WORKFLOW_PROMPT}" via prompts/get before using adt_* transport or object tools.`,
-          })
-          return
-        case 'prompts/list':
-          await this.sendResult(parsed.id, { prompts: guidancePromptDefs() })
-          return
-        case 'prompts/get': {
-          const promptParams = parsed.params as { name?: string } | undefined
-          const promptName = promptParams?.name ?? ''
-          if (!isGuidancePrompt(promptName)) {
-            await this.sendError(parsed.id, -32602, `Unknown prompt: ${promptName}`)
-            return
-          }
-          await this.sendResult(parsed.id, getGuidancePrompt(promptName))
-          return
-        }
-        case 'tools/list':
-          await this.sendResult(parsed.id, {
-            tools: mcpTools.map((t) => ({
-              name: t.name,
-              description: t.description,
-              inputSchema: t.inputSchema,
-            })),
-          })
-          return
-        case 'tools/call':
-          await this.handleToolCall(parsed.id, parsed.params)
-          return
-        default:
-          await this.sendError(parsed.id, -32601, `Method not found: ${parsed.method ?? '(none)'}`)
-      }
+      await this.dispatchMethod(parsed.id, parsed)
     } catch (err) {
       console.error('MCP message error:', err)
     }
   }
 
+  private async dispatchMethod(id: string | number, parsed: JsonRpcRequest): Promise<void> {
+    switch (parsed.method) {
+      case 'initialize':
+        await this.sendResult(id, this.buildInitializeResult())
+        return
+      case 'prompts/list':
+        await this.sendResult(id, { prompts: guidancePromptDefs() })
+        return
+      case 'prompts/get':
+        await this.handlePromptsGet(id, parsed.params)
+        return
+      case 'tools/list':
+        await this.sendResult(id, { tools: this.listToolDescriptors() })
+        return
+      case 'tools/call':
+        await this.handleToolCall(id, parsed.params)
+        return
+      default:
+        await this.sendError(id, -32601, `Method not found: ${parsed.method ?? '(none)'}`)
+    }
+  }
+
+  private buildInitializeResult() {
+    return {
+      protocolVersion: '2024-11-05',
+      capabilities: { tools: {}, prompts: {} },
+      serverInfo: { name: 'adt-lsp-mcp', version: '0.1.0' },
+      instructions: `Fetch MCP prompt "${ADT_LSP_WORKFLOW_PROMPT}" via prompts/get before using adt_* transport or object tools.`,
+    }
+  }
+
+  private listToolDescriptors() {
+    return mcpTools.map((t) => ({
+      name: t.name,
+      description: t.description,
+      inputSchema: t.inputSchema,
+    }))
+  }
+
+  private async handlePromptsGet(id: number | string, params: unknown): Promise<void> {
+    const promptParams = params as { name?: string } | undefined
+    const promptName = promptParams?.name ?? ''
+    if (!isGuidancePrompt(promptName)) {
+      await this.sendError(id, -32602, `Unknown prompt: ${promptName}`)
+      return
+    }
+    await this.sendResult(id, getGuidancePrompt(promptName))
+  }
+
+  private isValidToolArguments(args: unknown): args is Record<string, unknown> | undefined {
+    if (args === undefined) return true
+    return typeof args === 'object' && args !== null && !Array.isArray(args)
+  }
+
   private async handleToolCall(id: number | string, params: unknown): Promise<void> {
-    const call = params as { name?: string; arguments?: Record<string, unknown> } | undefined
+    const call = params as { name?: string; arguments?: unknown } | undefined
     const name = call?.name
     if (!name) {
       await this.sendError(id, -32602, 'Missing tool name')
       return
     }
-
     const tool = mcpTools.find((t) => t.name === name)
     if (!tool) {
       await this.sendError(id, -32601, `Tool not found: ${name}`)
       return
     }
-
+    const args = call?.arguments
+    if (!this.isValidToolArguments(args)) {
+      await this.sendError(
+        id,
+        -32602,
+        `Invalid tool arguments: expected object, got ${typeof args}`
+      )
+      return
+    }
     try {
-      const args = call?.arguments
-      if (
-        args !== undefined &&
-        (args === null || typeof args !== 'object' || Array.isArray(args))
-      ) {
-        await this.sendError(
-          id,
-          -32602,
-          `Invalid tool arguments: expected object, got ${typeof args}`
-        )
-        return
-      }
       const session = await this.ensureLspReady()
       const transport = new LspConnectionTransport(session.connection)
       const result = await tool.handler(args ?? {}, transport)
