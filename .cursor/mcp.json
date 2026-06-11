@@ -3,6 +3,10 @@
     "sap-adt": {
       "command": "bun",
       "args": ["run", "mcp:stdio"]
+    },
+    "adt-lsp": {
+      "command": "bun",
+      "args": ["scripts/mcp-adt-lsp.ts"]
     }
   }
 }

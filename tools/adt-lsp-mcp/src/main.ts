@@ -5,7 +5,7 @@
  * Usage: adt-lsp-mcp <destination>
  * Or set OPENADT_DESTINATION / OPENADT_MCP_DESTINATION.
  */
-import { mcpTools } from '@openadt/adt-lsp-mcp-tools'
+import { mcpTools, listMcpToolDescriptors } from '@openadt/adt-lsp-mcp-tools'
 import {
   attachMcpStdoutEncoder,
   McpStdioDecoder,
@@ -15,6 +15,7 @@ import {
 import { locateAdtLs } from './locate'
 import {
   connectAdtLanguageServer,
+  ensureDestinationProjectAndLogon,
   LspConnectionTransport,
   prewarmDestination,
   type LspSession,
@@ -40,54 +41,99 @@ class SimpleMcpServer {
   private decoder = new McpStdioDecoder()
   private lspSession: LspSession | undefined
   private lspReady: Promise<void> | undefined
-  private readonly destination: string
+  private readonly boundDestination: string | undefined
+  private readonly readyDestinations = new Set<string>()
 
-  constructor(destination: string) {
-    this.destination = destination
+  constructor(boundDestination: string | undefined) {
+    this.boundDestination = boundDestination || undefined
     attachMcpStdoutEncoder(this.encoder)
+    this.decoder.on('transport', (mode) => {
+      this.encoder.setTransport(mode)
+    })
+    this.decoder.on('error', (err: Error) => {
+      console.error(`[adt-lsp-mcp] stdio decode error: ${err.message}`)
+    })
     this.decoder.on('data', (body: string) => {
       void this.onMessage(body)
     })
     process.stdin.pipe(this.decoder)
   }
 
-  /** Connect adt-lsc in the background; MCP initialize/tools/list do not wait. */
+  /** Pre-logon when destination is bound at startup; per-tool mode connects lazily. */
   startLspInBackground(): void {
-    this.lspReady = this.connectLsp().catch((err) => {
+    if (!this.boundDestination) {
+      return
+    }
+    this.beginLspConnect(this.boundDestination)
+  }
+
+  private beginLspConnect(destination: string): void {
+    if (this.lspReady) {
+      return
+    }
+    this.lspReady = this.connectLsp(destination).catch((err: unknown) => {
       this.lspReady = undefined
-      throw err
+      const error = err instanceof Error ? err : new Error(String(err))
+      console.error(`[adt-lsp-mcp] LSP connect failed: ${error.message}`)
+      throw error
+    })
+    void this.lspReady.catch(() => {
+      /* surfaced via ensureLspReady on tools/call */
     })
   }
 
-  private async connectLsp(): Promise<void> {
+  private async connectLsp(destination: string): Promise<void> {
+    if (this.lspSession) {
+      await this.ensureDestinationReady(destination)
+      return
+    }
+
     const install = locateAdtLs()
     if (!install) {
       throw new Error('ADT LS not found. Install SAP ADT VS Code extension or set ADT_LS_PATH')
     }
 
     console.error(`ADT LS: ${install.adtLscPath} (${install.version})`)
-    console.error(`Destination: ${this.destination}`)
+    console.error(`Destination: ${destination}`)
 
     this.lspSession = await connectAdtLanguageServer(install, DEFAULT_WORKSPACE, {
       destinationsStorePath: join(homedir(), '.adtls'),
-      createProjectIds: [this.destination],
-      ensureLoggedOnIds: [this.destination],
+      createProjectIds: [destination],
+      ensureLoggedOnIds: [destination],
     })
+    this.readyDestinations.add(destination)
 
     const transport = new LspConnectionTransport(this.lspSession.connection)
-    void prewarmDestination(transport, this.destination)
+    void prewarmDestination(transport, destination)
 
     console.error('LSP connection established')
   }
 
-  private async ensureLspReady(): Promise<LspSession> {
+  private async ensureDestinationReady(destination: string): Promise<void> {
+    if (this.readyDestinations.has(destination) || !this.lspSession) {
+      return
+    }
+    await ensureDestinationProjectAndLogon(this.lspSession.connection, destination)
+    this.readyDestinations.add(destination)
+    void prewarmDestination(new LspConnectionTransport(this.lspSession.connection), destination)
+  }
+
+  private async ensureLspReady(callDestination?: string): Promise<LspSession> {
+    const destination = this.boundDestination ?? callDestination
+    if (!destination) {
+      throw new Error(
+        'Missing destination. Set OPENADT_MCP_DESTINATION at server startup or pass destination in tool arguments.'
+      )
+    }
+
     if (!this.lspReady) {
-      this.startLspInBackground()
+      this.beginLspConnect(destination)
     }
     await this.lspReady
     if (!this.lspSession) {
       throw new Error('LSP session not initialized')
     }
+    await this.ensureDestinationReady(destination)
     return this.lspSession
   }
 
@@ -124,20 +170,27 @@ class SimpleMcpServer {
   }
 
   private buildInitializeResult() {
+    const destinationHint = this.boundDestination
+      ? ` Session destination: ${this.boundDestination} (bound at startup — destination is omitted from tool schemas).`
+      : ' Per-tool mode: pass destination in each tool call (same as standard SAP MCP). Optional: bind one destination at startup via CLI/env to hide the field.'
     return {
       protocolVersion: '2024-11-05',
       capabilities: { tools: {}, prompts: {} },
       serverInfo: { name: 'adt-lsp-mcp', version: '0.1.0' },
-      instructions: `Fetch MCP prompt "${ADT_LSP_WORKFLOW_PROMPT}" via prompts/get before using adt_* transport or object tools.`,
+      instructions: `Fetch MCP prompt "${ADT_LSP_WORKFLOW_PROMPT}" via prompts/get before using adt_* transport or object tools.${destinationHint}`,
     }
   }
 
   private listToolDescriptors() {
-    return mcpTools.map((t) => ({
-      name: t.name,
-      description: t.description,
-      inputSchema: t.inputSchema,
-    }))
+    return listMcpToolDescriptors({ boundDestination: this.boundDestination })
+  }
+
+  private resolveToolArguments(args: Record<string, unknown> | undefined): Record<string, unknown> {
+    const merged = { ...(args ?? {}) }
+    if (this.boundDestination) {
+      merged.destination = this.boundDestination
+    }
+    return merged
   }
 
   private async handlePromptsGet(id: number | string, params: unknown): Promise<void> {
@@ -177,9 +230,12 @@ class SimpleMcpServer {
       return
     }
     try {
-      const session = await this.ensureLspReady()
+      const merged = this.resolveToolArguments(args)
+      const callDestination =
+        typeof merged.destination === 'string' ? merged.destination.trim() : undefined
+      const session = await this.ensureLspReady(callDestination)
       const transport = new LspConnectionTransport(session.connection)
-      const result = await tool.handler(args as never, transport)
+      const result = await tool.handler(merged as never, transport)
       await this.sendResult(id, result)
     } catch (err) {
       const message = err instanceof Error ? err.message : String(err)
@@ -213,15 +269,19 @@ function resolveDestination(argv: string[]): string | undefined {
 }
 
 async function main(): Promise<void> {
-  const destination = resolveDestination(process.argv.slice(2))
-  if (!destination) {
-    console.error('Usage: adt-lsp-mcp <destination>')
-    console.error('Or set OPENADT_DESTINATION / OPENADT_MCP_DESTINATION')
-    process.exit(1)
+  const boundDestination = resolveDestination(process.argv.slice(2))
+  if (boundDestination) {
+    console.error(`[adt-lsp-mcp] Bound destination: ${boundDestination}`)
+  } else {
+    console.error(
+      '[adt-lsp-mcp] Per-tool destination mode — pass destination in each tool call (standard SAP MCP).'
+    )
   }
 
-  const server = new SimpleMcpServer(destination)
-  server.startLspInBackground()
+  const server = new SimpleMcpServer(boundDestination)
+  if (boundDestination) {
+    server.startLspInBackground()
+  }
 
   console.error('ADT LSP MCP server started (stdio mode)')
   console.error('Tools:', mcpTools.map((t) => t.name).join(', '))

@@ -24,6 +24,7 @@
     "openadt": "nx run openadt-cli:run --output-style=stream --",
     "openadt:mcp": "bun scripts/nx-openadt.ts mcp",
     "mcp:stdio": "bun scripts/mcp-stdio.ts",
+    "mcp:adt-lsp": "bun scripts/mcp-adt-lsp.ts",
     "openadt:build": "nx package openadt-cli --output-style=stream",
     "openadt:test": "nx test openadt-cli --output-style=stream",
     "act:debt": "bun .agents/skills/act/scripts/review-debt-cli.ts",

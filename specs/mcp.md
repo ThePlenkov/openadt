@@ -377,6 +377,8 @@ Run `agent` from the repository root. Stale servers are stopped at startup; kill
 
 **Claude Code** uses the same schema in **`.mcp.json`** at the repo root (not `.cursor/mcp.json`). Use the same `sap-adt` server key and `bun run mcp:stdio` command as above.
 
+Direct LSP OpenADT tools (`adt-lsp` server, `bun run mcp:adt-lsp`): [adt-lsp-mcp-local.md](adt-lsp-mcp-local.md).
+
 ### Agent backend tool name limits (Claude + AWS Bedrock)
 
 Some agent hosts (notably **Claude Code on AWS Bedrock**) do not call MCP tools by their raw MCP name. Claude prefixes each tool as:
@@ -516,12 +518,13 @@ Package: `tools/adt-lsp-mcp/` — stdio-only MCP for the 26 `adt_*` tools. Depen
 
 | Item                    | Contract                                                                                                                                                                                                   |
 | ----------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| CLI                     | `adt-lsp-mcp <destination>` or env `OPENADT_DESTINATION` / `OPENADT_MCP_DESTINATION`                                                                                                                       |
-| Destination id          | `SID_CLIENT_USER_LANG` (e.g. `ABC_200_USER_EN`) — must exist in `~/.adtls/destinations.json`                                                                                                               |
+| CLI                     | Optional bound destination at startup: `adt-lsp-mcp [destination]` or env `OPENADT_DESTINATION` / `OPENADT_MCP_DESTINATION`. Without it: per-tool `destination` (SAP MCP mode). Dev entry: [adt-lsp-mcp-local.md](adt-lsp-mcp-local.md) |
+| Destination id          | `SID_CLIENT_USER_LANG` (e.g. `ABC_200_USER_EN`) — must exist in `~/.adtls/destinations.json`. Per-tool arg when unbound; hidden/injected when bound at startup.                                                                               |
 | `destinationsStorePath` | **Directory** `~/.adtls` (contains `destinations.json`), not the file path                                                                                                                                 |
 | LSP transport           | Handlers receive `LspConnectionTransport`, not raw `MessageConnection`                                                                                                                                     |
 | MCP `tools/call` result | Handler return value is the JSON-RPC **`result`** field (`{ content, isError? }`), not nested under `result.result`                                                                                        |
-| Startup                 | MCP `initialize` / `tools/list` / `prompts/list` respond immediately; LSP connect + logon runs in background; first `tools/call` awaits readiness                                                          |
+| `tools/list` schema     | JSON Schema via `@openadt/mcp-tools`. **`destination` included** when unbound (SAP MCP parity); **omitted** when bound at startup.                                                                         |
+| Startup                 | `initialize` / `tools/list` / `prompts/list` are immediate. Bound destination: LSP logon in background. Unbound: lazy LSP + logon on first `tools/call` per destination. Multi-destination supported on one session when unbound.                          |
 | Transport LSP namespace | `adtLs/cts/transport/*` (not `adtLs/transport/*`)                                                                                                                                                          |
 | Object URI chain        | ADT path from `adt_quick_search` → `adtLs/repository/getLsUri` → repotree/AFF URI for file/transport ops; `checkTransportForObjectLock` uses `{ objectInfo: { objectUri }, operationType }` after getLsUri |
 

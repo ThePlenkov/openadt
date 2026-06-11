@@ -2,6 +2,7 @@ export {
   connectAdtLanguageServer,
   disposeLspSession,
   buildLspInitializeParams,
+  ensureDestinationProjectAndLogon,
   type LspSession,
   type ConnectAdtLanguageServerOptions,
 } from './lsp-client'

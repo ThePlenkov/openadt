@@ -192,6 +192,18 @@ export async function connectAdtLanguageServer(
   return { connection, child, pipeName }
 }
 
+/** Add destination project + logon on an existing adt-lsc session (multi-destination MCP). */
+export async function ensureDestinationProjectAndLogon(
+  connection: MessageConnection,
+  destinationId: string,
+  options: { logonTimeoutMs?: number; log?: McpLog } = {}
+): Promise<void> {
+  await createProjectAndLogon(connection, destinationId, {
+    logonTimeoutMs: options.logonTimeoutMs ?? DEFAULT_LOGON_TIMEOUT_MS,
+    log: options.log,
+  })
+}
+
 async function createProjectOnce(
   connection: MessageConnection,
   destinationId: string,

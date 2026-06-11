@@ -1,0 +1,37 @@
+{
+  "name": "adt-lsp-mcp",
+  "root": "tools/adt-lsp-mcp",
+  "sourceRoot": "tools/adt-lsp-mcp/src",
+  "projectType": "application",
+  "targets": {
+    "build": {
+      "executor": "nx:run-commands",
+      "options": {
+        "command": "bun run build",
+        "cwd": "tools/adt-lsp-mcp"
+      },
+      "outputs": ["{projectRoot}/dist"]
+    },
+    "test": {
+      "executor": "nx:run-commands",
+      "options": {
+        "command": "bun test tools/adt-lsp-mcp/src"
+      }
+    },
+    "typecheck": {
+      "executor": "nx:run-commands",
+      "options": {
+        "command": "bunx tsc -p tools/adt-lsp-mcp/tsconfig.json --noEmit"
+      }
+    },
+    "serve-stdio": {
+      "executor": "nx:run-commands",
+      "cache": false,
+      "options": {
+        "command": "bun scripts/mcp-adt-lsp.ts",
+        "cwd": "{workspaceRoot}",
+        "forwardAllArgs": true
+      }
+    }
+  }
+}
