@@ -1,28 +1,29 @@
 ---
-code: adtls-16
-id: get-hover
-title: Get hover information
-tags: [hover]
+code: ls-6
+id: transport-search
+title: Advanced transport search
+tags: [transport]
 mode: standalone
 given: >-
   MCP stdio launcher runs in standalone mode with --no-proxy --import-from=adtls;
   user destination {{destination}} is registered and logon-ready.
 when: >-
-  Call adt_get_hover with destination {{destination}}, uri, and position.
+  Call adt_search_transports with destination {{destination}} and search parameters.
 then: >-
-  MCP returns a tool result with hover information;
-  isError is false; response contains hover text.
+  MCP returns a tool result with transport list;
+  isError is false; response contains transport information.
 steps:
-  - tool: adt_get_hover
+  - tool: adt_search_transports
     args:
       destination: "{{destination}}"
-      uri: "/sap/bc/adt/oo/classes/cl_abap_typedescr"
-      position: { line: 1, character: 0 }
+      user: "DEVELOPER"
+      request: "DEVK9*"
+      project: "ZPROJECT"
     assert:
       notError: true
 ---
 
-# Get hover information
+# Advanced transport search
 
 ## Given
 
@@ -30,13 +31,13 @@ MCP stdio launcher runs in standalone mode with `--no-proxy --import-from=adtls`
 
 ## When
 
-Call `adt_get_hover` with destination, object URI, and position.
+Call `adt_search_transports` with destination and search parameters.
 
 ## Then
 
-- MCP tool responds with hover information.
+- MCP tool responds with transport list.
 - `isError` is false.
-- Response contains hover text.
+- Response contains transport information.
 
 ## Before you start
 

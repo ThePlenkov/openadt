@@ -1,5 +1,5 @@
 ---
-code: adtls-4
+code: ls-4
 id: transport-assign
 title: Create and assign transport to object
 tags: [transport]

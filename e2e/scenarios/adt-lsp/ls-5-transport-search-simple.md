@@ -1,27 +1,28 @@
 ---
-code: adtls-24
-id: get-inactive-objects
-title: Get inactive objects in package
-tags: [activation]
+code: ls-5
+id: transport-search-simple
+title: Simple transport search
+tags: [transport]
 mode: standalone
 given: >-
   MCP stdio launcher runs in standalone mode with --no-proxy --import-from=adtls;
   user destination {{destination}} is registered and logon-ready.
 when: >-
-  Call adt_get_inactive_objects with destination {{destination}} and package.
+  Call adt_search_transports_simple with destination {{destination}} and query.
 then: >-
-  MCP returns a tool result with inactive objects list;
-  isError is false; response contains object information.
+  MCP returns a tool result with transport list;
+  isError is false; response contains transport information.
 steps:
-  - tool: adt_get_inactive_objects
+  - tool: adt_search_transports_simple
     args:
       destination: "{{destination}}"
-      package: "$TMP"
+      owner: "{{owner}}"
+      function: "*"
     assert:
       notError: true
 ---
 
-# Get inactive objects in package
+# Simple transport search
 
 ## Given
 
@@ -29,13 +30,13 @@ MCP stdio launcher runs in standalone mode with `--no-proxy --import-from=adtls`
 
 ## When
 
-Call `adt_get_inactive_objects` with destination and package.
+Call `adt_search_transports_simple` with destination and search query.
 
 ## Then
 
-- MCP tool responds with inactive objects list.
+- MCP tool responds with transport list.
 - `isError` is false.
-- Response contains object information.
+- Response contains transport information.
 
 ## Before you start
 

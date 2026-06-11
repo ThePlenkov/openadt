@@ -1,39 +1,42 @@
 ---
-code: adtls-23
-id: atc-workflow
-title: "ATC workflow: get variants, run check, load results"
-tags: [atc, workflow]
+code: ls-25
+id: transport-workflow
+title: "Transport workflow: check lock, create, assign"
+tags: [transport, workflow]
 mode: standalone
 given: >-
   MCP stdio launcher runs in standalone mode with --no-proxy --import-from=adtls;
   user destination {{destination}} is registered and logon-ready.
 when: >-
-  Call adt_get_check_variants, adt_run_check, and adt_load_statement_results in sequence.
+  Call adt_check_transport_lock, adt_create_transport, and adt_assign_transport in sequence.
 then: >-
   MCP returns tool results for each step;
-  all isError flags are false; ATC workflow completes successfully.
+  all isError flags are false; transport workflow completes successfully.
 steps:
-  - tool: adt_get_check_variants
-    args:
-      destination: "{{destination}}"
-    assert:
-      notError: true
-  - tool: adt_run_check
+  - tool: adt_check_transport_lock
     args:
       destination: "{{destination}}"
       uri: "/sap/bc/adt/oo/classes/zcl_example"
-      checkVariant: "DEFAULT"
+      transportId: "DEVK900000"
     assert:
       notError: true
-  - tool: adt_load_statement_results
+  - tool: adt_create_transport
     args:
       destination: "{{destination}}"
-      measurementId: "MEASUREMENT_001"
+      uri: "/sap/bc/adt/oo/classes/zcl_example"
+      transportId: "DEVK900000"
+    assert:
+      notError: true
+  - tool: adt_assign_transport
+    args:
+      destination: "{{destination}}"
+      uri: "/sap/bc/adt/oo/classes/zcl_example"
+      transportId: "DEVK900000"
     assert:
       notError: true
 ---
 
-# ATC workflow: get variants, run check, load results
+# Transport workflow: check lock, create, assign
 
 ## Given
 
@@ -41,13 +44,13 @@ MCP stdio launcher runs in standalone mode with `--no-proxy --import-from=adtls`
 
 ## When
 
-Call `adt_get_check_variants`, `adt_run_check`, and `adt_load_statement_results` in sequence.
+Call `adt_check_transport_lock`, `adt_create_transport`, and `adt_assign_transport` in sequence.
 
 ## Then
 
 - MCP tool responds with results for each step.
 - All `isError` flags are false.
-- ATC workflow completes successfully.
+- Transport workflow completes successfully.
 
 ## Before you start
 

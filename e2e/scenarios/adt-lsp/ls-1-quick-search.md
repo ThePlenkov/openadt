@@ -1,5 +1,5 @@
 ---
-code: adtls-1
+code: ls-1
 id: quick-search
 title: Quick search in ABAP repository
 tags: [smoke, repository]

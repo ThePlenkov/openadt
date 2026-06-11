@@ -1,27 +1,28 @@
 ---
-code: adtls-11
-id: get-object-name
-title: Get object name from URI
+code: ls-13
+id: get-folder-uri
+title: Get folder URI for object
 tags: [filesystem]
 mode: standalone
 given: >-
   MCP stdio launcher runs in standalone mode with --no-proxy --import-from=adtls;
   user destination {{destination}} is registered and logon-ready.
 when: >-
-  Call adt_get_object_name with destination {{destination}} and object URI.
+  Call adt_get_folder_uri with destination {{destination}}, package, and objectType.
 then: >-
-  MCP returns a tool result with object name;
-  isError is false; response contains name and success flag.
+  MCP returns a tool result with folder URI;
+  isError is false; response contains URI information.
 steps:
-  - tool: adt_get_object_name
+  - tool: adt_get_folder_uri
     args:
       destination: "{{destination}}"
-      uri: "/sap/bc/adt/oo/classes/cl_abap_typedescr"
+      package: "$TMP"
+      objectType: "CLAS"
     assert:
       notError: true
 ---
 
-# Get object name from URI
+# Get folder URI for object
 
 ## Given
 
@@ -29,13 +30,13 @@ MCP stdio launcher runs in standalone mode with `--no-proxy --import-from=adtls`
 
 ## When
 
-Call `adt_get_object_name` with destination and object URI.
+Call `adt_get_folder_uri` with destination, package, and object type.
 
 ## Then
 
-- MCP tool responds with object name.
+- MCP tool responds with folder URI.
 - `isError` is false.
-- Response contains name and success flag.
+- Response contains URI information.
 
 ## Before you start
 

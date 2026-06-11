@@ -1,28 +1,28 @@
 ---
-code: adtls-13
-id: get-folder-uri
-title: Get folder URI for object
-tags: [filesystem]
+code: ls-22
+id: run-check
+title: Run ATC check
+tags: [atc]
 mode: standalone
 given: >-
   MCP stdio launcher runs in standalone mode with --no-proxy --import-from=adtls;
   user destination {{destination}} is registered and logon-ready.
 when: >-
-  Call adt_get_folder_uri with destination {{destination}}, package, and objectType.
+  Call adt_run_check with destination {{destination}}, object URI, and check variant.
 then: >-
-  MCP returns a tool result with folder URI;
-  isError is false; response contains URI information.
+  MCP returns a tool result with check results;
+  isError is false; response contains check findings.
 steps:
-  - tool: adt_get_folder_uri
+  - tool: adt_run_check
     args:
       destination: "{{destination}}"
-      package: "$TMP"
-      objectType: "CLAS"
+      uri: "/sap/bc/adt/oo/classes/zcl_example"
+      checkVariant: "DEFAULT"
     assert:
       notError: true
 ---
 
-# Get folder URI for object
+# Run ATC check
 
 ## Given
 
@@ -30,13 +30,13 @@ MCP stdio launcher runs in standalone mode with `--no-proxy --import-from=adtls`
 
 ## When
 
-Call `adt_get_folder_uri` with destination, package, and object type.
+Call `adt_run_check` with destination, object URI, and check variant.
 
 ## Then
 
-- MCP tool responds with folder URI.
+- MCP tool responds with check results.
 - `isError` is false.
-- Response contains URI information.
+- Response contains check findings.
 
 ## Before you start
 

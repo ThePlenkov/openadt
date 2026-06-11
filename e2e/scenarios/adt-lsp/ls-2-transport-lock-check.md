@@ -1,27 +1,29 @@
 ---
-code: adtls-14
-id: get-external-links
-title: Get external links for object
-tags: [filesystem]
+code: ls-2
+id: transport-lock-check
+title: Check if object requires transport
+tags: [transport]
 mode: standalone
 given: >-
   MCP stdio launcher runs in standalone mode with --no-proxy --import-from=adtls;
   user destination {{destination}} is registered and logon-ready.
 when: >-
-  Call adt_get_external_links with destination {{destination}} and object URI.
+  Call adt_check_transport_lock with destination {{destination}}, uri, and transportId.
 then: >-
-  MCP returns a tool result with external links;
-  isError is false; response contains link information.
+  MCP returns a tool result with transport lock status;
+  isError is false; response contains lock information.
 steps:
-  - tool: adt_get_external_links
+  - tool: adt_check_transport_lock
     args:
       destination: "{{destination}}"
       uri: "/sap/bc/adt/oo/classes/cl_abap_typedescr"
+      transportId: "DEVK900000"
     assert:
+      contentContains: "isTransportCheckSuccessful"
       notError: true
 ---
 
-# Get external links for object
+# Check if object requires transport
 
 ## Given
 
@@ -29,13 +31,13 @@ MCP stdio launcher runs in standalone mode with `--no-proxy --import-from=adtls`
 
 ## When
 
-Call `adt_get_external_links` with destination and object URI.
+Call `adt_check_transport_lock` with destination, object URI, and transport ID.
 
 ## Then
 
-- MCP tool responds with external links.
+- MCP tool responds with transport lock status.
 - `isError` is false.
-- Response contains link information.
+- Response contains lock information.
 
 ## Before you start
 

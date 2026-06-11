@@ -1,27 +1,27 @@
 ---
-code: adtls-7
-id: document-symbols
-title: Get document symbols for file
-tags: [document]
+code: ls-8
+id: run-application
+title: Run ABAP application
+tags: [application]
 mode: standalone
 given: >-
   MCP stdio launcher runs in standalone mode with --no-proxy --import-from=adtls;
   user destination {{destination}} is registered and logon-ready.
 when: >-
-  Call adt_document_symbols with destination {{destination}} and object URI.
+  Call adt_run_application with destination {{destination}} and application URI.
 then: >-
-  MCP returns a tool result with document symbols;
-  isError is false; response contains symbol information.
+  MCP returns a tool result with application run status;
+  isError is false; response contains run information.
 steps:
-  - tool: adt_document_symbols
+  - tool: adt_run_application
     args:
       destination: "{{destination}}"
-      uri: "/sap/bc/adt/oo/classes/cl_abap_typedescr"
+      uri: "/sap/bc/adt/programs/sap_start"
     assert:
       notError: true
 ---
 
-# Get document symbols for file
+# Run ABAP application
 
 ## Given
 
@@ -29,13 +29,13 @@ MCP stdio launcher runs in standalone mode with `--no-proxy --import-from=adtls`
 
 ## When
 
-Call `adt_document_symbols` with destination and object URI.
+Call `adt_run_application` with destination and application URI.
 
 ## Then
 
-- MCP tool responds with document symbols.
+- MCP tool responds with application run status.
 - `isError` is false.
-- Response contains symbol information.
+- Response contains run information.
 
 ## Before you start
 

@@ -1,28 +1,27 @@
 ---
-code: adtls-22
-id: run-check
-title: Run ATC check
-tags: [atc]
+code: ls-14
+id: get-external-links
+title: Get external links for object
+tags: [filesystem]
 mode: standalone
 given: >-
   MCP stdio launcher runs in standalone mode with --no-proxy --import-from=adtls;
   user destination {{destination}} is registered and logon-ready.
 when: >-
-  Call adt_run_check with destination {{destination}}, object URI, and check variant.
+  Call adt_get_external_links with destination {{destination}} and object URI.
 then: >-
-  MCP returns a tool result with check results;
-  isError is false; response contains check findings.
+  MCP returns a tool result with external links;
+  isError is false; response contains link information.
 steps:
-  - tool: adt_run_check
+  - tool: adt_get_external_links
     args:
       destination: "{{destination}}"
-      uri: "/sap/bc/adt/oo/classes/zcl_example"
-      checkVariant: "DEFAULT"
+      uri: "/sap/bc/adt/oo/classes/cl_abap_typedescr"
     assert:
       notError: true
 ---
 
-# Run ATC check
+# Get external links for object
 
 ## Given
 
@@ -30,13 +29,13 @@ MCP stdio launcher runs in standalone mode with `--no-proxy --import-from=adtls`
 
 ## When
 
-Call `adt_run_check` with destination, object URI, and check variant.
+Call `adt_get_external_links` with destination and object URI.
 
 ## Then
 
-- MCP tool responds with check results.
+- MCP tool responds with external links.
 - `isError` is false.
-- Response contains check findings.
+- Response contains link information.
 
 ## Before you start
 

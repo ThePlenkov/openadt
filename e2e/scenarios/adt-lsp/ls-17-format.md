@@ -1,26 +1,28 @@
 ---
-code: adtls-21
-id: get-check-variants
-title: Get ATC check variants
-tags: [atc]
+code: ls-17
+id: format
+title: Format ABAP code
+tags: [format]
 mode: standalone
 given: >-
   MCP stdio launcher runs in standalone mode with --no-proxy --import-from=adtls;
   user destination {{destination}} is registered and logon-ready.
 when: >-
-  Call adt_get_check_variants with destination {{destination}}.
+  Call adt_format with destination {{destination}}, uri, and code.
 then: >-
-  MCP returns a tool result with check variants list;
-  isError is false; response contains variant names.
+  MCP returns a tool result with formatted code;
+  isError is false; response contains formatted ABAP code.
 steps:
-  - tool: adt_get_check_variants
+  - tool: adt_format
     args:
       destination: "{{destination}}"
+      uri: "/sap/bc/adt/oo/classes/cl_abap_typedescr"
+      content: "REPORT ztest."
     assert:
       notError: true
 ---
 
-# Get ATC check variants
+# Format ABAP code
 
 ## Given
 
@@ -28,13 +30,13 @@ MCP stdio launcher runs in standalone mode with `--no-proxy --import-from=adtls`
 
 ## When
 
-Call `adt_get_check_variants` with destination.
+Call `adt_format` with destination, object URI, and code.
 
 ## Then
 
-- MCP tool responds with check variants list.
+- MCP tool responds with formatted code.
 - `isError` is false.
-- Response contains variant names.
+- Response contains formatted ABAP code.
 
 ## Before you start
 

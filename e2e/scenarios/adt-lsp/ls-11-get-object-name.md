@@ -1,27 +1,27 @@
 ---
-code: adtls-20
-id: load-statement-results
-title: Load statement coverage results
-tags: [coverage]
+code: ls-11
+id: get-object-name
+title: Get object name from URI
+tags: [filesystem]
 mode: standalone
 given: >-
   MCP stdio launcher runs in standalone mode with --no-proxy --import-from=adtls;
   user destination {{destination}} is registered and logon-ready.
 when: >-
-  Call adt_load_statement_results with destination {{destination}} and measurement ID.
+  Call adt_get_object_name with destination {{destination}} and object URI.
 then: >-
-  MCP returns a tool result with statement results;
-  isError is false; response contains statement coverage data.
+  MCP returns a tool result with object name;
+  isError is false; response contains name and success flag.
 steps:
-  - tool: adt_load_statement_results
+  - tool: adt_get_object_name
     args:
       destination: "{{destination}}"
-      measurementId: "MEASUREMENT_001"
+      uri: "/sap/bc/adt/oo/classes/cl_abap_typedescr"
     assert:
       notError: true
 ---
 
-# Load statement coverage results
+# Get object name from URI
 
 ## Given
 
@@ -29,13 +29,13 @@ MCP stdio launcher runs in standalone mode with `--no-proxy --import-from=adtls`
 
 ## When
 
-Call `adt_load_statement_results` with destination and measurement ID.
+Call `adt_get_object_name` with destination and object URI.
 
 ## Then
 
-- MCP tool responds with statement results.
+- MCP tool responds with object name.
 - `isError` is false.
-- Response contains statement coverage data.
+- Response contains name and success flag.
 
 ## Before you start
 

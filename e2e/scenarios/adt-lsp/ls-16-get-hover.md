@@ -1,29 +1,28 @@
 ---
-code: adtls-2
-id: transport-lock-check
-title: Check if object requires transport
-tags: [transport]
+code: ls-16
+id: get-hover
+title: Get hover information
+tags: [hover]
 mode: standalone
 given: >-
   MCP stdio launcher runs in standalone mode with --no-proxy --import-from=adtls;
   user destination {{destination}} is registered and logon-ready.
 when: >-
-  Call adt_check_transport_lock with destination {{destination}}, uri, and transportId.
+  Call adt_get_hover with destination {{destination}}, uri, and position.
 then: >-
-  MCP returns a tool result with transport lock status;
-  isError is false; response contains lock information.
+  MCP returns a tool result with hover information;
+  isError is false; response contains hover text.
 steps:
-  - tool: adt_check_transport_lock
+  - tool: adt_get_hover
     args:
       destination: "{{destination}}"
       uri: "/sap/bc/adt/oo/classes/cl_abap_typedescr"
-      transportId: "DEVK900000"
+      position: { line: 1, character: 0 }
     assert:
-      contentContains: "isTransportCheckSuccessful"
       notError: true
 ---
 
-# Check if object requires transport
+# Get hover information
 
 ## Given
 
@@ -31,13 +30,13 @@ MCP stdio launcher runs in standalone mode with `--no-proxy --import-from=adtls`
 
 ## When
 
-Call `adt_check_transport_lock` with destination, object URI, and transport ID.
+Call `adt_get_hover` with destination, object URI, and position.
 
 ## Then
 
-- MCP tool responds with transport lock status.
+- MCP tool responds with hover information.
 - `isError` is false.
-- Response contains lock information.
+- Response contains hover text.
 
 ## Before you start
 

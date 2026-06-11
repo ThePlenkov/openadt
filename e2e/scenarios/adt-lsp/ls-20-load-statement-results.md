@@ -1,27 +1,27 @@
 ---
-code: adtls-18
-id: diagnostic
-title: Get diagnostic information
-tags: [diagnostic]
+code: ls-20
+id: load-statement-results
+title: Load statement coverage results
+tags: [coverage]
 mode: standalone
 given: >-
   MCP stdio launcher runs in standalone mode with --no-proxy --import-from=adtls;
   user destination {{destination}} is registered and logon-ready.
 when: >-
-  Call adt_diagnostic with destination {{destination}} and object URI.
+  Call adt_load_statement_results with destination {{destination}} and measurement ID.
 then: >-
-  MCP returns a tool result with diagnostic information;
-  isError is false; response contains diagnostic data.
+  MCP returns a tool result with statement results;
+  isError is false; response contains statement coverage data.
 steps:
-  - tool: adt_diagnostic
+  - tool: adt_load_statement_results
     args:
       destination: "{{destination}}"
-      uri: "/sap/bc/adt/oo/classes/cl_abap_typedescr"
+      measurementId: "MEASUREMENT_001"
     assert:
       notError: true
 ---
 
-# Get diagnostic information
+# Load statement coverage results
 
 ## Given
 
@@ -29,13 +29,13 @@ MCP stdio launcher runs in standalone mode with `--no-proxy --import-from=adtls`
 
 ## When
 
-Call `adt_diagnostic` with destination and object URI.
+Call `adt_load_statement_results` with destination and measurement ID.
 
 ## Then
 
-- MCP tool responds with diagnostic information.
+- MCP tool responds with statement results.
 - `isError` is false.
-- Response contains diagnostic data.
+- Response contains statement coverage data.
 
 ## Before you start
 

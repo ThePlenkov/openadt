@@ -1,29 +1,27 @@
 ---
-code: adtls-3
-id: transport-create
-title: Create transport for object
-tags: [transport]
+code: ls-10
+id: force-refresh
+title: Force refresh of object
+tags: [filesystem]
 mode: standalone
 given: >-
   MCP stdio launcher runs in standalone mode with --no-proxy --import-from=adtls;
   user destination {{destination}} is registered and logon-ready.
 when: >-
-  Call adt_create_transport with destination {{destination}}, uri, operationType, and description.
+  Call adt_force_refresh with destination {{destination}} and object URI.
 then: >-
-  MCP returns a tool result with transport creation status;
+  MCP returns a tool result with refresh status;
   isError is false; response contains success information.
 steps:
-  - tool: adt_create_transport
+  - tool: adt_force_refresh
     args:
       destination: "{{destination}}"
       uri: "/sap/bc/adt/oo/classes/cl_abap_typedescr"
-      operationType: "MODIFICATION"
-      description: "Test transport for adtls-3 scenario"
     assert:
       notError: true
 ---
 
-# Create transport for object
+# Force refresh of object
 
 ## Given
 
@@ -31,11 +29,11 @@ MCP stdio launcher runs in standalone mode with `--no-proxy --import-from=adtls`
 
 ## When
 
-Call `adt_create_transport` with destination, object URI, and transport ID.
+Call `adt_force_refresh` with destination and object URI.
 
 ## Then
 
-- MCP tool responds with transport creation status.
+- MCP tool responds with refresh status.
 - `isError` is false.
 - Response contains success information.
 

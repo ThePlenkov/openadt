@@ -1,29 +1,27 @@
 ---
-code: adtls-6
-id: transport-search
-title: Advanced transport search
-tags: [transport]
+code: ls-19
+id: get-coverage
+title: Get code coverage information
+tags: [coverage]
 mode: standalone
 given: >-
   MCP stdio launcher runs in standalone mode with --no-proxy --import-from=adtls;
   user destination {{destination}} is registered and logon-ready.
 when: >-
-  Call adt_search_transports with destination {{destination}} and search parameters.
+  Call adt_get_coverage with destination {{destination}} and object URI.
 then: >-
-  MCP returns a tool result with transport list;
-  isError is false; response contains transport information.
+  MCP returns a tool result with coverage information;
+  isError is false; response contains coverage data.
 steps:
-  - tool: adt_search_transports
+  - tool: adt_get_coverage
     args:
       destination: "{{destination}}"
-      user: "DEVELOPER"
-      request: "DEVK9*"
-      project: "ZPROJECT"
+      uri: "/sap/bc/adt/oo/classes/zcl_example"
     assert:
       notError: true
 ---
 
-# Advanced transport search
+# Get code coverage information
 
 ## Given
 
@@ -31,13 +29,13 @@ MCP stdio launcher runs in standalone mode with `--no-proxy --import-from=adtls`
 
 ## When
 
-Call `adt_search_transports` with destination and search parameters.
+Call `adt_get_coverage` with destination and object URI.
 
 ## Then
 
-- MCP tool responds with transport list.
+- MCP tool responds with coverage information.
 - `isError` is false.
-- Response contains transport information.
+- Response contains coverage data.
 
 ## Before you start
 

@@ -1,27 +1,27 @@
 ---
-code: adtls-19
-id: get-coverage
-title: Get code coverage information
-tags: [coverage]
+code: ls-18
+id: diagnostic
+title: Get diagnostic information
+tags: [diagnostic]
 mode: standalone
 given: >-
   MCP stdio launcher runs in standalone mode with --no-proxy --import-from=adtls;
   user destination {{destination}} is registered and logon-ready.
 when: >-
-  Call adt_get_coverage with destination {{destination}} and object URI.
+  Call adt_diagnostic with destination {{destination}} and object URI.
 then: >-
-  MCP returns a tool result with coverage information;
-  isError is false; response contains coverage data.
+  MCP returns a tool result with diagnostic information;
+  isError is false; response contains diagnostic data.
 steps:
-  - tool: adt_get_coverage
+  - tool: adt_diagnostic
     args:
       destination: "{{destination}}"
-      uri: "/sap/bc/adt/oo/classes/zcl_example"
+      uri: "/sap/bc/adt/oo/classes/cl_abap_typedescr"
     assert:
       notError: true
 ---
 
-# Get code coverage information
+# Get diagnostic information
 
 ## Given
 
@@ -29,13 +29,13 @@ MCP stdio launcher runs in standalone mode with `--no-proxy --import-from=adtls`
 
 ## When
 
-Call `adt_get_coverage` with destination and object URI.
+Call `adt_diagnostic` with destination and object URI.
 
 ## Then
 
-- MCP tool responds with coverage information.
+- MCP tool responds with diagnostic information.
 - `isError` is false.
-- Response contains coverage data.
+- Response contains diagnostic data.
 
 ## Before you start
 

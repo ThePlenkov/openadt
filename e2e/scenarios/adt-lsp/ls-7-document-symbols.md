@@ -1,19 +1,19 @@
 ---
-code: adtls-10
-id: force-refresh
-title: Force refresh of object
-tags: [filesystem]
+code: ls-7
+id: document-symbols
+title: Get document symbols for file
+tags: [document]
 mode: standalone
 given: >-
   MCP stdio launcher runs in standalone mode with --no-proxy --import-from=adtls;
   user destination {{destination}} is registered and logon-ready.
 when: >-
-  Call adt_force_refresh with destination {{destination}} and object URI.
+  Call adt_document_symbols with destination {{destination}} and object URI.
 then: >-
-  MCP returns a tool result with refresh status;
-  isError is false; response contains success information.
+  MCP returns a tool result with document symbols;
+  isError is false; response contains symbol information.
 steps:
-  - tool: adt_force_refresh
+  - tool: adt_document_symbols
     args:
       destination: "{{destination}}"
       uri: "/sap/bc/adt/oo/classes/cl_abap_typedescr"
@@ -21,7 +21,7 @@ steps:
       notError: true
 ---
 
-# Force refresh of object
+# Get document symbols for file
 
 ## Given
 
@@ -29,13 +29,13 @@ MCP stdio launcher runs in standalone mode with `--no-proxy --import-from=adtls`
 
 ## When
 
-Call `adt_force_refresh` with destination and object URI.
+Call `adt_document_symbols` with destination and object URI.
 
 ## Then
 
-- MCP tool responds with refresh status.
+- MCP tool responds with document symbols.
 - `isError` is false.
-- Response contains success information.
+- Response contains symbol information.
 
 ## Before you start
 

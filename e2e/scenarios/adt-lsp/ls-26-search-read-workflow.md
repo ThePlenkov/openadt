@@ -1,39 +1,41 @@
 ---
-code: adtls-15
-id: lock-unlock-workflow
-title: Lock and unlock file workflow
-tags: [filesystem, workflow]
+code: ls-26
+id: search-read-workflow
+title: "Search and read workflow: quick search, get folder URI, force refresh"
+tags: [repository, workflow]
 mode: standalone
 given: >-
   MCP stdio launcher runs in standalone mode with --no-proxy --import-from=adtls;
   user destination {{destination}} is registered and logon-ready.
 when: >-
-  Call adt_lock_file, adt_get_file_lock_status, and adt_unlock_file in sequence.
+  Call adt_quick_search, adt_get_folder_uri, and adt_force_refresh in sequence.
 then: >-
   MCP returns tool results for each step;
-  all isError flags are false; lock status changes correctly.
+  all isError flags are false; search-read workflow completes successfully.
 steps:
-  - tool: adt_lock_file
+  - tool: adt_quick_search
     args:
       destination: "{{destination}}"
-      uri: "/sap/bc/adt/oo/classes/zcl_example"
+      searchTerm: "Z*"
+    assert:
+      contentContains: "| Name | Type | Description |"
+      notError: true
+  - tool: adt_get_folder_uri
+    args:
+      destination: "{{destination}}"
+      package: "$TMP"
+      objectType: "CLAS"
     assert:
       notError: true
-  - tool: adt_get_file_lock_status
+  - tool: adt_force_refresh
     args:
       destination: "{{destination}}"
-      uri: "/sap/bc/adt/oo/classes/zcl_example"
-    assert:
-      notError: true
-  - tool: adt_unlock_file
-    args:
-      destination: "{{destination}}"
-      uri: "/sap/bc/adt/oo/classes/zcl_example"
+      uri: "/sap/bc/adt/oo/classes/cl_abap_typedescr"
     assert:
       notError: true
 ---
 
-# Lock and unlock file workflow
+# Search and read workflow: quick search, get folder URI, force refresh
 
 ## Given
 
@@ -41,13 +43,13 @@ MCP stdio launcher runs in standalone mode with `--no-proxy --import-from=adtls`
 
 ## When
 
-Call `adt_lock_file`, `adt_get_file_lock_status`, and `adt_unlock_file` in sequence.
+Call `adt_quick_search`, `adt_get_folder_uri`, and `adt_force_refresh` in sequence.
 
 ## Then
 
-- MCP tool responds with lock status for each step.
+- MCP tool responds with results for each step.
 - All `isError` flags are false.
-- Lock status changes correctly.
+- Search-read workflow completes successfully.
 
 ## Before you start
 

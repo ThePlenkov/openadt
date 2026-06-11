@@ -1,5 +1,5 @@
 ---
-code: adtls-12
+code: ls-12
 id: get-package-name
 title: Get package name from URI
 tags: [filesystem]

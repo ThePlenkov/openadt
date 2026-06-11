@@ -1,42 +1,39 @@
 ---
-code: adtls-25
-id: transport-workflow
-title: "Transport workflow: check lock, create, assign"
-tags: [transport, workflow]
+code: ls-15
+id: lock-unlock-workflow
+title: Lock and unlock file workflow
+tags: [filesystem, workflow]
 mode: standalone
 given: >-
   MCP stdio launcher runs in standalone mode with --no-proxy --import-from=adtls;
   user destination {{destination}} is registered and logon-ready.
 when: >-
-  Call adt_check_transport_lock, adt_create_transport, and adt_assign_transport in sequence.
+  Call adt_lock_file, adt_get_file_lock_status, and adt_unlock_file in sequence.
 then: >-
   MCP returns tool results for each step;
-  all isError flags are false; transport workflow completes successfully.
+  all isError flags are false; lock status changes correctly.
 steps:
-  - tool: adt_check_transport_lock
+  - tool: adt_lock_file
     args:
       destination: "{{destination}}"
       uri: "/sap/bc/adt/oo/classes/zcl_example"
-      transportId: "DEVK900000"
     assert:
       notError: true
-  - tool: adt_create_transport
+  - tool: adt_get_file_lock_status
     args:
       destination: "{{destination}}"
       uri: "/sap/bc/adt/oo/classes/zcl_example"
-      transportId: "DEVK900000"
     assert:
       notError: true
-  - tool: adt_assign_transport
+  - tool: adt_unlock_file
     args:
       destination: "{{destination}}"
       uri: "/sap/bc/adt/oo/classes/zcl_example"
-      transportId: "DEVK900000"
     assert:
       notError: true
 ---
 
-# Transport workflow: check lock, create, assign
+# Lock and unlock file workflow
 
 ## Given
 
@@ -44,13 +41,13 @@ MCP stdio launcher runs in standalone mode with `--no-proxy --import-from=adtls`
 
 ## When
 
-Call `adt_check_transport_lock`, `adt_create_transport`, and `adt_assign_transport` in sequence.
+Call `adt_lock_file`, `adt_get_file_lock_status`, and `adt_unlock_file` in sequence.
 
 ## Then
 
-- MCP tool responds with results for each step.
+- MCP tool responds with lock status for each step.
 - All `isError` flags are false.
-- Transport workflow completes successfully.
+- Lock status changes correctly.
 
 ## Before you start
 
