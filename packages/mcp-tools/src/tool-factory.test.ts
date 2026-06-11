@@ -1,11 +1,10 @@
 import { describe, expect, test } from 'bun:test'
 import { z } from 'zod'
-import { tool } from './tool-factory'
-import type { LspTransport } from '@openadt/lsp-client'
+import { tool, type ToolTransport } from './tool-factory'
 
 describe('tool factory', () => {
   test('creates tool definition with correct structure', () => {
-    const mockTransport = {} as LspTransport
+    const mockTransport = {} as ToolTransport
     const testTool = tool({
       name: 'test-tool',
       description: 'A test tool',
@@ -26,7 +25,7 @@ describe('tool factory', () => {
   })
 
   test('handler receives correct arguments', async () => {
-    const mockTransport = {} as LspTransport
+    const mockTransport = {} as ToolTransport
     const testTool = tool({
       name: 'echo',
       description: 'Echo tool',
@@ -45,7 +44,7 @@ describe('tool factory', () => {
   })
 
   test('supports optional parameters', async () => {
-    const mockTransport = {} as LspTransport
+    const mockTransport = {} as ToolTransport
     const testTool = tool({
       name: 'optional',
       description: 'Tool with optional param',
@@ -73,7 +72,7 @@ describe('tool factory', () => {
   })
 
   test('supports isError flag', async () => {
-    const mockTransport = {} as LspTransport
+    const mockTransport = {} as ToolTransport
     const testTool = tool({
       name: 'error-tool',
       description: 'Tool that returns error',

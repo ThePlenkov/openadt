@@ -1,2 +1,1 @@
-export { tool } from './tool-factory'
-export type { LspTransport } from '@openadt/lsp-client'
+export { tool, type ToolTransport } from './tool-factory'

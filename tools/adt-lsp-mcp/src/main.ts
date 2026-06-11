@@ -5,7 +5,7 @@
  * Usage: adt-lsp-mcp <destination>
  * Or set OPENADT_DESTINATION / OPENADT_MCP_DESTINATION.
  */
-import { mcpTools } from '@openadt/adt-mcp-tools'
+import { mcpTools } from '@openadt/adt-lsp-mcp-tools'
 import {
   attachMcpStdoutEncoder,
   McpStdioDecoder,
@@ -18,7 +18,7 @@ import {
   LspConnectionTransport,
   prewarmDestination,
   type LspSession,
-} from '@openadt/lsp-client'
+} from '@openadt/adt-lsp-client'
 import { DEFAULT_WORKSPACE } from '@openadt/adt-config'
 import { homedir } from 'node:os'
 import { join } from 'node:path'

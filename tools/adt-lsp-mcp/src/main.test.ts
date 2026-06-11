@@ -1,11 +1,11 @@
 import { describe, expect, test, mock, afterEach } from 'bun:test'
 // @ts-ignore - workspace package without types yet
-import { mcpTools } from '@openadt/adt-mcp-tools'
+import { mcpTools } from '@openadt/adt-lsp-mcp-tools'
 import { ADT_LSP_WORKFLOW_PROMPT, guidancePromptDefs } from './guidance/guidance'
 
 describe('ADT LSP MCP Server', () => {
-  test('mcpTools exports all 26 ADT tools', () => {
-    expect(mcpTools.length).toBe(26)
+  test('mcpTools exports all 27 ADT tools', () => {
+    expect(mcpTools.length).toBe(27)
     const toolNames = mcpTools.map((t: { name: string }) => t.name)
     expect(toolNames).toContain('adt_quick_search')
     expect(toolNames).toContain('adt_check_transport_lock')
@@ -33,8 +33,15 @@ describe('ADT LSP MCP Server', () => {
     expect(defs.map((d) => d.name)).toContain(ADT_LSP_WORKFLOW_PROMPT)
   })
 
-  test('transport tools mention cts/transport in description', () => {
-    const transportTools = mcpTools.filter((t: { name: string }) => t.name.includes('transport'))
+  test('transport LSP tools mention cts/transport in description', () => {
+    const transportTools = mcpTools.filter((t: { name: string }) =>
+      [
+        'adt_create_transport',
+        'adt_assign_transport',
+        'adt_search_transports',
+        'adt_search_transports_simple',
+      ].includes(t.name)
+    )
     for (const tool of transportTools) {
       expect(tool.description).toContain('adtLs/cts/transport')
     }

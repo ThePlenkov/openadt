@@ -1,41 +1,30 @@
 /**
- * MCP tool factory function.
- * Ensures exports are valid MCP tools with proper typing.
+ * MCP tool factory — transport-agnostic handler surface.
  */
 import { z } from 'zod'
-import type { LspTransport } from '@openadt/lsp-client'
 
-/**
- * MCP tool definition (internal type)
- */
-type ToolDefinition<T extends z.ZodRawShape> = {
-  name: string
-  description: string
-  inputSchema: z.ZodObject<T>
-  handler: (
-    args: z.infer<z.ZodObject<T>>,
-    transport: LspTransport
-  ) => Promise<{
-    content: Array<{ type: string; text: string }>
-    isError?: boolean
-  }>
+export type ToolTransport = {
+  sendRequest(
+    method: string,
+    params: unknown,
+    paramStructure?: 'byName' | 'byPosition'
+  ): Promise<unknown>
+  sendNotification?(method: string, params: unknown): void
 }
 
-/**
- * MCP tool factory function.
- * Validates and creates a properly typed MCP tool.
- */
-export function tool<T extends z.ZodRawShape>(def: {
+type ToolHandlerResult = {
+  content: Array<{ type: string; text: string }>
+  isError?: boolean
+}
+
+export function tool<
+  T extends z.ZodRawShape,
+  TTransport extends ToolTransport = ToolTransport,
+>(def: {
   name: string
   description: string
   inputSchema: z.ZodObject<T>
-  handler: (
-    args: z.infer<z.ZodObject<T>>,
-    transport: LspTransport
-  ) => Promise<{
-    content: Array<{ type: string; text: string }>
-    isError?: boolean
-  }>
-}): ToolDefinition<T> {
+  handler: (args: z.infer<z.ZodObject<T>>, transport: TTransport) => Promise<ToolHandlerResult>
+}) {
   return def
 }

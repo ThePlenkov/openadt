@@ -12,7 +12,7 @@
     "paths": {
       "@openadt/adt-infra": ["../../packages/adt-infra/src/index.ts"],
       "@openadt/adt-config": ["../../packages/adt-config/src/index.ts"],
-      "@openadt/lsp-client": ["../../packages/lsp-client/src/index.ts"]
+      "@openadt/adt-lsp-client": ["../../packages/adt-lsp-client/src/index.ts"]
     },
     "ignoreDeprecations": "6.0",
     "types": ["bun-types"]

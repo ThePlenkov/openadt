@@ -512,7 +512,7 @@ See [adt-agent-typescript.md](adt-agent-typescript.md) for the full tool referen
 
 #### `@openadt/adt-lsp-mcp` (direct LSP stdio)
 
-Package: `tools/adt-lsp-mcp/` — stdio-only MCP for the 26 `adt_*` tools. Calls `adt-lsc` over **pipe LSP** directly; there is **no** HTTP MCP bridge (`adtLs/mcp/startMCPServer` is not used).
+Package: `tools/adt-lsp-mcp/` — stdio-only MCP for the 26 `adt_*` tools. Depends on `@openadt/adt-lsp-mcp-tools` (handlers) and `@openadt/adt-lsp-client` (LSP transport). Calls `adt-lsc` over **pipe LSP** directly; there is **no** HTTP MCP bridge (`adtLs/mcp/startMCPServer` is not used).
 
 | Item                    | Contract                                                                                                                                                                                                   |
 | ----------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |

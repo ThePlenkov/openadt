@@ -74,7 +74,7 @@ All custom tools are prefixed with `adt_` to distinguish from SAP MCP tools.
 
 ## Repotree open-document lifecycle (text-document LSP tools)
 
-Headless MCP calls standard LSP text-document methods (`textDocument/references`, `textDocument/documentSymbol`, …) that VS Code reaches only after opening a file. `@openadt/lsp-client` **`withOpenDocument()`** wraps each tool call:
+Headless MCP calls standard LSP text-document methods (`textDocument/references`, `textDocument/documentSymbol`, …) that VS Code reaches only after opening a file. `@openadt/adt-lsp-client` **`withOpenDocument()`** (via the operations API) wraps each tool call:
 
 1. `adtLs/repository/getLsUri` — ADT path → repotree/AFF URI (required)
 2. `adtLs/fileSystem/forceRefresh` — `{ uri, refreshRelatedFiles: true }` (best-effort)
@@ -170,9 +170,20 @@ Format, diagnostics, and references tools are throttled to 4 requests per second
 
 LSP method names follow the pattern `adt/<domain>/<action>`. These are custom methods from the SAP ADT Language Server protocol, not standard LSP.
 
+## TypeScript package layers
+
+| Package | Role |
+| ------- | ---- |
+| `@openadt/adt-lsp-contracts` | LSP method specs (`lspEndpoint` definitions for `adtLs/*` and `textDocument/*`) |
+| `@openadt/adt-lsp-client` | Connection, transport, `withOpenDocument`, and **operations API** (orchestration) |
+| `@openadt/adt-lsp-mcp-tools` | Thin MCP handlers (Zod schemas + JSON envelope); call client operations only |
+| `tools/adt-lsp-mcp` | stdio MCP server binary |
+
+MCP tools do **not** import contracts directly — they call `@openadt/adt-lsp-client` operations (e.g. `getDocumentSymbols`, `runAtcCheck`).
+
 ## Dependencies
 
-- Existing LSP connection infrastructure (`src/client/lsp-client.ts`)
-- Existing MCP framing (`src/mcp/mcp-framing.ts`)
-- Existing stdio proxy (`src/mcp/stdio-proxy.ts`)
-- Existing read tools pattern (`src/service/read/`)
+- `@openadt/adt-lsp-client` — LSP connection, logon, operations
+- `@openadt/adt-lsp-mcp-tools` — MCP tool registry
+- `@openadt/mcp-framing` — stdio MCP framing
+- Legacy launcher: `tools/sap-adt-mcp-launcher/` (combined stdio + HTTP)

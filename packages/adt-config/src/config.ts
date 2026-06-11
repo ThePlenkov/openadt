@@ -6,7 +6,7 @@ import {
   type DestinationImportMode,
   type McpServeConfig,
 } from './types'
-import { DEFAULT_LOGON_TIMEOUT_MS } from '@openadt/lsp-client'
+import { DEFAULT_LOGON_TIMEOUT_MS } from '@openadt/adt-lsp-client'
 
 export const DEFAULT_WORKSPACE = join(homedir(), '.openadt', 'adt-ls-workspace')
 export const PID_FILE = join(homedir(), '.openadt', 'adt-ls-mcp.pid')
