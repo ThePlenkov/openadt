@@ -175,7 +175,7 @@ class SimpleMcpServer {
     try {
       const session = await this.ensureLspReady()
       const transport = new LspConnectionTransport(session.connection)
-      const result = await tool.handler(args ?? {}, transport)
+      const result = await tool.handler(args as never, transport)
       await this.sendResult(id, result)
     } catch (err) {
       const message = err instanceof Error ? err.message : String(err)

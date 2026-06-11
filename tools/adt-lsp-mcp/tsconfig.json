@@ -1,9 +1,19 @@
 {
   "extends": "../../tsconfig.base.json",
   "compilerOptions": {
-    "declaration": true,
-    "outDir": "./dist"
+    "noEmit": true,
+    "baseUrl": ".",
+    "paths": {
+      "@openadt/adt-config": ["../../packages/adt-config/src/index.ts"],
+      "@openadt/adt-infra": ["../../packages/adt-infra/src/index.ts"],
+      "@openadt/adt-mcp-tools": ["../../packages/adt-mcp-tools/src/index.ts"],
+      "@openadt/adt-services": ["../../packages/adt-services/src/index.ts"],
+      "@openadt/lsp-client": ["../../packages/lsp-client/src/index.ts"],
+      "@openadt/mcp-framing": ["../../packages/mcp-framing/src/index.ts"],
+      "@openadt/mcp-tools": ["../../packages/mcp-tools/src/index.ts"]
+    },
+    "ignoreDeprecations": "6.0"
   },
-  "include": ["src/**/*"],
-  "exclude": ["node_modules", "dist"]
+  "include": ["src/main.ts", "src/mcp/**/*.ts", "src/locate.ts", "src/guidance/**/*.ts"],
+  "exclude": ["node_modules", "dist", "e2e"]
 }
