@@ -16,7 +16,7 @@ steps:
   - tool: adt_run_application
     args:
       destination: "{{destination}}"
-      uri: "/sap/bc/adt/programs/sap_start"
+      uri: "/sap/bc/adt/oo/classes/cl_abap_typedescr"
     assert:
       notError: true
 ---

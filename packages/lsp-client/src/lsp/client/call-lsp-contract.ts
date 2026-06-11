@@ -3,7 +3,7 @@
  * Calls LSP methods using a transport-agnostic contract.
  */
 import type { LspMethodSpec } from '../contract/contract-core'
-import type { LspTransport } from './lsp-transport'
+import type { LspParamStructure, LspTransport } from './lsp-transport'
 import type { LspContractInput, LspContractResponse } from '../contract/client-types'
 
 /**
@@ -20,22 +20,21 @@ export async function callLspContract<E extends LspMethodSpec>(
   contract: E,
   transport: LspTransport,
   params: LspContractInput<E>,
-  options?: { timeoutMs?: number }
+  options?: { timeoutMs?: number; paramStructure?: LspParamStructure }
 ): Promise<LspContractResponse<E>> {
-  const { timeoutMs } = options ?? {}
+  const { timeoutMs, paramStructure } = options ?? {}
+
+  const send = () => transport.sendRequest(contract.method, params, paramStructure)
 
   if (timeoutMs) {
     const timeoutPromise = new Promise<never>((_, reject) => {
       setTimeout(() => reject(new Error(`LSP call timed out after ${timeoutMs}ms`)), timeoutMs)
     })
 
-    const result = await Promise.race([
-      transport.sendRequest(contract.method, params),
-      timeoutPromise,
-    ])
+    const result = await Promise.race([send(), timeoutPromise])
 
     return result as LspContractResponse<E>
   }
 
-  return (await transport.sendRequest(contract.method, params)) as LspContractResponse<E>
+  return (await send()) as LspContractResponse<E>
 }

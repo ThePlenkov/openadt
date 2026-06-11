@@ -25,8 +25,8 @@ export type LspMethodSpec = {
   /** LSP method name, e.g., "adtLs/transport/searchTransportsSimple" */
   method: string
   types: {
-    /** Request parameters type */
-    params: Type<Record<string, unknown>>
+    /** Request parameters type (object, string, or positional array) */
+    params: Type<unknown>
     /** Response type */
     response: Type<unknown>
   }

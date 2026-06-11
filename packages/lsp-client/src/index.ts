@@ -17,6 +17,7 @@ export { callLspContract } from './lsp/client/call-lsp-contract'
 export {
   HttpLspTransport,
   LspConnectionTransport,
+  type LspParamStructure,
   type LspTransport,
 } from './lsp/client/lsp-transport'
 

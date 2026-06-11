@@ -1,27 +1,37 @@
 /**
  * MCP tool for adt get check variants.
- * Uses MCP SDK pattern with Zod schema.
  */
 import { z } from 'zod'
 import { tool } from '@openadt/mcp-tools'
 import { getCheckVariants } from '@openadt/adt-services'
 import type { LspTransport } from '@openadt/lsp-client'
-import { callLspContract } from '@openadt/lsp-client'
+import { callLspContract, resolveRepotreeUri } from '@openadt/lsp-client'
 
-// Zod schema (single source of truth)
 const schema = z.object({
   destination: z.string().describe('SAP destination'),
+  uri: z
+    .string()
+    .describe('Object URI (ADT path or repotree URI; tool resolves via getLsUri if needed)'),
+  quickPickUserInput: z
+    .string()
+    .optional()
+    .describe('ATC variant filter (use * for all; empty is rejected by SAP backend)'),
 })
 
-// Tool definition for MCP SDK registration
 export const adt_get_check_variants = tool({
   name: 'adt_get_check_variants',
-  description: 'Get ATC check variants',
+  description: 'Get ATC check variants for an object (adtLs/atc/getCheckVariants).',
   inputSchema: schema,
   handler: async (args: z.infer<typeof schema>, transport: LspTransport) => {
     try {
-      const lspResult = await callLspContract(getCheckVariants, transport, {
+      const objectUri = await resolveRepotreeUri(transport, {
         destination: args.destination,
+        uri: args.uri,
+      })
+
+      const lspResult = await callLspContract(getCheckVariants, transport, {
+        objectUri,
+        quickPickUserInput: args.quickPickUserInput ?? '*',
       })
 
       return {

@@ -16,13 +16,15 @@ steps:
   - tool: adt_get_check_variants
     args:
       destination: "{{destination}}"
+      uri: "/sap/bc/adt/oo/classes/cl_abap_typedescr"
+      quickPickUserInput: "*"
     assert:
       notError: true
   - tool: adt_run_check
     args:
       destination: "{{destination}}"
-      uri: "/sap/bc/adt/oo/classes/zcl_example"
-      checkVariant: "DEFAULT"
+      uri: "/sap/bc/adt/oo/classes/cl_abap_typedescr"
+      checkVariant: ""
     assert:
       notError: true
   - tool: adt_load_statement_results

@@ -16,22 +16,26 @@ steps:
   - tool: adt_check_transport_lock
     args:
       destination: "{{destination}}"
-      uri: "/sap/bc/adt/oo/classes/zcl_example"
+      uri: "/sap/bc/adt/oo/classes/cl_abap_typedescr"
       transportId: "DEVK900000"
     assert:
+      contentContains: "isTransportCheckSuccessful"
       notError: true
   - tool: adt_create_transport
     args:
       destination: "{{destination}}"
-      uri: "/sap/bc/adt/oo/classes/zcl_example"
-      transportId: "DEVK900000"
+      uri: "/sap/bc/adt/oo/classes/cl_abap_typedescr"
+      operationType: "MODIFICATION"
+      description: "Test transport for ls-25 workflow"
     assert:
       notError: true
+    extract:
+      transportId: "number"
   - tool: adt_assign_transport
     args:
       destination: "{{destination}}"
-      uri: "/sap/bc/adt/oo/classes/zcl_example"
-      transportId: "DEVK900000"
+      uri: "/sap/bc/adt/oo/classes/cl_abap_typedescr"
+      transportId: "{{transportId}}"
     assert:
       notError: true
 ---
@@ -55,4 +59,3 @@ Call `adt_check_transport_lock`, `adt_create_transport`, and `adt_assign_transpo
 ## Before you start
 
 Ask the user for their **ADT destination id** (`SID_CLIENT_USER_LANG`). Do not assume any SID from the repo.
-

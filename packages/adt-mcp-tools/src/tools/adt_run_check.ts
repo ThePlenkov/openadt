@@ -1,31 +1,40 @@
 /**
  * MCP tool for running ATC check.
- * Uses MCP SDK pattern with Zod schema.
  */
 import { z } from 'zod'
 import { tool } from '@openadt/mcp-tools'
 import { runCheck as atcRunCheck } from '@openadt/adt-services'
 import type { LspTransport } from '@openadt/lsp-client'
-import { callLspContract } from '@openadt/lsp-client'
+import { callLspContract, resolveRepotreeUri } from '@openadt/lsp-client'
 
-// Zod schema (single source of truth)
 const schema = z.object({
   destination: z.string().describe('SAP destination'),
-  uris: z.array(z.string()).describe('Object URIs'),
-  variant: z.string().optional().describe('Check variant (optional)'),
+  uri: z.string().describe('Object URI (ADT path or repotree URI)'),
+  checkVariant: z.string().optional().describe('ATC check variant name (empty = system default)'),
+  uris: z.array(z.string()).optional().describe('Deprecated — use uri'),
+  variant: z.string().optional().describe('Deprecated — use checkVariant'),
 })
 
-// Tool definition for MCP SDK registration
 export const adt_run_check = tool({
   name: 'adt_run_check',
-  description: 'Run ATC check',
+  description: 'Run ATC check on an object (adtLs/atc/runCheck).',
   inputSchema: schema,
   handler: async (args: z.infer<typeof schema>, transport: LspTransport) => {
     try {
-      const lspResult = await callLspContract(atcRunCheck, transport, {
+      const adtUri = args.uri ?? args.uris?.[0]
+      const checkVariant = args.checkVariant ?? args.variant ?? ''
+      if (!adtUri) {
+        throw new Error('Provide uri.')
+      }
+
+      const objectUri = await resolveRepotreeUri(transport, {
         destination: args.destination,
-        uris: args.uris,
-        variant: args.variant,
+        uri: adtUri,
+      })
+
+      const lspResult = await callLspContract(atcRunCheck, transport, {
+        objectUri,
+        checkVariant,
       })
 
       return {

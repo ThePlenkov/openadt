@@ -17,7 +17,7 @@ export { diagnostic } from './textDocument/diagnostic'
 export { formatting } from './textDocument/formatting'
 
 // Application run
-export { runApplication } from './adtLs/applicationRun/runApplication'
+export { runApplication } from './adtLs/run/runApplication'
 
 // File system
 export { forceRefresh } from './adtLs/fileSystem/forceRefresh'

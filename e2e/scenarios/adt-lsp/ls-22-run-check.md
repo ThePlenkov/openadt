@@ -16,8 +16,8 @@ steps:
   - tool: adt_run_check
     args:
       destination: "{{destination}}"
-      uri: "/sap/bc/adt/oo/classes/zcl_example"
-      checkVariant: "DEFAULT"
+      uri: "/sap/bc/adt/oo/classes/cl_abap_typedescr"
+      checkVariant: ""
     assert:
       notError: true
 ---
