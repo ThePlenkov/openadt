@@ -1,12 +1,13 @@
 // Repository
 export { quickSearch } from './adtLs/repository/quickSearch'
+export { getLsUri } from './adtLs/repository/getLsUri'
 
-// Transport
-export { assignTransportToObject } from './adtLs/transport/assignTransportToObject'
-export { checkTransportForObjectLock } from './adtLs/transport/checkTransportForObjectLock'
-export { createTransportForObjectLock } from './adtLs/transport/createTransportForObjectLock'
-export { searchTransports } from './adtLs/transport/searchTransports'
-export { searchTransportsSimple } from './adtLs/transport/searchTransportsSimple'
+// CTS Transport
+export { assignTransportToObject } from './adtLs/cts/transport/assignTransportToObject'
+export { checkTransportForObjectLock } from './adtLs/cts/transport/checkTransportForObjectLock'
+export { createTransportForObjectLock } from './adtLs/cts/transport/createTransportForObjectLock'
+export { searchTransports } from './adtLs/cts/transport/searchTransports'
+export { searchTransportsSimple } from './adtLs/cts/transport/searchTransportsSimple'
 
 // Document symbol
 export { documentSymbols } from './adtLs/documentSymbol/documentSymbols'

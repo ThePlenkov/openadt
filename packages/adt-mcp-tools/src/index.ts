@@ -1,5 +1,6 @@
 export {
   adt_quick_search,
+  adt_get_ls_uri,
   adt_check_transport_lock,
   adt_create_transport,
   adt_assign_transport,
@@ -30,6 +31,7 @@ export {
 // Export all tools as array for MCP server registration
 import {
   adt_quick_search,
+  adt_get_ls_uri,
   adt_check_transport_lock,
   adt_create_transport,
   adt_assign_transport,
@@ -59,6 +61,7 @@ import {
 
 export const mcpTools = [
   adt_quick_search,
+  adt_get_ls_uri,
   adt_check_transport_lock,
   adt_create_transport,
   adt_assign_transport,

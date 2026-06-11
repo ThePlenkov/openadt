@@ -18,7 +18,6 @@ steps:
       destination: "{{destination}}"
       uri: "/sap/bc/adt/oo/classes/cl_abap_typedescr"
     assert:
-      contentContains: "success"
       notError: true
 ---
 

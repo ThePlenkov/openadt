@@ -16,8 +16,8 @@ steps:
   - tool: adt_format
     args:
       destination: "{{destination}}"
-      uri: "/sap/bc/adt/oo/classes/zcl_example"
-      code: "REPORT ztest."
+      uri: "/sap/bc/adt/oo/classes/cl_abap_typedescr"
+      content: "REPORT ztest."
     assert:
       notError: true
 ---

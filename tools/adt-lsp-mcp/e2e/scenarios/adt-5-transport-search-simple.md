@@ -16,7 +16,7 @@ steps:
   - tool: adt_search_transports_simple
     args:
       destination: "{{destination}}"
-      query: "DEVK9*"
+      query: "*"
     assert:
       notError: true
 ---

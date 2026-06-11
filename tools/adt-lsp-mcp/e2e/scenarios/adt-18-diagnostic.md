@@ -16,7 +16,7 @@ steps:
   - tool: adt_diagnostic
     args:
       destination: "{{destination}}"
-      uri: "/sap/bc/adt/oo/classes/zcl_example"
+      uri: "/sap/bc/adt/oo/classes/cl_abap_typedescr"
     assert:
       notError: true
 ---

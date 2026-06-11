@@ -1,7 +1,7 @@
 ---
 code: adt-23
 id: atc-workflow
-title: ATC workflow: get variants, run check, load results
+title: "ATC workflow: get variants, run check, load results"
 tags: [atc, workflow]
 mode: standalone
 given: >-

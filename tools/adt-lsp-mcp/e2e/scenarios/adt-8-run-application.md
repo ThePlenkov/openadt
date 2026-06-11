@@ -16,7 +16,7 @@ steps:
   - tool: adt_run_application
     args:
       destination: "{{destination}}"
-      uri: "/sap/bc/adt/wd/applications/ztest_app"
+      uri: "/sap/bc/adt/programs/sap_start"
     assert:
       notError: true
 ---

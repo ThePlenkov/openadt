@@ -16,8 +16,8 @@ steps:
   - tool: adt_create_transport
     args:
       destination: "{{destination}}"
-      uri: "/sap/bc/adt/oo/classes/zcl_example"
-      transportId: "DEVK900000"
+      uri: "/sap/bc/adt/oo/classes/cl_abap_typedescr"
+      transportId: ""
     assert:
       notError: true
 ---

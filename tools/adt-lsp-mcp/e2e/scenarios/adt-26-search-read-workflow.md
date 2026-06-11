@@ -1,7 +1,7 @@
 ---
 code: adt-26
 id: search-read-workflow
-title: Search and read workflow: quick search, get folder URI, force refresh
+title: "Search and read workflow: quick search, get folder URI, force refresh"
 tags: [repository, workflow]
 mode: standalone
 given: >-

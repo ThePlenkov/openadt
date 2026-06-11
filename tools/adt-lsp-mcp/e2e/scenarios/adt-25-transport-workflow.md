@@ -1,7 +1,7 @@
 ---
 code: adt-25
 id: transport-workflow
-title: Transport workflow: check lock, create, assign
+title: "Transport workflow: check lock, create, assign"
 tags: [transport, workflow]
 mode: standalone
 given: >-
