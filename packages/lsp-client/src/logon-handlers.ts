@@ -207,17 +207,32 @@ export async function getLogonState(
   }
 }
 
-export async function ensureDestinationLoggedOn(
+function buildLogonDidNotCompleteMessage(
+  destinationId: string,
+  state: string | undefined,
+  err: unknown
+): Error {
+  return new Error(
+    `Logon to ${destinationId} did not complete (${state ?? 'unknown'}): ${formatError(err)}`
+  )
+}
+
+function buildLogonTimeoutMessage(destinationId: string, state: string | undefined): Error {
+  const detail = lastLogonFailureMessage ?? state ?? 'unknown'
+  return new Error(
+    `Logon to ${destinationId} did not reach 'connected' (${detail}). ` +
+      'Approve Secure Login / SSO if prompted. If this repeats: run with --verbose, ' +
+      'stop stale adt-lsc (pkill adt-lsc on macOS/Linux, Get-Process adt-lsc | Stop-Process -Force on Windows), ' +
+      'check ~/.openadt/local.openadt.toml jco_native_dir/sapcrypto.'
+  )
+}
+
+async function awaitEnsureLoggedOnResponse(
   connection: MessageConnection,
   destinationId: string,
-  options: { timeoutMs: number; log?: McpLog }
-): Promise<void> {
-  const { timeoutMs, log } = options
-  lastLogonFailureMessage = undefined
-  console.error(
-    `[openadt-mcp] Starting SAP logon for ${destinationId} — approve SSO / Secure Login if a window opens (timeout ${Math.round(timeoutMs / 1000)}s).`
-  )
-  log?.info(`LSP → adtLs/destinations/ensureLoggedOn ${destinationId}`)
+  timeoutMs: number,
+  log: McpLog | undefined
+): Promise<string | undefined> {
   try {
     await withTimeout(
       connection.sendRequest('adtLs/destinations/ensureLoggedOn', destinationId),
@@ -225,25 +240,40 @@ export async function ensureDestinationLoggedOn(
       'adtLs/destinations/ensureLoggedOn'
     )
     log?.info(`LSP ← ensureLoggedOn ${destinationId} ok`)
+    return undefined
   } catch (err) {
     const state = await getLogonState(connection, destinationId)
     if (state === 'connected') {
       log?.info(`ensureLoggedOn timed out but logonState=connected`)
-      return
+      return undefined
     }
-    throw new Error(
-      `Logon to ${destinationId} did not complete (${state ?? 'unknown'}): ${formatError(err)}`
-    )
+    throw buildLogonDidNotCompleteMessage(destinationId, state, err)
   }
+}
+
+function announceLogonStart(
+  destinationId: string,
+  timeoutMs: number,
+  log: McpLog | undefined
+): void {
+  lastLogonFailureMessage = undefined
+  console.error(
+    `[openadt-mcp] Starting SAP logon for ${destinationId} — approve SSO / Secure Login if a window opens (timeout ${Math.round(timeoutMs / 1000)}s).`
+  )
+  log?.info(`LSP → adtLs/destinations/ensureLoggedOn ${destinationId}`)
+}
+
+export async function ensureDestinationLoggedOn(
+  connection: MessageConnection,
+  destinationId: string,
+  options: { timeoutMs: number; log?: McpLog }
+): Promise<void> {
+  const { timeoutMs, log } = options
+  announceLogonStart(destinationId, timeoutMs, log)
+  await awaitEnsureLoggedOnResponse(connection, destinationId, timeoutMs, log)
   const state = await getLogonState(connection, destinationId)
   if (state !== 'connected') {
-    const detail = lastLogonFailureMessage ?? state ?? 'unknown'
-    throw new Error(
-      `Logon to ${destinationId} did not reach 'connected' (${detail}). ` +
-        'Approve Secure Login / SSO if prompted. If this repeats: run with --verbose, ' +
-        'stop stale adt-lsc (pkill adt-lsc on macOS/Linux, Get-Process adt-lsc | Stop-Process -Force on Windows), ' +
-        'check ~/.openadt/local.openadt.toml jco_native_dir/sapcrypto.'
-    )
+    throw buildLogonTimeoutMessage(destinationId, state)
   }
 }
 

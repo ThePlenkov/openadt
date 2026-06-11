@@ -444,12 +444,20 @@ export function createStdioMcpBridge(): StdioMcpBridge {
     return true
   }
 
-  function canAnswerLocalTool(request: ParsedRpc | undefined): boolean {
-    if (!agentRegistry || !lspConnection || !agentDestination || !isToolCallRequest(request)) {
-      return false
-    }
+  function hasAgentRuntime(): boolean {
+    return (
+      agentRegistry !== undefined && lspConnection !== undefined && agentDestination !== undefined
+    )
+  }
+
+  function isToolCallForRegisteredAgent(request: ParsedRpc | undefined): boolean {
+    if (!hasAgentRuntime() || !isToolCallRequest(request)) return false
     const { name } = toolCallParams(request.params)
-    return agentRegistry.has(name)
+    return agentRegistry!.has(name)
+  }
+
+  function canAnswerLocalTool(request: ParsedRpc | undefined): boolean {
+    return isToolCallForRegisteredAgent(request)
   }
 
   const handleNoProxyMessage = (message: McpStdioMessage, request: ParsedRpc | undefined): void => {
@@ -457,6 +465,22 @@ export function createStdioMcpBridge(): StdioMcpBridge {
     chain.append(async () => {
       await replyError(message, new JsonRpcError(-32001, 'Tool not available in no-proxy mode'))
     })
+  }
+
+  function tryAnswerLocalHandlers(request: ParsedRpc | undefined): boolean {
+    if (tryAnswerLocalGuidance(request)) return true
+    if (tryAnswerLocalReadTool(request)) return true
+    if (tryAnswerLocalAgentTool(request)) return true
+    return false
+  }
+
+  function forwardProxyModeRequest(message: McpStdioMessage, request: ParsedRpc | undefined): void {
+    if (tryAnswerLocalHandlers(request)) return
+    const injectMethod = guidanceEnabled() ? request?.method : undefined
+    const outbound = new McpStdioMessage(
+      rewriteToolsCallRequest({ body: message.body, registry: toolNames })
+    )
+    chain.append(() => forwardToBackend(outbound, request, injectMethod))
   }
 
   const forwardHttpOne = (message: McpStdioMessage): void => {
@@ -469,14 +493,7 @@ export function createStdioMcpBridge(): StdioMcpBridge {
       return
     }
     const request = parseRpc(message.body)
-    if (tryAnswerLocalGuidance(request)) return
-    if (tryAnswerLocalReadTool(request)) return
-    if (tryAnswerLocalAgentTool(request)) return
-    const injectMethod = guidanceEnabled() ? request?.method : undefined
-    const outbound = new McpStdioMessage(
-      rewriteToolsCallRequest({ body: message.body, registry: toolNames })
-    )
-    chain.append(() => forwardToBackend(outbound, request, injectMethod))
+    forwardProxyModeRequest(message, request)
   }
 
   const forwardToBackend = async (

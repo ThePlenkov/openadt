@@ -48,18 +48,28 @@ export function getCliFlag(argv: string[], flag: string): string | undefined {
   return undefined
 }
 
+const LOCAL_EXECUTOR_ALIASES = ['local', 'cursor', 'openadt-runner'] as const
+
+function isLocalExecutorAlias(norm: string): boolean {
+  return (LOCAL_EXECUTOR_ALIASES as readonly string[]).includes(norm)
+}
+
+function isAcpExecutorAlias(norm: string): boolean {
+  return (ACP_EXECUTOR_ALIASES as readonly string[]).includes(norm)
+}
+
+function resolveExecutorFromFlag(raw: string): E2eExecutor {
+  const norm = raw.toLowerCase().trim()
+  if (isLocalExecutorAlias(norm)) return 'local'
+  if (isAcpExecutorAlias(norm)) return 'acp'
+  throw new Error(`Unknown executor "${raw}". Use acp (or --acp), or omit for local bun run.`)
+}
+
 export function resolveE2eExecutor(argv: string[]): E2eExecutor {
   if (argv.includes('--acp')) return 'acp'
   const raw = getCliFlag(argv, '--command') ?? getCliFlag(argv, '--executor')
   if (!raw) return 'local'
-  const norm = raw.toLowerCase().trim()
-  if (norm === 'local' || norm === 'cursor' || norm === 'openadt-runner') {
-    return 'local'
-  }
-  if ((ACP_EXECUTOR_ALIASES as readonly string[]).includes(norm)) {
-    return 'acp'
-  }
-  throw new Error(`Unknown executor "${raw}". Use acp (or --acp), or omit for local bun run.`)
+  return resolveExecutorFromFlag(raw)
 }
 
 export function resolveE2eAgent(opts: CliOptions): string {
@@ -165,10 +175,18 @@ function pickSingleAdtlsMatch(destinations: AdtlsEntry[], opts: CliOptions): str
 
 function matchesAdtlsEntry(d: AdtlsEntry, opts: CliOptions, system: string): boolean {
   const p = d.properties ?? {}
-  if (p.systemId?.toUpperCase() !== system.toUpperCase()) return false
+  if (!systemIdMatches(p.systemId, system)) return false
   if (opts.client && p.client !== opts.client) return false
-  if (opts.user && p.user?.toUpperCase() !== opts.user.toUpperCase()) return false
+  if (opts.user && !userMatches(p.user, opts.user)) return false
   return Boolean(d.id?.trim())
+}
+
+function systemIdMatches(actual: string | undefined, expected: string): boolean {
+  return actual?.toUpperCase() === expected.toUpperCase()
+}
+
+function userMatches(actual: string | undefined, expected: string): boolean {
+  return actual?.toUpperCase() === expected.toUpperCase()
 }
 
 function autoResolvePartialDestination(opts: CliOptions): string {

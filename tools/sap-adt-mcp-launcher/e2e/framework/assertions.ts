@@ -163,17 +163,26 @@ function pickArrayLength(value: Record<string, unknown>): number | undefined {
   return undefined
 }
 
+function isStructuredObject(value: unknown): value is Record<string, unknown> {
+  return Boolean(value) && typeof value === 'object' && !Array.isArray(value)
+}
+
+function lengthFromNestedArray(data: unknown): number | undefined {
+  if (Array.isArray(data)) return data.length
+  if (!isStructuredObject(data)) return undefined
+  return pickArrayLength(data)
+}
+
 function arrayLength(structured: unknown): number {
   if (Array.isArray(structured)) return structured.length
-  if (!structured || typeof structured !== 'object') return 0
-  const o = structured as Record<string, unknown>
-  const top = pickArrayLength(o)
-  if (top !== undefined) return top
-  const data = o.data
-  if (Array.isArray(data)) return data.length
-  if (data && typeof data === 'object') {
-    const nested = pickArrayLength(data as Record<string, unknown>)
-    if (nested !== undefined) return nested
-  }
-  return 0
+  if (!isStructuredObject(structured)) return 0
+  return topLevelArrayLength(structured) ?? nestedDataArrayLength(structured.data)
+}
+
+function topLevelArrayLength(o: Record<string, unknown>): number | undefined {
+  return pickArrayLength(o)
+}
+
+function nestedDataArrayLength(data: unknown): number {
+  return lengthFromNestedArray(data) ?? 0
 }

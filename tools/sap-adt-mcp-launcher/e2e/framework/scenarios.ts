@@ -58,21 +58,39 @@ export function parseScenarioMarkdown(raw: string): {
   return { meta, body }
 }
 
-function assertRequiredFrontmatter(file: string, meta: Frontmatter, body: string): void {
+const GWT_KEYS = ['given', 'when', 'then'] as const
+
+function assertCodePresent(file: string, meta: Frontmatter): void {
   if (!meta.code) {
     throw new Error(`Invalid scenario file: ${file} (missing code: mcp-N or adt-N)`)
   }
+}
+
+function assertIdAndStepsPresent(file: string, meta: Frontmatter): void {
   if (!meta.id || !meta.steps?.length) {
     throw new Error(`Invalid scenario file: ${file} (need id + steps in frontmatter)`)
   }
+}
+
+function assertBodyPresent(file: string, body: string): void {
   if (!body) {
     throw new Error(`Invalid scenario file: ${file} (markdown body required for agent brief)`)
   }
-  for (const key of ['given', 'when', 'then'] as const) {
+}
+
+function assertGwtFrontmatter(file: string, meta: Frontmatter): void {
+  for (const key of GWT_KEYS) {
     if (!meta[key]?.trim()) {
       throw new Error(`Invalid scenario file: ${file} (frontmatter requires ${key})`)
     }
   }
+}
+
+function assertRequiredFrontmatter(file: string, meta: Frontmatter, body: string): void {
+  assertCodePresent(file, meta)
+  assertIdAndStepsPresent(file, meta)
+  assertBodyPresent(file, body)
+  assertGwtFrontmatter(file, meta)
 }
 
 function assertScenarioFilename(file: string, code: string, id: string): void {
@@ -141,28 +159,50 @@ function scenarioFileMatchesSelector(file: string, selector: string): boolean {
 }
 
 /** Load scenarios from `<root>/scenarios/` only — optional filename pre-filter (avoids bulk YAML parse failures). */
+function collectScenarioFiles(root: string, selector?: string): string[] {
+  const dir = scenariosDir(root)
+  if (!existsSync(dir)) return []
+  return readdirSync(dir)
+    .filter((f) => f.endsWith('.md'))
+    .filter((f) => !selector?.trim() || scenarioFileMatchesSelector(f, selector))
+    .sort()
+}
+
+function parseScenarioFile(dir: string, file: string): Scenario {
+  const raw = readFileSync(join(dir, file), 'utf8')
+  const { meta, body } = parseScenarioMarkdown(raw)
+  return toScenario(file, meta, body)
+}
+
+function handleScenarioError(file: string, err: unknown, skipInvalid: boolean | undefined): void {
+  if (!skipInvalid) throw err
+  const message = err instanceof Error ? err.message : String(err)
+  console.warn(`Skipping scenario file ${file}: ${message}`)
+}
+
+function appendScenario(
+  out: Scenario[],
+  dir: string,
+  file: string,
+  skipInvalid: boolean | undefined
+): void {
+  try {
+    out.push(parseScenarioFile(dir, file))
+  } catch (err) {
+    handleScenarioError(file, err, skipInvalid)
+  }
+}
+
 export function loadScenariosFromRoot(
   root: string,
   selector?: string,
   options?: { skipInvalid?: boolean }
 ): Scenario[] {
   const dir = scenariosDir(root)
-  if (!existsSync(dir)) return []
-  const files = readdirSync(dir)
-    .filter((f) => f.endsWith('.md'))
-    .filter((f) => !selector?.trim() || scenarioFileMatchesSelector(f, selector))
-    .sort()
+  const files = collectScenarioFiles(root, selector)
   const out: Scenario[] = []
   for (const file of files) {
-    try {
-      const raw = readFileSync(join(dir, file), 'utf8')
-      const { meta, body } = parseScenarioMarkdown(raw)
-      out.push(toScenario(file, meta, body))
-    } catch (err) {
-      if (!options?.skipInvalid) throw err
-      const message = err instanceof Error ? err.message : String(err)
-      console.warn(`Skipping scenario file ${file}: ${message}`)
-    }
+    appendScenario(out, dir, file, options?.skipInvalid)
   }
   return out
 }

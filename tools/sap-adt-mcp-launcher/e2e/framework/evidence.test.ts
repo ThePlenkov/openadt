@@ -51,10 +51,68 @@ describe('evidence', () => {
     }
   })
 
+  function buildGivenWhenThenReportInput(
+    root: string,
+    results: ScenarioResult[]
+  ): WriteEvidenceReportInput {
+    const { runId, path } = createEvidencePath(root, 'mcp-1', true)
+    return {
+      path,
+      runId,
+      startedAt: '2026-06-10T13:00:00.000Z',
+      finishedAt: '2026-06-10T13:00:01.000Z',
+      exitCode: 0,
+      opts: {
+        evidence: true,
+        resolveDestination: false,
+        importFrom: 'adtls',
+        port: 2239,
+        timeoutMs: 300_000,
+        list: false,
+      },
+      ctx: {
+        destination: 'ABC_200_USER_EN',
+        pattern: 'CL_ABAP*',
+        importFrom: 'adtls',
+        port: 2239,
+        timeoutMs: 300_000,
+      },
+      scenarios: [
+        {
+          code: 'mcp-1',
+          id: 'list-destinations',
+          file: 'mcp-1-list-destinations.md',
+          title: 'List',
+          given: 'destination {{destination}} is ready',
+          when: 'call abap_list_destinations',
+          then: 'response includes {{destination}}',
+          intent: '# test',
+          steps: [{ tool: 'abap_list_destinations' }],
+        },
+      ],
+      results,
+      mcpMode: 'standalone',
+    }
+  }
+
+  function assertGivenWhenThenInReport(md: string): void {
+    expect(md).toContain('**Verdict:** ✅ PASS')
+    expect(md).toContain('### 🟢 Given')
+    expect(md).toContain('### ⚡ When')
+    expect(md).toContain('### 🎯 Then (expected)')
+    expect(md).toContain('destinations_include')
+    expect(md).toContain('📦 Response payload')
+    expect(md).toContain('**Destination:** ABC_200_USER_EN')
+    expect(md).toContain('**Command:** `bun run e2e -- mcp-1 --destination ABC_200_USER_EN`')
+    expect(md).toContain('tools/sap-adt-mcp-launcher/e2e/scenarios/mcp-1-list-destinations.md')
+    expect(md).toContain(`**Agent:** ${DEFAULT_E2E_AGENT}`)
+    expect(md).toContain(`**Model / LLM:** ${DEFAULT_E2E_MODEL}`)
+    expect(md).toContain('**Execution:** framework')
+  }
+
   test('writeEvidenceReport writes Given/When/Then evidence', () => {
     const root = mkdtempSync(join(tmpdir(), 'openadt-e2e-'))
     try {
-      const { runId, path } = createEvidencePath(root, 'mcp-1', true)
       const results: ScenarioResult[] = [
         {
           code: 'mcp-1',
@@ -82,56 +140,10 @@ describe('evidence', () => {
           ],
         },
       ]
-      writeEvidenceReport({
-        path,
-        runId,
-        startedAt: '2026-06-10T13:00:00.000Z',
-        finishedAt: '2026-06-10T13:00:01.000Z',
-        exitCode: 0,
-        opts: {
-          evidence: true,
-          resolveDestination: false,
-          importFrom: 'adtls',
-          port: 2239,
-          timeoutMs: 300_000,
-          list: false,
-        },
-        ctx: {
-          destination: 'ABC_200_USER_EN',
-          pattern: 'CL_ABAP*',
-          importFrom: 'adtls',
-          port: 2239,
-          timeoutMs: 300_000,
-        },
-        scenarios: [
-          {
-            code: 'mcp-1',
-            id: 'list-destinations',
-            file: 'mcp-1-list-destinations.md',
-            title: 'List',
-            given: 'destination {{destination}} is ready',
-            when: 'call abap_list_destinations',
-            then: 'response includes {{destination}}',
-            intent: '# test',
-            steps: [{ tool: 'abap_list_destinations' }],
-          },
-        ],
-        results,
-        mcpMode: 'standalone',
-      })
-      const md = readFileSync(path, 'utf8')
-      expect(md).toContain('**Verdict:** ✅ PASS')
-      expect(md).toContain('### 🟢 Given')
-      expect(md).toContain('### ⚡ When')
-      expect(md).toContain('### 🎯 Then (expected)')
-      expect(md).toContain('destinations_include')
-      expect(md).toContain('📦 Response payload')
-      expect(md).toContain('**Destination:** ABC_200_USER_EN')
-      expect(md).toContain('**Command:** `bun run e2e -- mcp-1 --destination ABC_200_USER_EN`')
-      expect(md).toContain('tools/sap-adt-mcp-launcher/e2e/scenarios/mcp-1-list-destinations.md')
-      expect(md).toContain(`**Agent:** ${DEFAULT_E2E_AGENT}`)
-      expect(md).toContain(`**Model / LLM:** ${DEFAULT_E2E_MODEL}`)
-      expect(md).toContain('**Execution:** framework')
+      const input = buildGivenWhenThenReportInput(root, results)
+      writeEvidenceReport(input)
+      const md = readFileSync(input.path, 'utf8')
+      assertGivenWhenThenInReport(md)
     } finally {
       rmSync(root, { recursive: true, force: true })
     }
