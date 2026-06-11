@@ -8,7 +8,7 @@ given: >-
   MCP stdio launcher runs in standalone mode with --no-proxy --import-from=adtls;
   user destination {{destination}} is registered and logon-ready.
 when: >-
-  Call adt_create_transport with destination {{destination}}, uri, and transportId.
+  Call adt_create_transport with destination {{destination}}, uri, operationType, and description.
 then: >-
   MCP returns a tool result with transport creation status;
   isError is false; response contains success information.
@@ -17,7 +17,8 @@ steps:
     args:
       destination: "{{destination}}"
       uri: "/sap/bc/adt/oo/classes/cl_abap_typedescr"
-      transportId: ""
+      operationType: "MODIFICATION"
+      description: "Test transport for adt-3 scenario"
     assert:
       notError: true
 ---

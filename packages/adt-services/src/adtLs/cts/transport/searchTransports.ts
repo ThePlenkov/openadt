@@ -8,11 +8,14 @@ export const searchTransports: LspEndpoint = lspEndpoint({
   method: 'adtLs/cts/transport/searchTransports',
   types: {
     params: type<{
-      destination: string
-      user?: string
-      status?: 'modifiable' | 'released' | 'all'
-      targetSystem?: string
-      transportType?: string
+      destinationId: string
+      number?: string
+      owner?: string
+      function?: string[]
+      status?: string[]
+      fromDate?: string
+      toDate?: string
+      limit?: number
     }>(),
     response: type<{
       success: boolean

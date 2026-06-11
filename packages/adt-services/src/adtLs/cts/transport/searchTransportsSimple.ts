@@ -8,9 +8,9 @@ export const searchTransportsSimple: LspEndpoint = lspEndpoint({
   method: 'adtLs/cts/transport/searchTransportsSimple',
   types: {
     params: type<{
-      destination: string
-      user?: string
-      status?: 'modifiable' | 'released' | 'all'
+      destinationId: string
+      owner: string
+      function: string
     }>(),
     response: type<{
       success: boolean

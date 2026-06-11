@@ -18,5 +18,8 @@
     "@openadt/lsp-client": "workspace:*",
     "@openadt/adt-config": "workspace:*",
     "zod": "^4.4.3"
+  },
+  "inlinedDependencies": {
+    "vscode-jsonrpc": "8.2.1"
   }
 }

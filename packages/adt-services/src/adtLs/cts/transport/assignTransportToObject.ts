@@ -8,9 +8,8 @@ export const assignTransportToObject: LspEndpoint = lspEndpoint({
   method: 'adtLs/cts/transport/assignTransportToObject',
   types: {
     params: type<{
-      destination: string
-      uri: string
-      transportId: string
+      objectUri: string
+      transport: string
     }>(),
     response: type<{ success: boolean }>(),
   },

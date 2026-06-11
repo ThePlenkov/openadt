@@ -8,14 +8,19 @@ export const createTransportForObjectLock: LspEndpoint = lspEndpoint({
   method: 'adtLs/cts/transport/createTransportForObjectLock',
   types: {
     params: type<{
-      destination: string
-      uri: string
-      transportType: 'workbench' | 'customizing'
       description?: string
+      ctsProject?: string
+      changeGuid?: string
+      checkData: {
+        operationType: 'CREATION' | 'MODIFICATION'
+        objectInfo: { objectUri: string }
+        transportLayer?: string
+        isRecordChanges?: boolean
+      }
     }>(),
     response: type<{
-      success: boolean
       transportId: string
+      transportRequest: unknown
     }>(),
   },
 })

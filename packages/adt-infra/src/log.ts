@@ -29,6 +29,13 @@ export function createMcpLog(options: { verbose?: boolean; logFile?: string }): 
   return new FileMcpLog(logPath)
 }
 
+export function createToolLogger(options: {
+  verbose?: boolean
+  logFile?: string
+}): McpLog | undefined {
+  return createMcpLog(options)
+}
+
 /** Redact Bearer tokens and common secret fields before writing logs. */
 export function redactSecrets(text: string): string {
   return text

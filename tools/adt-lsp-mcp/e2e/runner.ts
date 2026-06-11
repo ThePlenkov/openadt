@@ -157,11 +157,12 @@ async function runScenario(
   console.log(`--- ${scenario.code} ${scenario.id}: ${scenario.title} ---`)
   const client = new AdtLspMcpClient(launcher, ctx.destination, ctx.timeoutMs)
   const steps: StepResult[] = []
+  const extractedValues: Record<string, string> = {}
 
   try {
     await client.start()
     for (const step of scenario.steps) {
-      const args = substituteArgs(step.args, ctx)
+      const args = substituteArgs(step.args, { ...ctx, ...extractedValues })
       const t0 = Date.now()
       let result: unknown
       try {
@@ -188,7 +189,27 @@ async function runScenario(
         continue
       }
       const payload = extractToolPayload(result)
-      const verdict = evaluateAssert(substituteAssert(step.assert, ctx), payload)
+
+      // Extract values if step has extract configuration
+      if ('extract' in step && typeof step.extract === 'object' && step.extract !== null) {
+        try {
+          const responseData = JSON.parse(payload.contentText)
+          for (const [key, jsonPath] of Object.entries(step.extract as Record<string, string>)) {
+            const value = getJsonPathValue(responseData, jsonPath)
+            if (value !== undefined) {
+              extractedValues[key] = String(value)
+              console.log(`  Extracted ${key}=${value}`)
+            }
+          }
+        } catch (err) {
+          console.log(`  Warning: Failed to extract values: ${err}`)
+        }
+      }
+
+      const verdict = evaluateAssert(
+        substituteAssert(step.assert, { ...ctx, ...extractedValues }),
+        payload
+      )
       const icon = verdict.ok ? '✓' : '✗'
       console.log(`${icon} ${step.tool}: ${redact(verdict.detail, ctx)}`)
       steps.push({
@@ -215,6 +236,16 @@ async function runScenario(
     passed,
     steps,
   }
+}
+
+function getJsonPathValue(obj: unknown, path: string): unknown {
+  const parts = path.split('.')
+  let current: unknown = obj
+  for (const part of parts) {
+    if (current === null || typeof current !== 'object') return undefined
+    current = (current as Record<string, unknown>)[part]
+  }
+  return current
 }
 
 function printSummary(results: ScenarioResult[]): void {

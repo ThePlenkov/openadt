@@ -10,6 +10,8 @@ export {
 
 export {
   createMcpLog,
+  createToolLogger,
+  isMcpDebugEnabled,
   type McpLog,
   eclipseWorkspaceLogPath,
   redactSecrets,

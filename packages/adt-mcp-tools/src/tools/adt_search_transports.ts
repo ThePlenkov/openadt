@@ -13,6 +13,13 @@ const schema = z.object({
   destination: z
     .string()
     .describe('SAP destination id (SID_CLIENT_USER_LANG, e.g. ABC_200_USER_EN)'),
+  number: z.string().optional().describe('Transport number filter (optional)'),
+  owner: z.string().optional().describe('Owner filter (optional)'),
+  function: z.array(z.string()).optional().describe('Function filter (optional)'),
+  status: z.array(z.string()).optional().describe('Status filter (optional)'),
+  fromDate: z.string().optional().describe('From date filter (optional)'),
+  toDate: z.string().optional().describe('To date filter (optional)'),
+  limit: z.number().optional().describe('Limit results (optional)'),
 })
 
 export const adt_search_transports = tool({
@@ -23,7 +30,14 @@ export const adt_search_transports = tool({
   handler: async (args: z.infer<typeof schema>, transport: LspTransport) => {
     try {
       const lspResult = await callLspContract(searchTransports, transport, {
-        destination: args.destination,
+        destinationId: args.destination,
+        number: args.number,
+        owner: args.owner,
+        function: args.function,
+        status: args.status,
+        fromDate: args.fromDate,
+        toDate: args.toDate,
+        limit: args.limit,
       })
 
       return {

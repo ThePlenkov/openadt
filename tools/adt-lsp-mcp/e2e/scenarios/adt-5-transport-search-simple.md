@@ -16,7 +16,8 @@ steps:
   - tool: adt_search_transports_simple
     args:
       destination: "{{destination}}"
-      query: "*"
+      owner: "PPLENKOV"
+      function: "*"
     assert:
       notError: true
 ---

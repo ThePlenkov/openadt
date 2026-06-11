@@ -8,6 +8,8 @@ import { assignTransportToObject } from '@openadt/adt-services'
 import type { LspTransport } from '@openadt/lsp-client'
 import { callLspContract } from '@openadt/lsp-client'
 
+const LSP_METHOD_REPOSITORY_GET_LS_URI = 'adtLs/repository/getLsUri'
+
 // Zod schema (single source of truth)
 const schema = z.object({
   destination: z
@@ -16,7 +18,7 @@ const schema = z.object({
   uri: z
     .string()
     .describe(
-      'Object URI (ADT path or repotree URI; use getLsUri after adt_quick_search when unsure)'
+      'ADT object path from adt_quick_search (e.g. /sap/bc/adt/oo/classes/cl_x); tool resolves repotree URI via getLsUri'
     ),
   transportId: z.string().describe('Transport request number to assign'),
 })
@@ -24,14 +26,23 @@ const schema = z.object({
 export const adt_assign_transport = tool({
   name: 'adt_assign_transport',
   description:
-    'Assign a transport to an ABAP object (adtLs/cts/transport/assignTransportToObject). Search transports first with adt_search_transports_simple.',
+    'Assign an ABAP object to a transport request (adtLs/cts/transport/assignTransportToObject). This tool calls getLsUri internally to resolve the repotree URI; do NOT call adt_get_ls_uri first. Pass ADT path from adt_quick_search as uri. Search for available transports first with adt_search_transports_simple to get a valid transportId.',
   inputSchema: schema,
   handler: async (args: z.infer<typeof schema>, transport: LspTransport) => {
     try {
-      const lspResult = await callLspContract(assignTransportToObject, transport, {
+      const lsUriResult = (await transport.sendRequest(LSP_METHOD_REPOSITORY_GET_LS_URI, {
         destination: args.destination,
-        uri: args.uri,
-        transportId: args.transportId,
+        adtUri: args.uri,
+      })) as { uri?: string }
+      const objectUri = lsUriResult?.uri
+
+      if (!objectUri) {
+        throw new Error('getLsUri returned no URI')
+      }
+
+      const lspResult = await callLspContract(assignTransportToObject, transport, {
+        objectUri,
+        transport: args.transportId,
       })
 
       return {

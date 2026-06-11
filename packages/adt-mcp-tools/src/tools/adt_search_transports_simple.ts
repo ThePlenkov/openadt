@@ -13,6 +13,8 @@ const schema = z.object({
   destination: z
     .string()
     .describe('SAP destination id (SID_CLIENT_USER_LANG, e.g. ABC_200_USER_EN)'),
+  owner: z.string().describe('Owner user ID (required)'),
+  function: z.string().describe('Transport function (required; use "*" for all)'),
 })
 
 export const adt_search_transports_simple = tool({
@@ -23,7 +25,9 @@ export const adt_search_transports_simple = tool({
   handler: async (args: z.infer<typeof schema>, transport: LspTransport) => {
     try {
       const lspResult = await callLspContract(searchTransportsSimple, transport, {
-        destination: args.destination,
+        destinationId: args.destination,
+        owner: args.owner,
+        function: args.function,
       })
 
       return {
