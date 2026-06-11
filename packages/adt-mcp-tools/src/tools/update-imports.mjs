@@ -22,6 +22,8 @@ const files = readdirSync(__dirname, { withFileTypes: true })
 
 for (const file of files) {
   const filePath = join(__dirname, file)
+  // filePath is derived from readdirSync(__dirname), not user input.
+  // eslint-disable-next-line security/detect-non-literal-fs-filename
   let content = readFileSync(filePath, 'utf-8')
 
   // Replace imports with shared packages
@@ -47,6 +49,7 @@ for (const file of files) {
     "from '@openadt/adt-config';"
   )
 
+  // eslint-disable-next-line security/detect-non-literal-fs-filename
   writeFileSync(filePath, content)
   console.log(`Updated ${file}`)
 }

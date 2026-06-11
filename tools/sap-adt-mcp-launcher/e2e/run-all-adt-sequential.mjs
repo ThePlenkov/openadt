@@ -1,4 +1,5 @@
 #!/usr/bin/env bun
+/* global Bun */
 /**
  * Sequential ADT scenario runner — runs each scenario in fresh context using /e2e skill.
  * Ensures isolated, fair testing with evidence collection for each scenario.

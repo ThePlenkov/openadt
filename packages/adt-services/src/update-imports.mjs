@@ -11,6 +11,8 @@ const __filename = fileURLToPath(import.meta.url)
 const __dirname = dirname(__filename)
 
 function updateDirectory(dir, patterns) {
+  // file is derived from readdirSync(dir), not user input.
+  // eslint-disable-next-line security/detect-non-literal-fs-filename
   const files = readdirSync(dir, { withFileTypes: true, recursive: true })
     .filter(
       (dirent) => dirent.isFile() && dirent.name.endsWith('.ts') && !dirent.name.endsWith('.mjs')
@@ -18,12 +20,14 @@ function updateDirectory(dir, patterns) {
     .map((dirent) => join(dirent.path, dirent.name))
 
   for (const file of files) {
+    // eslint-disable-next-line security/detect-non-literal-fs-filename
     let content = readFileSync(file, 'utf-8')
 
     for (const [pattern, replacement] of patterns) {
       content = content.replace(pattern, replacement)
     }
 
+    // eslint-disable-next-line security/detect-non-literal-fs-filename
     writeFileSync(file, content)
     console.log(`Updated ${file}`)
   }
