@@ -1,245 +1,235 @@
 /**
  * Resolve which merged PR numbers to harvest under filter criteria.
  */
-import { gh } from "./review-debt-gh.ts";
+import { gh } from './review-debt-gh.ts'
 
 export interface MergedPrCandidate {
-  number: number;
-  mergedAt: string;
-  author: string;
-  labels: string[];
+  number: number
+  mergedAt: string
+  author: string
+  labels: string[]
 }
 
 export interface HarvestPrFilters {
-  prIds: number[];
-  mergedSince: string | null;
-  mergedUntil: string | null;
-  lastN: number | null;
-  prAuthor: string | null;
-  labels: string[];
+  prIds: number[]
+  mergedSince: string | null
+  mergedUntil: string | null
+  lastN: number | null
+  prAuthor: string | null
+  labels: string[]
 }
 
 function parseCsvParts(value: string | null | undefined): string[] {
   if (!value?.trim()) {
-    return [];
+    return []
   }
-  return value.split(",").map((part) => part.trim());
+  return value.split(',').map((part) => part.trim())
 }
 
 function parseCsvMapped<T>(
   value: string | null | undefined,
-  mapPart: (part: string) => T | null,
+  mapPart: (part: string) => T | null
 ): T[] {
-  const out: T[] = [];
-  const seen = new Set<T>();
+  const out: T[] = []
+  const seen = new Set<T>()
   for (const part of parseCsvParts(value)) {
-    const mapped = mapPart(part);
+    const mapped = mapPart(part)
     if (mapped === null || seen.has(mapped)) {
-      continue;
+      continue
     }
-    seen.add(mapped);
-    out.push(mapped);
+    seen.add(mapped)
+    out.push(mapped)
   }
-  return out;
+  return out
 }
 
 export function parseCsvInts(value: string | null | undefined): number[] {
   return parseCsvMapped(value, (part) => {
-    const n = Number(part);
+    const n = Number(part)
     if (!Number.isFinite(n) || n <= 0) {
-      return null;
+      return null
     }
-    return n;
-  });
+    return n
+  })
 }
 
 export function parseCsvStrings(value: string | null | undefined): string[] {
-  return parseCsvMapped(value, (part) => (part.length > 0 ? part : null));
+  return parseCsvMapped(value, (part) => (part.length > 0 ? part : null))
 }
 
 function dayStart(isoDate: string): number {
-  return new Date(`${isoDate}T00:00:00.000Z`).getTime();
+  return new Date(`${isoDate}T00:00:00.000Z`).getTime()
 }
 
 function dayEnd(isoDate: string): number {
-  return new Date(`${isoDate}T23:59:59.999Z`).getTime();
+  return new Date(`${isoDate}T23:59:59.999Z`).getTime()
 }
 
 export function filterByMergedDate(
   prs: MergedPrCandidate[],
   since: string | null,
-  until: string | null,
+  until: string | null
 ): MergedPrCandidate[] {
-  const sinceMs = since ? dayStart(since) : null;
-  const untilMs = until ? dayEnd(until) : null;
+  const sinceMs = since ? dayStart(since) : null
+  const untilMs = until ? dayEnd(until) : null
 
   return prs.filter((pr) => {
-    const mergedMs = new Date(pr.mergedAt).getTime();
+    const mergedMs = new Date(pr.mergedAt).getTime()
     if (sinceMs !== null && mergedMs < sinceMs) {
-      return false;
+      return false
     }
     if (untilMs !== null && mergedMs > untilMs) {
-      return false;
+      return false
     }
-    return true;
-  });
+    return true
+  })
 }
 
-export function filterByLabels(
-  prs: MergedPrCandidate[],
-  required: string[],
-): MergedPrCandidate[] {
+export function filterByLabels(prs: MergedPrCandidate[], required: string[]): MergedPrCandidate[] {
   if (required.length === 0) {
-    return prs;
+    return prs
   }
-  const wanted = required.map((l) => l.toLowerCase());
+  const wanted = required.map((l) => l.toLowerCase())
   return prs.filter((pr) => {
-    const have = new Set(pr.labels.map((l) => l.toLowerCase()));
-    return wanted.every((label) => have.has(label));
-  });
+    const have = new Set(pr.labels.map((l) => l.toLowerCase()))
+    return wanted.every((label) => have.has(label))
+  })
 }
 
 function isPositiveLastN(lastN: number | null): lastN is number {
   if (lastN === null) {
-    return false;
+    return false
   }
   if (!Number.isFinite(lastN)) {
-    return false;
+    return false
   }
-  return lastN > 0;
+  return lastN > 0
 }
 
-export function applyLastN(
-  prs: MergedPrCandidate[],
-  lastN: number | null,
-): MergedPrCandidate[] {
-  const sorted = [...prs].sort((a, b) => b.mergedAt.localeCompare(a.mergedAt));
+export function applyLastN(prs: MergedPrCandidate[], lastN: number | null): MergedPrCandidate[] {
+  const sorted = [...prs].sort((a, b) => b.mergedAt.localeCompare(a.mergedAt))
   if (!isPositiveLastN(lastN)) {
-    return sorted;
+    return sorted
   }
-  return sorted.slice(0, lastN);
+  return sorted.slice(0, lastN)
 }
 
 export function fetchMergedPrCandidates(opts: {
-  owner: string;
-  repo: string;
-  prAuthor: string | null;
-  label: string | null;
-  limit: number;
+  owner: string
+  repo: string
+  prAuthor: string | null
+  label: string | null
+  limit: number
 }): MergedPrCandidate[] {
   const args = [
-    "pr",
-    "list",
-    "--repo",
+    'pr',
+    'list',
+    '--repo',
     `${opts.owner}/${opts.repo}`,
-    "--state",
-    "merged",
-    "--limit",
+    '--state',
+    'merged',
+    '--limit',
     String(opts.limit),
-    "--json",
-    "number,mergedAt,author,labels",
-  ];
+    '--json',
+    'number,mergedAt,author,labels',
+  ]
   if (opts.prAuthor) {
-    args.push("--author", opts.prAuthor);
+    args.push('--author', opts.prAuthor)
   }
   if (opts.label) {
-    args.push("--label", opts.label);
+    args.push('--label', opts.label)
   }
 
   const raw = JSON.parse(gh(args)) as Array<{
-    number: number;
-    mergedAt: string | null;
-    author?: { login?: string };
-    labels?: Array<{ name: string }>;
-  }>;
+    number: number
+    mergedAt: string | null
+    author?: { login?: string }
+    labels?: Array<{ name: string }>
+  }>
 
   return raw
     .filter((row) => row.mergedAt)
     .map((row) => ({
       number: row.number,
       mergedAt: row.mergedAt!,
-      author: row.author?.login ?? "unknown",
+      author: row.author?.login ?? 'unknown',
       labels: (row.labels ?? []).map((l) => l.name),
-    }));
+    }))
 }
 
 function fetchExplicitMergedPrs(opts: {
-  owner: string;
-  repo: string;
-  prIds: number[];
+  owner: string
+  repo: string
+  prIds: number[]
 }): MergedPrCandidate[] {
-  const out: MergedPrCandidate[] = [];
+  const out: MergedPrCandidate[] = []
   for (const number of opts.prIds) {
     let viewed: {
-      number: number;
-      mergedAt: string | null;
-      state: string;
-      author?: { login?: string };
-      labels?: Array<{ name: string }>;
-    };
+      number: number
+      mergedAt: string | null
+      state: string
+      author?: { login?: string }
+      labels?: Array<{ name: string }>
+    }
     try {
       viewed = JSON.parse(
         gh([
-          "pr",
-          "view",
+          'pr',
+          'view',
           String(number),
-          "--repo",
+          '--repo',
           `${opts.owner}/${opts.repo}`,
-          "--json",
-          "number,mergedAt,author,labels,state",
-        ]),
-      ) as typeof viewed;
+          '--json',
+          'number,mergedAt,author,labels,state',
+        ])
+      ) as typeof viewed
     } catch {
-      console.error(`warning: PR #${number} fetch failed — skipped`);
-      continue;
+      console.error(`warning: PR #${number} fetch failed — skipped`)
+      continue
     }
-    if (viewed.state !== "MERGED" || !viewed.mergedAt) {
-      console.error(`warning: PR #${number} is not merged — skipped`);
-      continue;
+    if (viewed.state !== 'MERGED' || !viewed.mergedAt) {
+      console.error(`warning: PR #${number} is not merged — skipped`)
+      continue
     }
     out.push({
       number: viewed.number,
       mergedAt: viewed.mergedAt,
-      author: viewed.author?.login ?? "unknown",
+      author: viewed.author?.login ?? 'unknown',
       labels: (viewed.labels ?? []).map((l) => l.name),
-    });
+    })
   }
-  return out;
+  return out
 }
 
 export function resolveHarvestPrs(opts: {
-  owner: string;
-  repo: string;
-  filters: HarvestPrFilters;
-  listLimit?: number;
+  owner: string
+  repo: string
+  filters: HarvestPrFilters
+  listLimit?: number
 }): MergedPrCandidate[] {
-  const limit = opts.listLimit ?? 100;
+  const limit = opts.listLimit ?? 100
 
-  let candidates: MergedPrCandidate[];
+  let candidates: MergedPrCandidate[]
   if (opts.filters.prIds.length > 0) {
     candidates = fetchExplicitMergedPrs({
       owner: opts.owner,
       repo: opts.repo,
       prIds: opts.filters.prIds,
-    });
+    })
   } else {
-    const label = opts.filters.labels[0] ?? null;
+    const label = opts.filters.labels[0] ?? null
     candidates = fetchMergedPrCandidates({
       owner: opts.owner,
       repo: opts.repo,
       prAuthor: opts.filters.prAuthor,
       label,
       limit,
-    });
-    candidates = filterByLabels(candidates, opts.filters.labels);
+    })
+    candidates = filterByLabels(candidates, opts.filters.labels)
   }
 
-  candidates = filterByMergedDate(
-    candidates,
-    opts.filters.mergedSince,
-    opts.filters.mergedUntil,
-  );
-  return applyLastN(candidates, opts.filters.lastN);
+  candidates = filterByMergedDate(candidates, opts.filters.mergedSince, opts.filters.mergedUntil)
+  return applyLastN(candidates, opts.filters.lastN)
 }
 
 export function hasHarvestSelection(filters: HarvestPrFilters): boolean {
@@ -250,5 +240,5 @@ export function hasHarvestSelection(filters: HarvestPrFilters): boolean {
     (filters.lastN !== null && filters.lastN > 0) ||
     filters.prAuthor !== null ||
     filters.labels.length > 0
-  );
+  )
 }

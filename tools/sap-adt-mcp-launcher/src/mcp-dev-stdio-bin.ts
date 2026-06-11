@@ -6,14 +6,14 @@
  *
  * Usage: openadt-mcp-dev.exe [--port 2238] [--import-from none] …
  */
-const userArgs = process.argv.slice(2);
+const userArgs = process.argv.slice(2)
 process.argv = [
   process.argv[0]!,
-  process.argv[1] ?? "openadt-mcp-dev",
-  "serve",
-  "--stdio",
+  process.argv[1] ?? 'openadt-mcp-dev',
+  'serve',
+  '--stdio',
   ...userArgs,
-];
-await import("./cli/main.ts");
+]
+await import('./cli/main.ts')
 
-export {};
+export {}

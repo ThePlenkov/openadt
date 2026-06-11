@@ -1,4 +1,4 @@
-import tseslint from "typescript-eslint";
+import tseslint from 'typescript-eslint'
 
 /**
  * OpenADT ESLint config — CodeScene-matching complexity thresholds.
@@ -23,43 +23,31 @@ import tseslint from "typescript-eslint";
 export default tseslint.config(
   {
     ignores: [
-      "node_modules/**",
-      ".nx/**",
-      ".kilo/**",
-      "target/**",
-      "dist/**",
-      "**/generated/**",
-      "packaging/**",
-      "homebrew-openadt/**",
-      "scoop-bucket/**",
-      "*.md",
-      "*.json",
-      "*.jsonc",
+      'node_modules/**',
+      '.nx/**',
+      '.kilo/**',
+      'target/**',
+      'dist/**',
+      '**/generated/**',
+      'packaging/**',
+      'homebrew-openadt/**',
+      'scoop-bucket/**',
+      '*.md',
+      '*.json',
+      '*.jsonc',
     ],
   },
   // ── Tier 1: STRICT (gates --max-warnings 0) ─────────────────────
   {
-    files: [
-      "scripts/**/*.{js,mjs,cjs,ts,tsx}",
-      ".agents/skills/**/*.{js,mjs,cjs,ts,tsx}",
-    ],
+    files: ['scripts/**/*.{js,mjs,cjs,ts,tsx}', '.agents/skills/**/*.{js,mjs,cjs,ts,tsx}'],
     rules: {
-      complexity: ["error", { max: 9 }],
-      "max-depth": ["error", 4],
-      "max-params": ["error", 4],
-      "max-lines-per-function": [
-        "error",
-        { max: 70, skipBlankLines: true, skipComments: true },
-      ],
-      "max-lines": [
-        "error",
-        { max: 1000, skipBlankLines: true, skipComments: true },
-      ],
-      "@typescript-eslint/no-explicit-any": "warn",
-      "@typescript-eslint/no-unused-vars": [
-        "warn",
-        { argsIgnorePattern: "^_" },
-      ],
+      complexity: ['error', { max: 9 }],
+      'max-depth': ['error', 4],
+      'max-params': ['error', 4],
+      'max-lines-per-function': ['error', { max: 70, skipBlankLines: true, skipComments: true }],
+      'max-lines': ['error', { max: 1000, skipBlankLines: true, skipComments: true }],
+      '@typescript-eslint/no-explicit-any': 'warn',
+      '@typescript-eslint/no-unused-vars': ['warn', { argsIgnorePattern: '^_' }],
     },
   },
   // ── Tier 2: WARN everywhere else (advisory, non-blocking) ───────
@@ -67,22 +55,13 @@ export default tseslint.config(
     ...config,
     rules: {
       ...config.rules,
-      complexity: ["warn", { max: 9 }],
-      "max-depth": ["warn", 4],
-      "max-params": ["warn", 4],
-      "max-lines-per-function": [
-        "warn",
-        { max: 70, skipBlankLines: true, skipComments: true },
-      ],
-      "max-lines": [
-        "warn",
-        { max: 1000, skipBlankLines: true, skipComments: true },
-      ],
-      "@typescript-eslint/no-explicit-any": "warn",
-      "@typescript-eslint/no-unused-vars": [
-        "warn",
-        { argsIgnorePattern: "^_" },
-      ],
+      complexity: ['warn', { max: 9 }],
+      'max-depth': ['warn', 4],
+      'max-params': ['warn', 4],
+      'max-lines-per-function': ['warn', { max: 70, skipBlankLines: true, skipComments: true }],
+      'max-lines': ['warn', { max: 1000, skipBlankLines: true, skipComments: true }],
+      '@typescript-eslint/no-explicit-any': 'warn',
+      '@typescript-eslint/no-unused-vars': ['warn', { argsIgnorePattern: '^_' }],
     },
   })),
   // ── Tier 1 exceptions: known CC overflow on legacy scripts/ ────
@@ -90,9 +69,9 @@ export default tseslint.config(
   // (flat config: the last matching block wins per-rule). Tracked for
   // follow-up refactor; add new exceptions here only with justification.
   {
-    files: ["scripts/nx-openadt.ts", "scripts/sdk-classpath.ts"],
+    files: ['scripts/nx-openadt.ts', 'scripts/sdk-classpath.ts'],
     rules: {
-      complexity: "off", // firstSubcommandIndex=12, buildSdkClasspathEntries=10
+      complexity: 'off', // firstSubcommandIndex=12, buildSdkClasspathEntries=10
     },
-  },
-);
+  }
+)

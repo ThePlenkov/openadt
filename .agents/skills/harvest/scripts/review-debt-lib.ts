@@ -142,11 +142,7 @@ export function listHarvestPaths(): string[] {
   return listHarvestFiles()
 }
 
-export function harvestFilename(opts: {
-  harvestedAt: string
-  pr: number
-  runId: string
-}): string {
+export function harvestFilename(opts: { harvestedAt: string; pr: number; runId: string }): string {
   const d = new Date(opts.harvestedAt)
   const pad = (n: number): string => String(n).padStart(2, '0')
   const ts =

@@ -18,111 +18,107 @@ import {
   writeHarvestFile,
   writeSummary,
   type DebtRecord,
-} from "./review-debt-lib.ts";
-import {
-  ensureGhAuth,
-  fetchReviewThreads,
-  gh,
-} from "./review-debt-gh.ts";
-import { bodyPreview, deriveArea, fingerprint } from "./review-debt-text.ts";
+} from './review-debt-lib.ts'
+import { ensureGhAuth, fetchReviewThreads, gh } from './review-debt-gh.ts'
+import { bodyPreview, deriveArea, fingerprint } from './review-debt-text.ts'
 
 interface HarvestArgs {
-  owner: string;
-  repo: string;
-  pr: number;
-  mergedSha: string;
-  runId: string;
-  dryRun: boolean;
+  owner: string
+  repo: string
+  pr: number
+  mergedSha: string
+  runId: string
+  dryRun: boolean
 }
 
 function readFlag(argv: string[], index: number): [string | null, number] {
-  const value = argv[index + 1];
-  if (!value || value.startsWith("--")) {
-    return [null, index];
+  const value = argv[index + 1]
+  if (!value || value.startsWith('--')) {
+    return [null, index]
   }
-  return [value, index + 1];
+  return [value, index + 1]
 }
 
 interface HarvestParseState {
-  positional: string[];
-  mergedSha: string;
-  runId: string;
-  dryRun: boolean;
+  positional: string[]
+  mergedSha: string
+  runId: string
+  dryRun: boolean
 }
 
 const HARVEST_FLAG_HANDLERS: Record<
   string,
   (state: HarvestParseState, argv: string[], i: number) => number
 > = {
-  "--dry-run": (state) => {
-    state.dryRun = true;
-    return 0;
+  '--dry-run': (state) => {
+    state.dryRun = true
+    return 0
   },
-  "--merged-sha": (state, argv, i) => {
-    const [value, next] = readFlag(argv, i);
-    state.mergedSha = value ?? "";
-    return next - i;
+  '--merged-sha': (state, argv, i) => {
+    const [value, next] = readFlag(argv, i)
+    state.mergedSha = value ?? ''
+    return next - i
   },
-  "--run-id": (state, argv, i) => {
-    const [value, next] = readFlag(argv, i);
+  '--run-id': (state, argv, i) => {
+    const [value, next] = readFlag(argv, i)
     if (value) {
-      state.runId = value;
+      state.runId = value
     }
-    return next - i;
+    return next - i
   },
-};
+}
 
 function applyHarvestToken(
   state: HarvestParseState,
   arg: string,
   argv: string[],
-  index: number,
+  index: number
 ): number {
-  const handler = HARVEST_FLAG_HANDLERS[arg];
+  const handler = HARVEST_FLAG_HANDLERS[arg]
   if (!handler) {
-    state.positional.push(arg);
-    return 0;
+    state.positional.push(arg)
+    return 0
   }
-  return handler(state, argv, index);
+  return handler(state, argv, index)
 }
 
 function parseArgs(argv: string[]): HarvestArgs {
   const state: HarvestParseState = {
     positional: [],
-    mergedSha: "",
-    runId: "local",
+    mergedSha: '',
+    runId: 'local',
     dryRun: false,
-  };
-
-  for (let i = 0; i < argv.length; i += 1) {
-    i += applyHarvestToken(state, argv[i]!, argv, i);
   }
 
-  return finalizeHarvestArgs(state);
+  for (let i = 0; i < argv.length; i += 1) {
+    i += applyHarvestToken(state, argv[i]!, argv, i)
+  }
+
+  return finalizeHarvestArgs(state)
 }
 
 function missingHarvestPositionals(
   owner: string | undefined,
   repo: string | undefined,
-  pr: number,
+  pr: number
 ): boolean {
   if (!owner) {
-    return true;
+    return true
   }
   if (!repo) {
-    return true;
+    return true
   }
-  return !Number.isFinite(pr);
+  return !Number.isFinite(pr)
 }
 
 function finalizeHarvestArgs(opts: HarvestParseState): HarvestArgs {
-  const [owner, repo, prRaw] = opts.positional;
-  const pr = Number(prRaw);
+  const [owner, repo, prRaw] = opts.positional
+  const pr = Number(prRaw)
   if (missingHarvestPositionals(owner, repo, pr)) {
     console.error(
-      "Usage: harvest-threads.ts OWNER REPO PR_NUMBER [--merged-sha SHA] [--run-id ID] [--dry-run]",
-    );
-    process.exit(2);
+      'Usage: harvest-threads.ts OWNER REPO PR_NUMBER [--merged-sha SHA] [--run-id ID] [--dry-run]'
+    )
+    process.exit(2)
   }
   return {
     owner,
@@ -131,67 +127,67 @@ function finalizeHarvestArgs(opts: HarvestParseState): HarvestArgs {
     mergedSha: opts.mergedSha,
     runId: opts.runId,
     dryRun: opts.dryRun,
-  };
+  }
 }
 
 function fetchPrMeta(opts: HarvestArgs): {
-  title: string;
-  url: string;
-  mergedAt: string;
-  mergeSha: string;
+  title: string
+  url: string
+  mergedAt: string
+  mergeSha: string
 } {
   const viewed = JSON.parse(
     gh([
-      "pr",
-      "view",
+      'pr',
+      'view',
       String(opts.pr),
-      "--repo",
+      '--repo',
       `${opts.owner}/${opts.repo}`,
-      "--json",
-      "title,url,mergedAt,mergeCommit,state",
-    ]),
+      '--json',
+      'title,url,mergedAt,mergeCommit,state',
+    ])
   ) as {
-    title: string;
-    url: string;
-    mergedAt: string | null;
-    mergeCommit?: { oid: string };
-    state: string;
-  };
-
-  if (viewed.state !== "MERGED") {
-    throw new Error(`PR #${opts.pr} is not merged (state=${viewed.state})`);
+    title: string
+    url: string
+    mergedAt: string | null
+    mergeCommit?: { oid: string }
+    state: string
   }
 
-  const mergeSha = opts.mergedSha || viewed.mergeCommit?.oid || "";
+  if (viewed.state !== 'MERGED') {
+    throw new Error(`PR #${opts.pr} is not merged (state=${viewed.state})`)
+  }
+
+  const mergeSha = opts.mergedSha || viewed.mergeCommit?.oid || ''
   return {
     title: viewed.title,
     url: viewed.url,
     mergedAt: viewed.mergedAt ?? new Date().toISOString(),
     mergeSha,
-  };
+  }
 }
 
 function threadUrl(prUrl: string, threadId: string): string {
-  return `${prUrl}#${threadId}`;
+  return `${prUrl}#${threadId}`
 }
 
 function toDebtRecord(opts: {
-  thread: Awaited<ReturnType<typeof fetchReviewThreads>>[number];
-  meta: ReturnType<typeof fetchPrMeta>;
-  pr: number;
-  runId: string;
-  harvestedAt: string;
-  classification: ReturnType<typeof classifyThread>;
+  thread: Awaited<ReturnType<typeof fetchReviewThreads>>[number]
+  meta: ReturnType<typeof fetchPrMeta>
+  pr: number
+  runId: string
+  harvestedAt: string
+  classification: ReturnType<typeof classifyThread>
 }): DebtRecord {
-  const comment = opts.thread.comments.nodes[0] ?? {};
-  const author = comment.author?.login ?? "unknown";
-  const path = comment.path ?? "";
-  const body = comment.body ?? "";
+  const comment = opts.thread.comments.nodes[0] ?? {}
+  const author = comment.author?.login ?? 'unknown'
+  const path = comment.path ?? ''
+  const body = comment.body ?? ''
 
   return {
     thread_id: opts.thread.id,
     thread_url: threadUrl(opts.meta.url, opts.thread.id),
-    status: "open",
+    status: 'open',
     priority: opts.classification.priority,
     needs: opts.classification.needs,
     source_pr: opts.pr,
@@ -212,90 +208,84 @@ function toDebtRecord(opts: {
     fix_pr: null,
     fixed_at: null,
     notes: null,
-  };
+  }
 }
 
 export interface HarvestPrResult {
-  pr: number;
-  incoming: DebtRecord[];
-  skipped: number;
-  skippedOutdated: number;
-  skippedThreadAuthor: number;
+  pr: number
+  incoming: DebtRecord[]
+  skipped: number
+  skippedOutdated: number
+  skippedThreadAuthor: number
 }
 
-type SkipReason = "outdated" | "thread_author" | "config";
+type SkipReason = 'outdated' | 'thread_author' | 'config'
 type ThreadAction =
-  | { kind: "skip"; reason: SkipReason }
+  | { kind: 'skip'; reason: SkipReason }
   | {
-      kind: "harvest";
-      author: string;
-      classification: ReturnType<typeof classifyThread>;
-    };
+      kind: 'harvest'
+      author: string
+      classification: ReturnType<typeof classifyThread>
+    }
 
-function authorMatchesFilter(
-  author: string,
-  threadAuthor: string | null,
-): boolean {
-  const needle = threadAuthor?.toLowerCase();
-  return !needle || author.toLowerCase().includes(needle);
+function authorMatchesFilter(author: string, threadAuthor: string | null): boolean {
+  const needle = threadAuthor?.toLowerCase()
+  return !needle || author.toLowerCase().includes(needle)
 }
 
 function classifyThreadAction(opts: {
-  thread: Awaited<ReturnType<typeof fetchReviewThreads>>[number];
-  threadAuthor: string | null;
-  config: ReturnType<typeof loadConfig>;
+  thread: Awaited<ReturnType<typeof fetchReviewThreads>>[number]
+  threadAuthor: string | null
+  config: ReturnType<typeof loadConfig>
 }): ThreadAction | null {
   if (opts.thread.isResolved || opts.thread.isOutdated) {
-    return opts.thread.isOutdated ? { kind: "skip", reason: "outdated" } : null;
+    return opts.thread.isOutdated ? { kind: 'skip', reason: 'outdated' } : null
   }
-  const author = opts.thread.comments.nodes[0]?.author?.login ?? "unknown";
+  const author = opts.thread.comments.nodes[0]?.author?.login ?? 'unknown'
   if (!authorMatchesFilter(author, opts.threadAuthor)) {
-    return { kind: "skip", reason: "thread_author" };
+    return { kind: 'skip', reason: 'thread_author' }
   }
-  const classification = classifyThread({ author, config: opts.config });
+  const classification = classifyThread({ author, config: opts.config })
   if (!classification.harvest) {
-    return { kind: "skip", reason: "config" };
+    return { kind: 'skip', reason: 'config' }
   }
-  return { kind: "harvest", author, classification };
+  return { kind: 'harvest', author, classification }
 }
 
-function recordSkip(
-  counts: Omit<HarvestPrResult, "pr" | "incoming">,
-  reason: SkipReason,
-): void {
-  if (reason === "outdated") {
-    counts.skippedOutdated += 1;
-  } else if (reason === "thread_author") {
-    counts.skippedThreadAuthor += 1;
+function recordSkip(counts: Omit<HarvestPrResult, 'pr' | 'incoming'>, reason: SkipReason): void {
+  if (reason === 'outdated') {
+    counts.skippedOutdated += 1
+  } else if (reason === 'thread_author') {
+    counts.skippedThreadAuthor += 1
   } else {
-    counts.skipped += 1;
+    counts.skipped += 1
   }
 }
 
 function collectHarvestRows(opts: {
-  threads: Awaited<ReturnType<typeof fetchReviewThreads>>;
-  config: ReturnType<typeof loadConfig>;
-  meta: ReturnType<typeof fetchPrMeta>;
-  pr: number;
-  runId: string;
-  harvestedAt: string;
-  threadAuthor: string | null;
-}): Omit<HarvestPrResult, "pr"> {
-  const incoming: DebtRecord[] = [];
-  const counts = { skipped: 0, skippedOutdated: 0, skippedThreadAuthor: 0 };
+  threads: Awaited<ReturnType<typeof fetchReviewThreads>>
+  config: ReturnType<typeof loadConfig>
+  meta: ReturnType<typeof fetchPrMeta>
+  pr: number
+  runId: string
+  harvestedAt: string
+  threadAuthor: string | null
+}): Omit<HarvestPrResult, 'pr'> {
+  const incoming: DebtRecord[] = []
+  const counts = { skipped: 0, skippedOutdated: 0, skippedThreadAuthor: 0 }
 
   for (const thread of opts.threads) {
     const action = classifyThreadAction({
       thread,
       threadAuthor: opts.threadAuthor,
       config: opts.config,
-    });
+    })
     if (!action) {
-      continue;
+      continue
     }
-    if (action.kind === "skip") {
-      recordSkip(counts, action.reason);
-      continue;
+    if (action.kind === 'skip') {
+      recordSkip(counts, action.reason)
+      continue
     }
     incoming.push(
       toDebtRecord({
@@ -305,38 +295,38 @@ function collectHarvestRows(opts: {
         runId: opts.runId,
         harvestedAt: opts.harvestedAt,
         classification: action.classification,
-      }),
-    );
+      })
+    )
   }
 
-  return { incoming, ...counts };
+  return { incoming, ...counts }
 }
 
 export async function harvestOnePr(opts: {
-  owner: string;
-  repo: string;
-  pr: number;
-  mergedSha?: string;
-  runId: string;
-  threadAuthor?: string | null;
+  owner: string
+  repo: string
+  pr: number
+  mergedSha?: string
+  runId: string
+  threadAuthor?: string | null
 }): Promise<HarvestPrResult> {
   const args: HarvestArgs = {
     owner: opts.owner,
     repo: opts.repo,
     pr: opts.pr,
-    mergedSha: opts.mergedSha ?? "",
+    mergedSha: opts.mergedSha ?? '',
     runId: opts.runId,
     dryRun: false,
-  };
+  }
 
-  const config = loadConfig();
-  const meta = fetchPrMeta(args);
-  const harvestedAt = new Date().toISOString();
+  const config = loadConfig()
+  const meta = fetchPrMeta(args)
+  const harvestedAt = new Date().toISOString()
   const threads = await fetchReviewThreads({
     owner: opts.owner,
     repo: opts.repo,
     pr: opts.pr,
-  });
+  })
 
   const collected = collectHarvestRows({
     threads,
@@ -346,22 +336,22 @@ export async function harvestOnePr(opts: {
     runId: opts.runId,
     harvestedAt,
     threadAuthor: opts.threadAuthor ?? null,
-  });
+  })
 
-  return { pr: opts.pr, ...collected };
+  return { pr: opts.pr, ...collected }
 }
 
 function logHarvestResult(result: HarvestPrResult): void {
   console.error(
     `harvest: PR #${result.pr} — ${result.incoming.length} thread(s) harvested, ` +
       `${result.skipped} ignored (config), ${result.skippedOutdated} skipped (outdated), ` +
-      `${result.skippedThreadAuthor} skipped (thread-author)`,
-  );
+      `${result.skippedThreadAuthor} skipped (thread-author)`
+  )
 }
 
 async function main(): Promise<void> {
-  const args = parseArgs(process.argv.slice(2));
-  ensureGhAuth();
+  const args = parseArgs(process.argv.slice(2))
+  ensureGhAuth()
 
   const result = await harvestOnePr({
     owner: args.owner,
@@ -369,37 +359,37 @@ async function main(): Promise<void> {
     pr: args.pr,
     mergedSha: args.mergedSha,
     runId: args.runId,
-  });
+  })
 
-  logHarvestResult(result);
+  logHarvestResult(result)
 
   if (args.dryRun) {
     for (const row of result.incoming) {
-      console.log(JSON.stringify(row));
+      console.log(JSON.stringify(row))
     }
-    return;
+    return
   }
 
   if (result.incoming.length === 0) {
-    console.error("harvest: no harvestable threads");
-    return;
+    console.error('harvest: no harvestable threads')
+    return
   }
 
-  const harvestedAt = result.incoming[0]!.harvested_at;
+  const harvestedAt = result.incoming[0]!.harvested_at
   const path = writeHarvestFile({
     pr: args.pr,
     runId: args.runId,
     harvestedAt,
     records: result.incoming,
-  });
-  writeSummary(buildSummary(readDebtRecords()));
+  })
+  writeSummary(buildSummary(readDebtRecords()))
 
-  console.error(`harvest: wrote ${result.incoming.length} row(s) to ${path}`);
+  console.error(`harvest: wrote ${result.incoming.length} row(s) to ${path}`)
 }
 
 if (import.meta.main) {
   main().catch((err: unknown) => {
-    console.error(err instanceof Error ? err.message : err);
-    process.exit(1);
-  });
+    console.error(err instanceof Error ? err.message : err)
+    process.exit(1)
+  })
 }

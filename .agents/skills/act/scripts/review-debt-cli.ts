@@ -21,7 +21,7 @@ const SUBCOMMANDS = {
   done: 'update-debt-status.ts',
 } as const
 
-type Subcommand = keyof typeof SUBCOMMANDS;
+type Subcommand = keyof typeof SUBCOMMANDS
 
 function usage(): never {
   console.error(`Usage:
@@ -92,13 +92,13 @@ function runCommand(cmd: string, rest: string[]): number {
 }
 
 function main(): void {
-  const [cmd, ...rest] = process.argv.slice(2);
+  const [cmd, ...rest] = process.argv.slice(2)
   if (wantsUsage(cmd)) {
-    usage();
+    usage()
   }
-  process.exit(runCommand(cmd!, rest));
+  process.exit(runCommand(cmd!, rest))
 }
 
 if (import.meta.main) {
-  main();
+  main()
 }

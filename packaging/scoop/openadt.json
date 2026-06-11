@@ -16,9 +16,7 @@
     "JDK 21": "java/openjdk21",
     "Bun (for openadt mcp)": "main/bun"
   },
-  "post_install": [
-    "& (Join-Path $dir 'bin\\scoop-post-install.ps1') -InstallDir $dir"
-  ],
+  "post_install": ["& (Join-Path $dir 'bin\\scoop-post-install.ps1') -InstallDir $dir"],
   "checkver": {
     "github": "abapify/openadt"
   },

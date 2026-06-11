@@ -7,11 +7,7 @@
  * status, stop, bridge, print-config). The dev shim injects "serve --stdio"
  * for the MCP Inspector; the published binary does not.
  */
-process.argv = [
-  process.argv[0]!,
-  process.argv[1] ?? "openadt-mcp",
-  ...process.argv.slice(2),
-];
-await import("./cli/main.ts");
+process.argv = [process.argv[0]!, process.argv[1] ?? 'openadt-mcp', ...process.argv.slice(2)]
+await import('./cli/main.ts')
 
-export {};
+export {}

@@ -7,4 +7,4 @@ export {
   Trace,
   TraceFormat,
   type MessageConnection,
-} from "vscode-jsonrpc/node.js";
+} from 'vscode-jsonrpc/node.js'

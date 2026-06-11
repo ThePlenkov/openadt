@@ -13,24 +13,24 @@ import {
 } from '../tools/sap-adt-mcp-launcher/e2e/framework/evidence'
 import { runAiTests } from '../tools/sap-adt-mcp-launcher/e2e/framework/runner'
 
-process.env.OPENADT_E2E_EVIDENCE = "1";
-const repoRoot = resolveRepoRoot(dirname(fileURLToPath(import.meta.url)));
-const argv = process.argv.slice(2);
-const cli = parseCli(argv);
+process.env.OPENADT_E2E_EVIDENCE = '1'
+const repoRoot = resolveRepoRoot(dirname(fileURLToPath(import.meta.url)))
+const argv = process.argv.slice(2)
+const cli = parseCli(argv)
 
-if (cli.executor === "acp") {
-  const { exitCode } = runE2eDispatch(cli, repoRoot);
-  process.exit(exitCode);
+if (cli.executor === 'acp') {
+  const { exitCode } = runE2eDispatch(cli, repoRoot)
+  process.exit(exitCode)
 }
-if (!argv.includes("--evidence")) {
-  argv.push("--evidence");
+if (!argv.includes('--evidence')) {
+  argv.push('--evidence')
 }
-if (!argv.includes("--evidence-dir")) {
-  argv.push("--evidence-dir", defaultEvidenceRoot(repoRoot));
+if (!argv.includes('--evidence-dir')) {
+  argv.push('--evidence-dir', defaultEvidenceRoot(repoRoot))
 }
 
-const { exitCode, evidencePath } = await runAiTests(parseCli(argv));
+const { exitCode, evidencePath } = await runAiTests(parseCli(argv))
 if (evidencePath) {
-  console.log(`E2E_EVIDENCE_FILE=${evidencePath}`);
+  console.log(`E2E_EVIDENCE_FILE=${evidencePath}`)
 }
-process.exit(exitCode);
+process.exit(exitCode)

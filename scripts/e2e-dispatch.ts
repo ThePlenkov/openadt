@@ -9,6 +9,6 @@ import { parseCli } from '../tools/sap-adt-mcp-launcher/e2e/framework/context'
 import { runE2eDispatch } from '../tools/sap-adt-mcp-launcher/e2e/framework/dispatch'
 import { resolveRepoRoot } from '../tools/sap-adt-mcp-launcher/e2e/framework/evidence'
 
-const repoRoot = resolveRepoRoot(dirname(fileURLToPath(import.meta.url)));
-const { exitCode } = runE2eDispatch(parseCli(process.argv.slice(2)), repoRoot);
-process.exit(exitCode);
+const repoRoot = resolveRepoRoot(dirname(fileURLToPath(import.meta.url)))
+const { exitCode } = runE2eDispatch(parseCli(process.argv.slice(2)), repoRoot)
+process.exit(exitCode)

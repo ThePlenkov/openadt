@@ -1,44 +1,44 @@
 /**
  * GitHub CLI helpers for review-debt harvest.
  */
-import type { ReviewThreadNode } from "./review-debt-lib.ts";
+import type { ReviewThreadNode } from './review-debt-lib.ts'
 
 export function gh(args: string[]): string {
-  const proc = Bun.spawnSync(["gh", ...args], {
-    stdout: "pipe",
-    stderr: "pipe",
-  });
+  const proc = Bun.spawnSync(['gh', ...args], {
+    stdout: 'pipe',
+    stderr: 'pipe',
+  })
   if (proc.exitCode !== 0) {
-    const err = new TextDecoder().decode(proc.stderr).trim();
-    throw new Error(`gh ${args[0]} failed: ${err}`);
+    const err = new TextDecoder().decode(proc.stderr).trim()
+    throw new Error(`gh ${args[0]} failed: ${err}`)
   }
-  return new TextDecoder().decode(proc.stdout);
+  return new TextDecoder().decode(proc.stdout)
 }
 
 export function ensureGhAuth(): void {
-  const proc = Bun.spawnSync(["gh", "auth", "status"], {
-    stdout: "ignore",
-    stderr: "ignore",
-  });
+  const proc = Bun.spawnSync(['gh', 'auth', 'status'], {
+    stdout: 'ignore',
+    stderr: 'ignore',
+  })
   if (proc.exitCode !== 0) {
-    console.error("error: gh not authenticated");
-    process.exit(1);
+    console.error('error: gh not authenticated')
+    process.exit(1)
   }
 }
 
 export interface GhPrTarget {
-  owner: string;
-  repo: string;
-  pr: number;
+  owner: string
+  repo: string
+  pr: number
 }
 
 interface ThreadPage {
-  nodes: ReviewThreadNode[];
-  pageInfo: { hasNextPage: boolean; endCursor: string | null };
+  nodes: ReviewThreadNode[]
+  pageInfo: { hasNextPage: boolean; endCursor: string | null }
 }
 
 function escapeGraphqlCursor(cursor: string): string {
-  return cursor.replace(/\\/g, "\\\\").replace(/"/g, '\\"');
+  return cursor.replace(/\\/g, '\\\\').replace(/"/g, '\\"')
 }
 
 function reviewThreadsQuery(afterClause: string): string {
@@ -59,74 +59,70 @@ function reviewThreadsQuery(afterClause: string): string {
           }
         }
       }
-    }`;
+    }`
 }
 
 function parseThreadPage(raw: string, pr: number): ThreadPage {
   const parsed = JSON.parse(raw) as {
     data?: {
       repository?: {
-        pullRequest?: { reviewThreads?: ThreadPage };
-      };
-    };
-    errors?: unknown;
-  };
+        pullRequest?: { reviewThreads?: ThreadPage }
+      }
+    }
+    errors?: unknown
+  }
 
   if (parsed.errors) {
-    throw new Error(`GraphQL errors: ${JSON.stringify(parsed.errors)}`);
+    throw new Error(`GraphQL errors: ${JSON.stringify(parsed.errors)}`)
   }
 
-  const threads = parsed.data?.repository?.pullRequest?.reviewThreads;
+  const threads = parsed.data?.repository?.pullRequest?.reviewThreads
   if (!threads) {
-    throw new Error(`pull request #${pr} not found`);
+    throw new Error(`pull request #${pr} not found`)
   }
 
-  return threads;
+  return threads
 }
 
 function fetchThreadPage(target: GhPrTarget, cursor: string): ThreadPage {
-  const afterClause = cursor
-    ? `, after: "${escapeGraphqlCursor(cursor)}"`
-    : "";
+  const afterClause = cursor ? `, after: "${escapeGraphqlCursor(cursor)}"` : ''
   const raw = gh([
-    "api",
-    "graphql",
-    "-f",
+    'api',
+    'graphql',
+    '-f',
     `query=${reviewThreadsQuery(afterClause)}`,
-    "-f",
+    '-f',
     `o=${target.owner}`,
-    "-f",
+    '-f',
     `r=${target.repo}`,
-    "-F",
+    '-F',
     `pr=${target.pr}`,
-    "-F",
-    "n=100",
-  ]);
-  return parseThreadPage(raw, target.pr);
+    '-F',
+    'n=100',
+  ])
+  return parseThreadPage(raw, target.pr)
 }
 
 function nextPageCursor(page: ThreadPage): string | null {
   if (!page.pageInfo.hasNextPage) {
-    return null;
+    return null
   }
-  return page.pageInfo.endCursor;
+  return page.pageInfo.endCursor
 }
 
-export async function fetchReviewThreads(
-  target: GhPrTarget,
-): Promise<ReviewThreadNode[]> {
-  const nodes: ReviewThreadNode[] = [];
-  let cursor = "";
+export async function fetchReviewThreads(target: GhPrTarget): Promise<ReviewThreadNode[]> {
+  const nodes: ReviewThreadNode[] = []
+  let cursor = ''
 
   for (;;) {
-    const page = fetchThreadPage(target, cursor);
-    nodes.push(...page.nodes);
-    const next = nextPageCursor(page);
+    const page = fetchThreadPage(target, cursor)
+    nodes.push(...page.nodes)
+    const next = nextPageCursor(page)
     if (!next) {
-      break;
+      break
     }
-    cursor = next;
+    cursor = next
   }
 
-  return nodes;
+  return nodes
 }
