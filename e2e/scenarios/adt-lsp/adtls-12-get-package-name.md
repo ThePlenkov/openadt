@@ -1,28 +1,27 @@
 ---
-code: adt-9
-id: find-references
-title: Find references to object
-tags: [references]
+code: adtls-12
+id: get-package-name
+title: Get package name from URI
+tags: [filesystem]
 mode: standalone
 given: >-
   MCP stdio launcher runs in standalone mode with --no-proxy --import-from=adtls;
   user destination {{destination}} is registered and logon-ready.
 when: >-
-  Call adt_find_references with destination {{destination}}, uri, and position.
+  Call adt_get_package_name with destination {{destination}} and object URI.
 then: >-
-  MCP returns a tool result with reference list;
-  isError is false; response contains reference information.
+  MCP returns a tool result with package name;
+  isError is false; response contains package and success flag.
 steps:
-  - tool: adt_find_references
+  - tool: adt_get_package_name
     args:
       destination: "{{destination}}"
       uri: "/sap/bc/adt/oo/classes/cl_abap_typedescr"
-      position: { line: 1, character: 0 }
     assert:
       notError: true
 ---
 
-# Find references to object
+# Get package name from URI
 
 ## Given
 
@@ -30,14 +29,15 @@ MCP stdio launcher runs in standalone mode with `--no-proxy --import-from=adtls`
 
 ## When
 
-Call `adt_find_references` with destination, object URI, and position.
+Call `adt_get_package_name` with destination and object URI.
 
 ## Then
 
-- MCP tool responds with reference list.
+- MCP tool responds with package name.
 - `isError` is false.
-- Response contains reference information.
+- Response contains package and success flag.
 
 ## Before you start
 
 Ask the user for their **ADT destination id** (`SID_CLIENT_USER_LANG`). Do not assume any SID from the repo.
+

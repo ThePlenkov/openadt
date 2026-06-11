@@ -1,29 +1,29 @@
 ---
-code: adt-2
-id: transport-lock-check
-title: Check if object requires transport
+code: adtls-3
+id: transport-create
+title: Create transport for object
 tags: [transport]
 mode: standalone
 given: >-
   MCP stdio launcher runs in standalone mode with --no-proxy --import-from=adtls;
   user destination {{destination}} is registered and logon-ready.
 when: >-
-  Call adt_check_transport_lock with destination {{destination}}, uri, and transportId.
+  Call adt_create_transport with destination {{destination}}, uri, operationType, and description.
 then: >-
-  MCP returns a tool result with transport lock status;
-  isError is false; response contains lock information.
+  MCP returns a tool result with transport creation status;
+  isError is false; response contains success information.
 steps:
-  - tool: adt_check_transport_lock
+  - tool: adt_create_transport
     args:
       destination: "{{destination}}"
       uri: "/sap/bc/adt/oo/classes/cl_abap_typedescr"
-      transportId: "DEVK900000"
+      operationType: "MODIFICATION"
+      description: "Test transport for adtls-3 scenario"
     assert:
-      contentContains: "isTransportCheckSuccessful"
       notError: true
 ---
 
-# Check if object requires transport
+# Create transport for object
 
 ## Given
 
@@ -31,14 +31,15 @@ MCP stdio launcher runs in standalone mode with `--no-proxy --import-from=adtls`
 
 ## When
 
-Call `adt_check_transport_lock` with destination, object URI, and transport ID.
+Call `adt_create_transport` with destination, object URI, and transport ID.
 
 ## Then
 
-- MCP tool responds with transport lock status.
+- MCP tool responds with transport creation status.
 - `isError` is false.
-- Response contains lock information.
+- Response contains success information.
 
 ## Before you start
 
 Ask the user for their **ADT destination id** (`SID_CLIENT_USER_LANG`). Do not assume any SID from the repo.
+

@@ -1,28 +1,28 @@
 ---
-code: adt-17
-id: format
-title: Format ABAP code
-tags: [format]
+code: adtls-16
+id: get-hover
+title: Get hover information
+tags: [hover]
 mode: standalone
 given: >-
   MCP stdio launcher runs in standalone mode with --no-proxy --import-from=adtls;
   user destination {{destination}} is registered and logon-ready.
 when: >-
-  Call adt_format with destination {{destination}}, uri, and code.
+  Call adt_get_hover with destination {{destination}}, uri, and position.
 then: >-
-  MCP returns a tool result with formatted code;
-  isError is false; response contains formatted ABAP code.
+  MCP returns a tool result with hover information;
+  isError is false; response contains hover text.
 steps:
-  - tool: adt_format
+  - tool: adt_get_hover
     args:
       destination: "{{destination}}"
       uri: "/sap/bc/adt/oo/classes/cl_abap_typedescr"
-      content: "REPORT ztest."
+      position: { line: 1, character: 0 }
     assert:
       notError: true
 ---
 
-# Format ABAP code
+# Get hover information
 
 ## Given
 
@@ -30,14 +30,15 @@ MCP stdio launcher runs in standalone mode with `--no-proxy --import-from=adtls`
 
 ## When
 
-Call `adt_format` with destination, object URI, and code.
+Call `adt_get_hover` with destination, object URI, and position.
 
 ## Then
 
-- MCP tool responds with formatted code.
+- MCP tool responds with hover information.
 - `isError` is false.
-- Response contains formatted ABAP code.
+- Response contains hover text.
 
 ## Before you start
 
 Ask the user for their **ADT destination id** (`SID_CLIENT_USER_LANG`). Do not assume any SID from the repo.
+

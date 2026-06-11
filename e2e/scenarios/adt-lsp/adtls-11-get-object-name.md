@@ -1,19 +1,19 @@
 ---
-code: adt-10
-id: force-refresh
-title: Force refresh of object
+code: adtls-11
+id: get-object-name
+title: Get object name from URI
 tags: [filesystem]
 mode: standalone
 given: >-
   MCP stdio launcher runs in standalone mode with --no-proxy --import-from=adtls;
   user destination {{destination}} is registered and logon-ready.
 when: >-
-  Call adt_force_refresh with destination {{destination}} and object URI.
+  Call adt_get_object_name with destination {{destination}} and object URI.
 then: >-
-  MCP returns a tool result with refresh status;
-  isError is false; response contains success information.
+  MCP returns a tool result with object name;
+  isError is false; response contains name and success flag.
 steps:
-  - tool: adt_force_refresh
+  - tool: adt_get_object_name
     args:
       destination: "{{destination}}"
       uri: "/sap/bc/adt/oo/classes/cl_abap_typedescr"
@@ -21,7 +21,7 @@ steps:
       notError: true
 ---
 
-# Force refresh of object
+# Get object name from URI
 
 ## Given
 
@@ -29,14 +29,15 @@ MCP stdio launcher runs in standalone mode with `--no-proxy --import-from=adtls`
 
 ## When
 
-Call `adt_force_refresh` with destination and object URI.
+Call `adt_get_object_name` with destination and object URI.
 
 ## Then
 
-- MCP tool responds with refresh status.
+- MCP tool responds with object name.
 - `isError` is false.
-- Response contains success information.
+- Response contains name and success flag.
 
 ## Before you start
 
 Ask the user for their **ADT destination id** (`SID_CLIENT_USER_LANG`). Do not assume any SID from the repo.
+

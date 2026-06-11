@@ -1,27 +1,28 @@
 ---
-code: adt-19
-id: get-coverage
-title: Get code coverage information
-tags: [coverage]
+code: adtls-13
+id: get-folder-uri
+title: Get folder URI for object
+tags: [filesystem]
 mode: standalone
 given: >-
   MCP stdio launcher runs in standalone mode with --no-proxy --import-from=adtls;
   user destination {{destination}} is registered and logon-ready.
 when: >-
-  Call adt_get_coverage with destination {{destination}} and object URI.
+  Call adt_get_folder_uri with destination {{destination}}, package, and objectType.
 then: >-
-  MCP returns a tool result with coverage information;
-  isError is false; response contains coverage data.
+  MCP returns a tool result with folder URI;
+  isError is false; response contains URI information.
 steps:
-  - tool: adt_get_coverage
+  - tool: adt_get_folder_uri
     args:
       destination: "{{destination}}"
-      uri: "/sap/bc/adt/oo/classes/zcl_example"
+      package: "$TMP"
+      objectType: "CLAS"
     assert:
       notError: true
 ---
 
-# Get code coverage information
+# Get folder URI for object
 
 ## Given
 
@@ -29,14 +30,15 @@ MCP stdio launcher runs in standalone mode with `--no-proxy --import-from=adtls`
 
 ## When
 
-Call `adt_get_coverage` with destination and object URI.
+Call `adt_get_folder_uri` with destination, package, and object type.
 
 ## Then
 
-- MCP tool responds with coverage information.
+- MCP tool responds with folder URI.
 - `isError` is false.
-- Response contains coverage data.
+- Response contains URI information.
 
 ## Before you start
 
 Ask the user for their **ADT destination id** (`SID_CLIENT_USER_LANG`). Do not assume any SID from the repo.
+

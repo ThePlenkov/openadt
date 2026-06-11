@@ -1,28 +1,27 @@
 ---
-code: adt-5
-id: transport-search-simple
-title: Simple transport search
-tags: [transport]
+code: adtls-20
+id: load-statement-results
+title: Load statement coverage results
+tags: [coverage]
 mode: standalone
 given: >-
   MCP stdio launcher runs in standalone mode with --no-proxy --import-from=adtls;
   user destination {{destination}} is registered and logon-ready.
 when: >-
-  Call adt_search_transports_simple with destination {{destination}} and query.
+  Call adt_load_statement_results with destination {{destination}} and measurement ID.
 then: >-
-  MCP returns a tool result with transport list;
-  isError is false; response contains transport information.
+  MCP returns a tool result with statement results;
+  isError is false; response contains statement coverage data.
 steps:
-  - tool: adt_search_transports_simple
+  - tool: adt_load_statement_results
     args:
       destination: "{{destination}}"
-      owner: "{{owner}}"
-      function: "*"
+      measurementId: "MEASUREMENT_001"
     assert:
       notError: true
 ---
 
-# Simple transport search
+# Load statement coverage results
 
 ## Given
 
@@ -30,14 +29,15 @@ MCP stdio launcher runs in standalone mode with `--no-proxy --import-from=adtls`
 
 ## When
 
-Call `adt_search_transports_simple` with destination and search query.
+Call `adt_load_statement_results` with destination and measurement ID.
 
 ## Then
 
-- MCP tool responds with transport list.
+- MCP tool responds with statement results.
 - `isError` is false.
-- Response contains transport information.
+- Response contains statement coverage data.
 
 ## Before you start
 
 Ask the user for their **ADT destination id** (`SID_CLIENT_USER_LANG`). Do not assume any SID from the repo.
+

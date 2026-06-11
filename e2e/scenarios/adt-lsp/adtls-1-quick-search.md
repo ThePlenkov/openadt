@@ -1,5 +1,5 @@
 ---
-code: adt-1
+code: adtls-1
 id: quick-search
 title: Quick search in ABAP repository
 tags: [smoke, repository]
@@ -71,3 +71,4 @@ Call `adt_quick_search` with destination `{{destination}}` and search term patte
 ## Before you start
 
 Ask the user for their **ADT destination id** (`SID_CLIENT_USER_LANG`). Do not assume any SID from the repo.
+

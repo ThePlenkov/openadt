@@ -1,29 +1,27 @@
 ---
-code: adt-6
-id: transport-search
-title: Advanced transport search
-tags: [transport]
+code: adtls-18
+id: diagnostic
+title: Get diagnostic information
+tags: [diagnostic]
 mode: standalone
 given: >-
   MCP stdio launcher runs in standalone mode with --no-proxy --import-from=adtls;
   user destination {{destination}} is registered and logon-ready.
 when: >-
-  Call adt_search_transports with destination {{destination}} and search parameters.
+  Call adt_diagnostic with destination {{destination}} and object URI.
 then: >-
-  MCP returns a tool result with transport list;
-  isError is false; response contains transport information.
+  MCP returns a tool result with diagnostic information;
+  isError is false; response contains diagnostic data.
 steps:
-  - tool: adt_search_transports
+  - tool: adt_diagnostic
     args:
       destination: "{{destination}}"
-      user: "DEVELOPER"
-      request: "DEVK9*"
-      project: "ZPROJECT"
+      uri: "/sap/bc/adt/oo/classes/cl_abap_typedescr"
     assert:
       notError: true
 ---
 
-# Advanced transport search
+# Get diagnostic information
 
 ## Given
 
@@ -31,14 +29,15 @@ MCP stdio launcher runs in standalone mode with `--no-proxy --import-from=adtls`
 
 ## When
 
-Call `adt_search_transports` with destination and search parameters.
+Call `adt_diagnostic` with destination and object URI.
 
 ## Then
 
-- MCP tool responds with transport list.
+- MCP tool responds with diagnostic information.
 - `isError` is false.
-- Response contains transport information.
+- Response contains diagnostic data.
 
 ## Before you start
 
 Ask the user for their **ADT destination id** (`SID_CLIENT_USER_LANG`). Do not assume any SID from the repo.
+

@@ -32,11 +32,27 @@ The skill provides:
 
 Invoke the skill via the `/e2e` command or import the framework modules for custom integrations. See the [skill specification](.agents/skills/e2e/SKILL.md) for complete usage details.
 
+### Scenario Naming Conventions
+
+OpenADT E2E scenarios use specific prefixes to indicate their target system:
+
+- **adtls_** - Scenarios for **adtls-mcp** (SAP ADT Language Server MCP)
+  - These scenarios test the SAP ADT Language Server MCP tools
+  - Located in `e2e/scenarios/adt-lsp/`
+  - Require the adtls-mcp launcher to be running
+  - Examples: `adtls-1`, `adtls-2`, `adtls-3` (formerly `adt-1`, `adt-2`, `adt-3`)
+
+- **mcp_** - Scenarios for generic MCP tools (if any)
+  - General MCP framework testing scenarios
+  - Not specific to SAP ADT
+
+The **adtls_** prefix is used instead of **adt_** to avoid confusion with general ADT operations. These scenarios specifically test the SAP ADT Language Server MCP implementation, not the broader ADT protocol or other ADT-related systems.
+
 ### Destination Resolution
 
 When executing E2E scenarios that require a SAP destination, the AI agent must:
 
-1. **Extract destination from user prompt** - The destination ID is typically provided in the prompt (e.g., `/e2e adt-1 BHF` where BHF is the destination)
+1. **Extract destination from user prompt** - The destination ID is typically provided in the prompt (e.g., `/e2e adtls-1 BHF` where BHF is the destination)
 2. **Validate destination exists** - Check if the destination is registered in the ADT configuration
 3. **Pass destination to scenario** - Include the destination in the RunContext as `destination` parameter
 

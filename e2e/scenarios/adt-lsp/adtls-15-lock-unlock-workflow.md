@@ -1,5 +1,5 @@
 ---
-code: adt-15
+code: adtls-15
 id: lock-unlock-workflow
 title: Lock and unlock file workflow
 tags: [filesystem, workflow]
@@ -52,3 +52,4 @@ Call `adt_lock_file`, `adt_get_file_lock_status`, and `adt_unlock_file` in seque
 ## Before you start
 
 Ask the user for their **ADT destination id** (`SID_CLIENT_USER_LANG`). Do not assume any SID from the repo.
+

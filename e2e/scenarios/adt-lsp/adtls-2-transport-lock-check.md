@@ -1,27 +1,29 @@
 ---
-code: adt-18
-id: diagnostic
-title: Get diagnostic information
-tags: [diagnostic]
+code: adtls-2
+id: transport-lock-check
+title: Check if object requires transport
+tags: [transport]
 mode: standalone
 given: >-
   MCP stdio launcher runs in standalone mode with --no-proxy --import-from=adtls;
   user destination {{destination}} is registered and logon-ready.
 when: >-
-  Call adt_diagnostic with destination {{destination}} and object URI.
+  Call adt_check_transport_lock with destination {{destination}}, uri, and transportId.
 then: >-
-  MCP returns a tool result with diagnostic information;
-  isError is false; response contains diagnostic data.
+  MCP returns a tool result with transport lock status;
+  isError is false; response contains lock information.
 steps:
-  - tool: adt_diagnostic
+  - tool: adt_check_transport_lock
     args:
       destination: "{{destination}}"
       uri: "/sap/bc/adt/oo/classes/cl_abap_typedescr"
+      transportId: "DEVK900000"
     assert:
+      contentContains: "isTransportCheckSuccessful"
       notError: true
 ---
 
-# Get diagnostic information
+# Check if object requires transport
 
 ## Given
 
@@ -29,14 +31,15 @@ MCP stdio launcher runs in standalone mode with `--no-proxy --import-from=adtls`
 
 ## When
 
-Call `adt_diagnostic` with destination and object URI.
+Call `adt_check_transport_lock` with destination, object URI, and transport ID.
 
 ## Then
 
-- MCP tool responds with diagnostic information.
+- MCP tool responds with transport lock status.
 - `isError` is false.
-- Response contains diagnostic data.
+- Response contains lock information.
 
 ## Before you start
 
 Ask the user for their **ADT destination id** (`SID_CLIENT_USER_LANG`). Do not assume any SID from the repo.
+

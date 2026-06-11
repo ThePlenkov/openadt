@@ -1,27 +1,27 @@
 ---
-code: adt-20
-id: load-statement-results
-title: Load statement coverage results
+code: adtls-19
+id: get-coverage
+title: Get code coverage information
 tags: [coverage]
 mode: standalone
 given: >-
   MCP stdio launcher runs in standalone mode with --no-proxy --import-from=adtls;
   user destination {{destination}} is registered and logon-ready.
 when: >-
-  Call adt_load_statement_results with destination {{destination}} and measurement ID.
+  Call adt_get_coverage with destination {{destination}} and object URI.
 then: >-
-  MCP returns a tool result with statement results;
-  isError is false; response contains statement coverage data.
+  MCP returns a tool result with coverage information;
+  isError is false; response contains coverage data.
 steps:
-  - tool: adt_load_statement_results
+  - tool: adt_get_coverage
     args:
       destination: "{{destination}}"
-      measurementId: "MEASUREMENT_001"
+      uri: "/sap/bc/adt/oo/classes/zcl_example"
     assert:
       notError: true
 ---
 
-# Load statement coverage results
+# Get code coverage information
 
 ## Given
 
@@ -29,14 +29,15 @@ MCP stdio launcher runs in standalone mode with `--no-proxy --import-from=adtls`
 
 ## When
 
-Call `adt_load_statement_results` with destination and measurement ID.
+Call `adt_get_coverage` with destination and object URI.
 
 ## Then
 
-- MCP tool responds with statement results.
+- MCP tool responds with coverage information.
 - `isError` is false.
-- Response contains statement coverage data.
+- Response contains coverage data.
 
 ## Before you start
 
 Ask the user for their **ADT destination id** (`SID_CLIENT_USER_LANG`). Do not assume any SID from the repo.
+

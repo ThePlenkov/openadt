@@ -1,5 +1,5 @@
 ---
-code: adt-24
+code: adtls-24
 id: get-inactive-objects
 title: Get inactive objects in package
 tags: [activation]
@@ -40,3 +40,4 @@ Call `adt_get_inactive_objects` with destination and package.
 ## Before you start
 
 Ask the user for their **ADT destination id** (`SID_CLIENT_USER_LANG`). Do not assume any SID from the repo.
+

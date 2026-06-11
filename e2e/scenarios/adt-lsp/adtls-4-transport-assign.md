@@ -1,5 +1,5 @@
 ---
-code: adt-4
+code: adtls-4
 id: transport-assign
 title: Create and assign transport to object
 tags: [transport]
@@ -52,3 +52,4 @@ Create a transport for the object, then assign the object to that transport.
 Ask the user for their **ADT destination id** (`SID_CLIENT_USER_LANG`). Do not assume any SID from the repo.
 
 **Note**: This scenario creates a new transport and assigns the object to it. The transport ID from the create step is used for the assign step.
+

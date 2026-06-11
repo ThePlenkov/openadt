@@ -1,28 +1,27 @@
 ---
-code: adt-13
-id: get-folder-uri
-title: Get folder URI for object
-tags: [filesystem]
+code: adtls-7
+id: document-symbols
+title: Get document symbols for file
+tags: [document]
 mode: standalone
 given: >-
   MCP stdio launcher runs in standalone mode with --no-proxy --import-from=adtls;
   user destination {{destination}} is registered and logon-ready.
 when: >-
-  Call adt_get_folder_uri with destination {{destination}}, package, and objectType.
+  Call adt_document_symbols with destination {{destination}} and object URI.
 then: >-
-  MCP returns a tool result with folder URI;
-  isError is false; response contains URI information.
+  MCP returns a tool result with document symbols;
+  isError is false; response contains symbol information.
 steps:
-  - tool: adt_get_folder_uri
+  - tool: adt_document_symbols
     args:
       destination: "{{destination}}"
-      package: "$TMP"
-      objectType: "CLAS"
+      uri: "/sap/bc/adt/oo/classes/cl_abap_typedescr"
     assert:
       notError: true
 ---
 
-# Get folder URI for object
+# Get document symbols for file
 
 ## Given
 
@@ -30,14 +29,15 @@ MCP stdio launcher runs in standalone mode with `--no-proxy --import-from=adtls`
 
 ## When
 
-Call `adt_get_folder_uri` with destination, package, and object type.
+Call `adt_document_symbols` with destination and object URI.
 
 ## Then
 
-- MCP tool responds with folder URI.
+- MCP tool responds with document symbols.
 - `isError` is false.
-- Response contains URI information.
+- Response contains symbol information.
 
 ## Before you start
 
 Ask the user for their **ADT destination id** (`SID_CLIENT_USER_LANG`). Do not assume any SID from the repo.
+

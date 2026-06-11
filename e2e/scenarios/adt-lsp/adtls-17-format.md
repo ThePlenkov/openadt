@@ -1,29 +1,28 @@
 ---
-code: adt-3
-id: transport-create
-title: Create transport for object
-tags: [transport]
+code: adtls-17
+id: format
+title: Format ABAP code
+tags: [format]
 mode: standalone
 given: >-
   MCP stdio launcher runs in standalone mode with --no-proxy --import-from=adtls;
   user destination {{destination}} is registered and logon-ready.
 when: >-
-  Call adt_create_transport with destination {{destination}}, uri, operationType, and description.
+  Call adt_format with destination {{destination}}, uri, and code.
 then: >-
-  MCP returns a tool result with transport creation status;
-  isError is false; response contains success information.
+  MCP returns a tool result with formatted code;
+  isError is false; response contains formatted ABAP code.
 steps:
-  - tool: adt_create_transport
+  - tool: adt_format
     args:
       destination: "{{destination}}"
       uri: "/sap/bc/adt/oo/classes/cl_abap_typedescr"
-      operationType: "MODIFICATION"
-      description: "Test transport for adt-3 scenario"
+      content: "REPORT ztest."
     assert:
       notError: true
 ---
 
-# Create transport for object
+# Format ABAP code
 
 ## Given
 
@@ -31,14 +30,15 @@ MCP stdio launcher runs in standalone mode with `--no-proxy --import-from=adtls`
 
 ## When
 
-Call `adt_create_transport` with destination, object URI, and transport ID.
+Call `adt_format` with destination, object URI, and code.
 
 ## Then
 
-- MCP tool responds with transport creation status.
+- MCP tool responds with formatted code.
 - `isError` is false.
-- Response contains success information.
+- Response contains formatted ABAP code.
 
 ## Before you start
 
 Ask the user for their **ADT destination id** (`SID_CLIENT_USER_LANG`). Do not assume any SID from the repo.
+

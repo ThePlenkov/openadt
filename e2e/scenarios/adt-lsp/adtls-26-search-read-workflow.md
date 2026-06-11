@@ -1,39 +1,41 @@
 ---
-code: adt-23
-id: atc-workflow
-title: "ATC workflow: get variants, run check, load results"
-tags: [atc, workflow]
+code: adtls-26
+id: search-read-workflow
+title: "Search and read workflow: quick search, get folder URI, force refresh"
+tags: [repository, workflow]
 mode: standalone
 given: >-
   MCP stdio launcher runs in standalone mode with --no-proxy --import-from=adtls;
   user destination {{destination}} is registered and logon-ready.
 when: >-
-  Call adt_get_check_variants, adt_run_check, and adt_load_statement_results in sequence.
+  Call adt_quick_search, adt_get_folder_uri, and adt_force_refresh in sequence.
 then: >-
   MCP returns tool results for each step;
-  all isError flags are false; ATC workflow completes successfully.
+  all isError flags are false; search-read workflow completes successfully.
 steps:
-  - tool: adt_get_check_variants
+  - tool: adt_quick_search
     args:
       destination: "{{destination}}"
+      searchTerm: "Z*"
+    assert:
+      contentContains: "| Name | Type | Description |"
+      notError: true
+  - tool: adt_get_folder_uri
+    args:
+      destination: "{{destination}}"
+      package: "$TMP"
+      objectType: "CLAS"
     assert:
       notError: true
-  - tool: adt_run_check
+  - tool: adt_force_refresh
     args:
       destination: "{{destination}}"
-      uri: "/sap/bc/adt/oo/classes/zcl_example"
-      checkVariant: "DEFAULT"
-    assert:
-      notError: true
-  - tool: adt_load_statement_results
-    args:
-      destination: "{{destination}}"
-      measurementId: "MEASUREMENT_001"
+      uri: "/sap/bc/adt/oo/classes/cl_abap_typedescr"
     assert:
       notError: true
 ---
 
-# ATC workflow: get variants, run check, load results
+# Search and read workflow: quick search, get folder URI, force refresh
 
 ## Given
 
@@ -41,14 +43,15 @@ MCP stdio launcher runs in standalone mode with `--no-proxy --import-from=adtls`
 
 ## When
 
-Call `adt_get_check_variants`, `adt_run_check`, and `adt_load_statement_results` in sequence.
+Call `adt_quick_search`, `adt_get_folder_uri`, and `adt_force_refresh` in sequence.
 
 ## Then
 
 - MCP tool responds with results for each step.
 - All `isError` flags are false.
-- ATC workflow completes successfully.
+- Search-read workflow completes successfully.
 
 ## Before you start
 
 Ask the user for their **ADT destination id** (`SID_CLIENT_USER_LANG`). Do not assume any SID from the repo.
+
