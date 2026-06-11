@@ -33,18 +33,35 @@ Splitting `sap-adt-mcp-launcher` into `@openadt/adt-lsp-mcp` broke e2e in **laye
 ## Prevention (where agents look first)
 
 1. **Facts:** `.agents/memory/facts/2026-06-11-adt-lsp-mcp-stdio-contract.md`
-2. **MCP prompt:** `prompts/get` → `adt_lsp_workflow` on `@openadt/adt-lsp-mcp`
-3. **Spec:** `specs/mcp.md` § `@openadt/adt-lsp-mcp`
-4. **Tool descriptions:** transport tools document `cts/transport` + getLsUri chain
+2. **Local Inspector setup:** `specs/adt-lsp-mcp-local.md`
+3. **MCP prompt:** `prompts/get` → `adt_lsp_workflow` on `@openadt/adt-lsp-mcp`
+4. **Spec:** `specs/mcp.md` § `@openadt/adt-lsp-mcp`
+5. **Tool descriptions:** transport tools document `cts/transport` + getLsUri chain
+
+## MCP Inspector guardrails (2026-06-11)
+
+| Symptom | Root cause |
+| ------- | ---------- |
+| Reconnect loop | Wrong cwd / script not found; missing destination exit; NDJSON/Content-Length mismatch |
+| No tool input fields | `tools/list` returned Zod, not JSON Schema |
+| Windows stdio flake | Double-process spawn wrapper |
+
+**Smoke:** NDJSON initialize → tools/list → assert each tool `inputSchema.properties` non-empty; with bound destination assert `destination` absent.
+
+See experience: `.agents/memory/experience/2026-06-11-adt-lsp-mcp-inspector-destination-guardrails.md`.
 
 ## Re-validate checklist (any adt-lsp-mcp change)
 
 - [ ] MCP result shape (no double wrap)
 - [ ] `destinationsStorePath` = directory
 - [ ] `LspConnectionTransport` wiring
-- [ ] LSP method namespace matches `@openadt/adt-services` contracts
+- [ ] LSP method namespace matches `@openadt/adt-lsp-contracts` (verify live, do not guess standard vs `adtLs/*`)
 - [ ] Object-modify tools: ADT path → getLsUri → repotree URI
 - [ ] E2e runner uses framed stdio client
+- [ ] `tools/list` emits JSON Schema (`toMcpInputSchema`)
+- [ ] Stdio encoder mirrors client transport (NDJSON vs Content-Length)
+- [ ] Rebuild `tools/adt-lsp-mcp/dist` before e2e if dist exists
+- [ ] No real destination ids in committed specs/config (fixtures only)
 
 ## Evidence wiring (c4768ce — not covered by 04b2ba2 retrospect)
 

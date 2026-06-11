@@ -95,26 +95,26 @@ Or call the binary after build: `bun tools/adt-lsp-mcp/dist/main.mjs ABC_200_USE
 **Recommended** — pass destination on the command line (Inspector UI → Args, space-separated):
 
 ```text
-scripts/mcp-adt-lsp.ts BHF_200_PPLENKOV_EN
+scripts/mcp-adt-lsp.ts ABC_200_USER_EN
 ```
 
 **CLI:**
 
 ```powershell
-bunx @modelcontextprotocol/inspector bun scripts/mcp-adt-lsp.ts BHF_200_PPLENKOV_EN
+bunx @modelcontextprotocol/inspector bun scripts/mcp-adt-lsp.ts ABC_200_USER_EN
 ```
 
 Or env via Inspector `-e` flag:
 
 ```powershell
-bunx @modelcontextprotocol/inspector -e OPENADT_MCP_DESTINATION=BHF_200_PPLENKOV_EN bun scripts/mcp-adt-lsp.ts
+bunx @modelcontextprotocol/inspector -e OPENADT_MCP_DESTINATION=ABC_200_USER_EN bun scripts/mcp-adt-lsp.ts
 ```
 
 | Field | Value |
 | ----- | ----- |
 | Transport | **stdio** |
 | Command | `bun` |
-| Args | `scripts/mcp-adt-lsp.ts BHF_200_PPLENKOV_EN` (add destination as second arg) |
+| Args | `scripts/mcp-adt-lsp.ts ABC_200_USER_EN` (add destination as second arg) |
 | Env (optional) | `OPENADT_MCP_DESTINATION=…` if not passed as arg |
 
 **Avoid** `bun run mcp:adt-lsp` in Inspector — Inspector cwd is usually not the repo root (`Script not found` → reconnect loop).

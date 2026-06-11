@@ -26,8 +26,9 @@ Export: `LspConnectionTransport` from `@openadt/lsp-client`.
 
 ## Startup model
 
-- MCP `initialize` / `tools/list` can respond immediately on stdio.
-- LSP connect + `createProject` + `ensureLoggedOn` runs in background; first `tools/call` awaits it.
+- MCP `initialize` / `tools/list` can respond immediately on stdio (no destination required in per-tool mode).
+- **Bound:** LSP connect + logon for one destination in background; first `tools/call` awaits it.
+- **Unbound:** LSP session starts on first `tools/call`; each new destination logons lazily on first use.
 - Cold SSO logon still bounded by `DEFAULT_LOGON_TIMEOUT_MS` (~300s) in `@openadt/lsp-client`.
 
 ## Transport LSP namespace
@@ -46,9 +47,33 @@ Many tools need a **repotree/AFF URI**, not an ADT object path:
 
 `checkTransportForObjectLock` params: `{ objectInfo: { objectUri: <repotree uri> }, operationType: 'MODIFICATION' | 'CREATION' }` — not `{ destination, uri, transportId }`.
 
-## Destination id
+## Destination id (two modes)
 
-Format: `SID_CLIENT_USER_LANG` (e.g. `ABC_200_USER_EN`). Must exist in `~/.adtls/destinations.json`. Server CLI arg or `OPENADT_DESTINATION` / `OPENADT_MCP_DESTINATION`.
+Format: `SID_CLIENT_USER_LANG` (e.g. `ABC_200_USER_EN`). Must exist in `~/.adtls/destinations.json`.
+
+| Mode | Startup | `tools/list` | `tools/call` |
+| ---- | ------- | ------------ | ------------ |
+| Per-tool (default) | Optional | `destination` in schema | Caller passes `destination` |
+| Bound session | CLI arg or `OPENADT_DESTINATION` / `OPENADT_MCP_DESTINATION` | `destination` omitted | Server injects bound value |
+
+Bound resolution order: CLI arg → `OPENADT_MCP_DESTINATION` → `OPENADT_DESTINATION`.
+
+## MCP `tools/list` JSON Schema
+
+Clients (MCP Inspector, Cursor) require **JSON Schema** on `inputSchema`, not Zod objects.
+
+- Convert via `@openadt/mcp-tools`: `toMcpInputSchema(zodSchema, { omitFields?: string[] })`
+- Bound mode: `listMcpToolDescriptors({ boundDestination })` omits `destination` from every tool schema
+- Symptom if skipped: tools appear in list but **no input fields** in Inspector
+
+## Stdio transport framing
+
+MCP clients differ:
+
+- **Cursor agent CLI / MCP Inspector:** NDJSON lines (`{...}\n`)
+- **Content-Length** framing also supported
+
+Server must **mirror client transport** on stdout: listen on `McpStdioDecoder` `'transport'` event and call `encoder.setTransport(mode)`. Replying Content-Length to an NDJSON client causes parse failure → reconnect loop.
 
 ## Guidance prompt
 
