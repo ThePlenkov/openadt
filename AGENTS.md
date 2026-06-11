@@ -36,6 +36,7 @@ Workflow detail: [openadt-sdd skill](.agents/skills/openadt-sdd/SKILL.md).
 | ------------------------------------------------------------------ | -------------------------------------------------------------- |
 | [DESIGN.md](DESIGN.md)                                             | **SDD enforcement** — spec gate, architecture, verify workflow |
 | [specs/README.md](specs/README.md)                                 | Spec index + `verify-spec-sync`                                |
+| [TESTING.md](TESTING.md)                                           | Testing approaches (E2E framework, scenarios, evidence)        |
 | [README.md](README.md)                                             | User-facing overview                                           |
 | [docs/usage.md](docs/usage.md)                                     | Installed CLI (Scoop/Homebrew)                                 |
 | [docs/contributing.md](docs/contributing.md)                       | Clone, build, test, devcontainer                               |

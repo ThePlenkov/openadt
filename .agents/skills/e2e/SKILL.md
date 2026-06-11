@@ -1,104 +1,126 @@
 ---
 name: e2e
 description: >-
-  Use when the user invokes /e2e or asks to run an MCP AI scenario (mcp-1, mcp-2, adt-1, …)
-  against a live SAP landscape, collect test evidence as a single .md under .e2e/results/,
-  and report pass/fail with Given/When/Then. Destination id is always supplied by the user.
-  Supports --acp / --command=acp to delegate the SAP run to an ACP-compatible agent instead of local bun.
+  Abstract AI-first testing framework for MCP scenarios. Supports dynamic parameter extraction from natural language prompts,
+  scenario execution against live systems, and evidence collection. Framework is fully reusable and domain-agnostic.
+  Use when the user invokes /e2e or asks to run an MCP AI scenario, collect test evidence as a single .md under .e2e/results/,
+  and report pass/fail with Given/When/Then.
 ---
 
-# /e2e
+# /e2e - AI-First Testing Framework
 
-Run one MCP AI scenario on a **real** SAP system and write **one evidence file** under **`.e2e/results/`** (gitignored).
+Abstract, reusable framework for agentic testing of MCP tools and services. The skill provides commands for scenario execution and evidence collection.
 
-Spec: [specs/mcp-ai-testing.md](../../../specs/mcp-ai-testing.md)
+## Commands
 
-## Scenario suites
+### `e2e-agent list <scenarios-dir>`
+List all scenarios in a directory.
 
-| Suite | Codes | Scenario dir | Root entry | Package-local |
-| ----- | ----- | ------------ | ---------- | ------------- |
-| SAP ADT launcher | `mcp-1` … `mcp-5` | `tools/sap-adt-mcp-launcher/e2e/scenarios/` | `bun run e2e` | `bun run mcp:e2e` (needs `--evidence`) |
-| ADT LSP MCP | `adt-1` … `adt-26` | `tools/adt-lsp-mcp/e2e/scenarios/` | `bun run adt:e2e` | `cd tools/adt-lsp-mcp && bun run mcp:e2e` (needs `--evidence`) |
+**Example:**
+```bash
+npx e2e-agent list ./e2e/scenarios
+```
 
-**Do not cross suites:** dispatch rejects `mcp-*` on `adt:e2e` and `adt-*` on `e2e`.
+### `e2e-agent run <scenarios-dir> <code>`
+Run a specific scenario by code.
+
+**Example:**
+```bash
+npx e2e-agent run ./e2e/scenarios test-1
+```
+
+### `e2e-agent dispatch <config>`
+Generate ACP dispatch payload for external execution.
+
+**Example:**
+```bash
+npx e2e-agent dispatch ./dispatch-config.json
+```
+
+### `e2e-agent help`
+Show help message.
+
+## Framework Features
+
+### Dynamic Parameter Substitution
+- Template substitution supports any parameter via `{{paramName}}` syntax
+- No hardcoded parameter names - fully abstract
+- Parameters can be added dynamically to `RunContext`
+
+### AI-First Parameter Extraction
+- `extractParamsFromPrompt()` placeholder for LLM-based interpretation
+- Accepts natural language prompts to extract scenario parameters
+- `mergeExtractedParams()` merges AI-extracted parameters with context
+- Currently returns empty object - implementations should override with actual AI
+
+### Scenario Suites
+
+Project-specific scenario suites are defined in `e2e/scenarios/<suite>/`. Each suite has its own entry point and scenario codes.
 
 ## On `/e2e <code>`
 
-Examples: `/e2e mcp-1`, `/e2e adt-2`, `/e2e adt-1 --acp --agent devin`
-
 ### 1. Resolve scenario
 
-| Input | Meaning |
-| ----- | ------- |
-| `mcp-1` … `mcp-5` | Launcher scenario code → use § Launcher below |
-| `adt-1` … `adt-26` | ADT LSP scenario code → use § ADT LSP below |
-| slug `read-standard-class` | Also accepted (launcher) |
+Read the scenario markdown under the suite's `e2e/scenarios/<suite>/` dir — every scenario has **Given / When / Then** in frontmatter.
 
-Read the scenario markdown under the suite's `e2e/scenarios/` dir — every scenario has **Given / When / Then** in frontmatter.
+### 2. AI maps user input to parameters
 
-### 2. Ask for destination (required)
+The AI agent's task is to:
+- Read the skill spec and understand the framework
+- Read the scenario (Given/When/Then, steps)
+- Understand what the user wants from their natural language prompt
+- Build a RunContext with the parameters needed for the scenario
+- Use framework modules to load scenarios, substitute templates, evaluate assertions, and generate evidence
 
-**Do not assume a SID or destination from git.**
+**The framework provides these building blocks:**
+- `loadScenariosFromDir()` - Load scenarios from a directory
+- `buildRunContext()` - Build execution context from CLI options
+- `substituteArgs()` - Substitute `{{param}}` placeholders with context values
+- `evaluateAssertions()` - Evaluate assertion checks against responses
+- `writeEvidenceReport()` - Generate evidence markdown in `.e2e/results/`
 
-Ask the user for **ADT destination id**. Accept either:
-
-- Full format: `SID_CLIENT_USER_LANG` (e.g., `BHF_200_PPLENKOV_EN`)
-- Partial format: system ID or partial name (e.g., `BHF`, `BHF_200`) — **auto-resolved from `~/.adtls/destinations.json`**
-- `OPENADT_MCP_DESTINATION` if already set in the session
-
-**Auto-resolution:** When a partial destination is provided (not full `SID_CLIENT_USER_LANG` format), the runner automatically resolves it from `~/.adtls/destinations.json` using the partial input as a system hint. No manual `--resolve-destination --system` flags needed.
+The AI agent is responsible for:
+- Interpreting user intent and mapping it to RunContext parameters
+- Executing the actual tool/service calls (MCP, HTTP, etc.)
+- Collecting responses and running assertions
+- Generating evidence reports
 
 ### 3. Choose executor
 
-| User intent | Flags | Cursor agent action |
-| ----------- | ----- | ------------------- |
-| Run here (default) | *(none)* | Execute local `bun run e2e` or `bun run adt:e2e` — see §4 |
-| Delegate via ACP (save Cursor credits) | `--acp`, `--command=acp`, `--command acp`, or `--executor acp` **plus** `--agent <acp-agent-id>` | **Do not** run e2e locally. Run dispatch and hand off via ACP — see §5 |
+| User intent | Action |
+| ----------- | ------ |
+| Run here (default) | Use framework modules to execute locally |
+| Delegate via ACP | Use `dispatch.ts` to generate ACP payload, hand off |
 
-ACP agent ids are user-supplied (never hardcoded). Browse [agentclientprotocol.com/overview/agents](https://agentclientprotocol.com/overview/agents) — e.g. `devin`, `cursor`, `gemini-cli`, `opencode`.
+ACP agent ids are user-supplied (never hardcoded).
 
 ---
 
-## Launcher (`mcp-*`)
+## Running Scenarios
 
-Run one scenario from `tools/sap-adt-mcp-launcher/e2e/scenarios/mcp-N-<id>.md`.
+### Local Execution
 
-List catalog: `bun run mcp:e2e -- --list`
+The AI agent uses framework modules to execute scenarios:
 
-### 4. Run locally with evidence
+1. **Load scenario**: Use `loadScenariosFromDir()` to load the scenario file
+2. **Build context**: Create a RunContext with parameters (e.g., destination, user)
+3. **Execute steps**: For each step, call the actual tool/service (MCP, HTTP, etc.)
+4. **Evaluate assertions**: Use `evaluateAssertions()` to check responses
+5. **Generate evidence**: Use `writeEvidenceReport()` to write `.e2e/results/<datetime>-✅-<test_id>-<hash>.md`
 
-Pass **who** ran the scenario so evidence distinguishes agent-orchestrated runs from bare CLI:
+The agent is responsible for the actual service calls - the framework only provides utilities for loading, substitution, assertions, and evidence.
 
-**IMPORTANT:** Detect the actual agent from environment/process context — do not hardcode. Check process tree or environment to identify whether running as `devin`, `cursor`, `windsurf`, or other agent.
+### ACP Dispatch (external executor)
 
-```bash
-OPENADT_E2E_AGENT=<actual-agent> OPENADT_E2E_MODEL=<your-model> bun run e2e -- mcp-1 --destination <USER_DESTINATION_ID>
-```
-
-Or flags (CLI wins over env): `--agent <actual-agent> --model <your-model>`. Use your **actual** model name when known (e.g. `Auto`, `composer-2.5-fast`) — do not hardcode a wrong model. Omit both for direct CLI runs (`agent: openadt-runner`).
-
-```bash
-bun run e2e -- mcp-1 --destination <USER_DESTINATION_ID>
-```
-
-The runner always enables `--evidence`. On completion stdout includes:
-
-```text
-Evidence written: <repo>/.e2e/results/<datetime>-✅-<test_id>-<hash>.md
-E2E_EVIDENCE_FILE=<same path>  (❌ in filename when the run fails)
-```
-
-### 5. Dispatch via ACP (external executor)
-
-When the user passes `--acp` (or `--command=acp`) **and** `--agent <acp-agent-id>`, **do not spawn MCP or burn Cursor credits** on the SAP SSO run.
+When the user passes `--acp` (or `--command=acp`) **and** `--agent <acp-agent-id>`, **do not spawn MCP or burn Cursor credits** on the live system run.
 
 ```bash
-bun run e2e -- mcp-1 --destination <USER_DESTINATION_ID> --acp --agent devin
+<runner-entry> -- <scenario-code> --destination <DESTINATION_ID> --acp --agent devin
 ```
 
-Equivalent: `bun run e2e:dispatch -- mcp-1 --destination <USER_DESTINATION_ID> --acp --agent devin`
+Equivalent: `<runner-entry>:dispatch -- <scenario-code> --destination <DESTINATION_ID> --acp --agent devin`
 
-Or env fallback: `ACP_AGENT=devin bun run e2e -- mcp-1 --destination <USER_DESTINATION_ID> --acp`
+Or env fallback: `ACP_AGENT=devin <runner-entry> -- <scenario-code> --destination <DESTINATION_ID> --acp`
 
 Stdout includes:
 
@@ -111,53 +133,7 @@ Tell the user to submit the prompt through their ACP client targeting the chosen
 
 ---
 
-## ADT LSP MCP (`adt-*`)
-
-Direct stdio MCP (`tools/adt-lsp-mcp/`). Scenarios: `tools/adt-lsp-mcp/e2e/scenarios/adt-N-<id>.md`.
-
-### 4. Run locally with evidence
-
-**Always use root entry** — evidence is always on:
-
-```bash
-OPENADT_E2E_AGENT=<actual-agent> OPENADT_E2E_MODEL=<your-model> bun run adt:e2e -- adt-1 --destination <USER_DESTINATION_ID>
-```
-
-```bash
-bun run adt:e2e -- adt-1 --destination <USER_DESTINATION_ID>
-```
-
-Root `adt:e2e` sets `OPENADT_E2E_EVIDENCE=1` and injects `--evidence` + `--evidence-dir`. On completion stdout includes `E2E_EVIDENCE_FILE=<path>`.
-
-### 5. Dispatch via ACP
-
-```bash
-bun run adt:e2e -- adt-1 --destination <USER_DESTINATION_ID> --acp --agent devin
-```
-
-Equivalent: `bun run adt:e2e:dispatch -- adt-1 --destination <USER_DESTINATION_ID> --acp --agent devin`
-
-External agent runs `command.local` from `.e2e/dispatch/<run-id>.json` (typically `OPENADT_E2E_AGENT=devin bun run adt:e2e -- adt-1 --destination <ID>`).
-
-### Anti-pattern (Devin / external agents)
-
-**Do not** use bare `devin -p` with package-local `bun run mcp:e2e` in `tools/adt-lsp-mcp` — that bypasses evidence. `devin -p` is not a substitute for this skill.
-
-| Wrong | Right |
-| ----- | ----- |
-| `devin -p` + `cd tools/adt-lsp-mcp && bun run mcp:e2e -- --scenario adt-1 …` | `OPENADT_E2E_AGENT=devin bun run adt:e2e -- adt-1 --destination <ID>` |
-| Package `mcp:e2e` without `--evidence` for agent runs | Root `bun run adt:e2e` |
-
-Package-local only for framework debugging:
-
-```bash
-cd tools/adt-lsp-mcp && bun run build
-cd tools/adt-lsp-mcp && bun run mcp:e2e -- --scenario adt-1 --destination <ID> --evidence
-```
-
----
-
-## 6. Report to user
+## Report to user
 
 **Local run** — reply with:
 
@@ -175,41 +151,77 @@ cd tools/adt-lsp-mcp && bun run mcp:e2e -- --scenario adt-1 --destination <ID> -
 - Reminder: evidence will appear under `.e2e/results/` after the ACP agent completes
 - Do not claim PASS/FAIL until the external agent returns evidence
 
-Do not paste full ABAP source or secrets. Use `OPENADT_MCP_REDACT=1` when sharing logs publicly.
+Do not paste full source or secrets. Use environment-specific redaction when sharing logs publicly.
 
 ## Evidence file format
 
-Single markdown file: `.e2e/results/2026-06-10T13-45-00Z-✅-mcp-1-a1b2c3d4.md` (or `❌` on failure; `adt-1` for LSP scenarios)
+Single markdown file: `.e2e/results/<datetime>-<✅|❌>-<test_id>-<hash>.md`
 
 Contains:
 
-- How the run was executed (command, **agent**, **model/LLM**, execution mode, destination, MCP mode)
+- How the run was executed (command, **agent**, **model/LLM**, execution mode, destination, service mode)
 - **Given / When / Then** (resolved placeholders)
-- Per step: MCP replied?, `isError`, assertion table, response payload excerpt
+- Per step: service replied?, error status, assertion table, response payload excerpt
 - Overall verdict
 
 A bare `✓ tool — ok` is **not** sufficient evidence — the file must show *what* was checked and *what* came back.
 
 ## Prerequisites
 
-- SAP ADT VS Code extension + `adt-lsc`
-- Bun on PATH
-- User logged on (SSO window may appear; timeout 300s default)
-- For full `adt_*` agent tools: scenarios use `mode: standalone` (default in runner)
+Project-specific prerequisites are defined by the consuming project. The AI agent should load and read the root project's `TESTING.md` file for project-specific details such as:
+
+- Service identifier resolution (how to extract service identifiers from user prompt)
+- Common service identifiers and endpoints
+- Service client configuration and authentication
+- Service launcher configuration
+
+Common requirements may include:
+- Service client or connector
+- Runtime environment (e.g., Bun on PATH)
+- User authentication/logon (if required by the service)
+- For full agent tools: scenarios use `mode: standalone` (default in runner)
 - ACP dispatch: an ACP-compatible client + agent from [the registry](https://agentclientprotocol.com/overview/agents)
+
+## Configuration
+
+The e2e-agent can be configured via project configuration files:
+
+### Option 1: `.e2e-agent.yaml`
+Create a `.e2e-agent.yaml` file in your project root:
+
+```yaml
+autoclean: true
+```
+
+### Option 2: TESTING.md frontmatter
+Add configuration to the frontmatter of your `TESTING.md`:
+
+```markdown
+---
+e2e-agent:
+  autoclean: true
+---
+```
+
+### Configuration precedence
+1. CLI flags (highest priority)
+2. Environment variables
+3. Project configuration files (.e2e-agent.yaml or TESTING.md frontmatter)
+
+### Available configuration options
+- `autoclean`: Delete all old evidence files for a scenario before writing new evidence (default: false)
 
 ## Related commands
 
+Project-specific commands are defined by the consuming project. Common patterns:
+
 | Command | Evidence |
 | ------- | -------- |
-| `bun run e2e -- mcp-1 …` | Yes — single `.md` in `.e2e/results/` |
-| `bun run e2e -- mcp-1 … --acp --agent <id>` | Dispatch JSON only; evidence after ACP agent runs |
-| `bun run e2e:dispatch -- …` | Same as dispatch path above |
-| `bun run adt:e2e -- adt-1 …` | Yes — evidence always on |
-| `bun run adt:e2e -- adt-1 … --acp --agent <id>` | Dispatch JSON; evidence after ACP agent runs |
-| `bun run adt:e2e:dispatch -- …` | Same as adt dispatch path above |
-| `bun run mcp:e2e -- …` (launcher or adt-lsp-mcp) | Only with `--evidence` or `OPENADT_E2E_EVIDENCE=1` |
+| `<root-entry> -- <scenario-code> …` | Yes — single `.md` in `.e2e/results/` |
+| `<root-entry> -- <scenario-code> … --acp --agent <id>` | Dispatch JSON only; evidence after ACP agent runs |
+| `<root-entry>:dispatch -- …` | Same as dispatch path above |
+| Package-local entry (without evidence flag) | Only with `--evidence` or project-specific env var |
 
 ## Agent-only execution
 
-If the user prefers manual MCP: follow Given/When/Then in the scenario file, then write one evidence `.md` under `.e2e/results/` using the same naming convention and the same sections (actual assertion checks + response excerpt).
+If the user prefers manual service interaction: follow Given/When/Then in the scenario file, then write one evidence `.md` under `.e2e/results/` using the same naming convention and the same sections (actual assertion checks + response excerpt).
