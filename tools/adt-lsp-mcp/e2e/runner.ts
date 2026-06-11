@@ -58,9 +58,15 @@ export type RunAdtLspE2eInput = {
   scenarios?: Scenario[]
 }
 
-export async function runAdtLspE2e(
-  input: RunAdtLspE2eInput | CliOptions
-): Promise<RunAdtLspE2eOutcome> {
+function startAdtLspRun(input: RunAdtLspE2eInput | CliOptions): {
+  opts: CliOptions
+  allScenarios: Scenario[]
+  startedAt: string
+  testId: string
+  ctx: ReturnType<typeof buildRunContext>
+  selected: Scenario[]
+  evidenceRoot: string
+} | null {
   const opts = 'opts' in input ? input.opts : input
   const allScenarios =
     'scenarios' in input && input.scenarios
@@ -69,67 +75,78 @@ export async function runAdtLspE2e(
 
   if (opts.list) {
     printCatalog(loadScenariosFromRoot(e2eRoot, undefined, { skipInvalid: true }))
-    return { exitCode: 0 }
+    return null
   }
-
   if (!existsSync(launcher)) {
     console.error(`Build required: bun run build (missing ${launcher})`)
-    return { exitCode: 1 }
+    return null
   }
-
   const startedAt = new Date().toISOString()
   const destination = resolveDestinationId(opts)
   const ctx = buildRunContext(opts, destination)
   const selected = filterScenarios(allScenarios, opts.scenario)
-
   const evidenceRoot = opts.evidenceRoot ?? defaultEvidenceRoot(resolveRepoRoot(packageRoot))
   const testId = selected.map((s) => s.code).join('_')
-  const writeEvidence = opts.evidence
+  return { opts, allScenarios, startedAt, testId, ctx, selected, evidenceRoot }
+}
 
+function maybeWriteAdtLspEvidence(
+  run: NonNullable<ReturnType<typeof startAdtLspRun>>,
+  results: ScenarioResult[],
+  exitCode: number
+): string | undefined {
+  if (!run.opts.evidence) return undefined
+  const passed = exitCode === 0
+  const { runId, path } = createEvidencePath(run.evidenceRoot, run.testId, passed, run.startedAt)
+  writeEvidenceReport({
+    path,
+    runId,
+    startedAt: run.startedAt,
+    finishedAt: new Date().toISOString(),
+    exitCode,
+    opts: run.opts,
+    ctx: run.ctx,
+    scenarios: run.selected,
+    results,
+    mcpMode: 'adt-lsp-mcp (direct LSP stdio)',
+    suite: ADT_LSP_E2E_SUITE,
+  })
+  console.log(`\nEvidence written: ${path}`)
+  return path
+}
+
+function printAdtLspHeader(run: NonNullable<ReturnType<typeof startAdtLspRun>>): void {
   console.log(`=== ADT LSP MCP e2e ===`)
-  console.log(`destination: ${redact(destination, ctx)}`)
-  console.log(`scenarios: ${selected.map((s) => `${s.code} (${s.id})`).join(', ')}\n`)
-  if (writeEvidence) {
-    console.log(`evidence: ${evidenceRoot} (filename gets ✅/❌ on completion)\n`)
+  console.log(`destination: ${redact(run.ctx.destination, run.ctx)}`)
+  console.log(`scenarios: ${run.selected.map((s) => `${s.code} (${s.id})`).join(', ')}\n`)
+  if (run.opts.evidence) {
+    console.log(`evidence: ${run.evidenceRoot} (filename gets ✅/❌ on completion)\n`)
   }
+}
+
+export async function runAdtLspE2e(
+  input: RunAdtLspE2eInput | CliOptions
+): Promise<RunAdtLspE2eOutcome> {
+  const run = startAdtLspRun(input)
+  if (!run) return { exitCode: 0 }
+  printAdtLspHeader(run)
 
   const timeout = setTimeout(() => {
     console.error('Run timeout — SSO/logon may be stuck')
-  }, ctx.timeoutMs).unref()
+  }, run.ctx.timeoutMs).unref()
 
   let exitCode = 1
   const results: ScenarioResult[] = []
   try {
-    for (const scenario of selected) {
-      results.push(await runScenario(scenario, ctx))
+    for (const scenario of run.selected) {
+      results.push(await runScenario(scenario, run.ctx))
     }
     printSummary(results)
     exitCode = results.every((r) => r.passed) ? 0 : 1
   } finally {
     clearTimeout(timeout)
   }
-
-  let evidencePath: string | undefined
-  if (writeEvidence) {
-    const passed = exitCode === 0
-    const { runId, path } = createEvidencePath(evidenceRoot, testId, passed, startedAt)
-    writeEvidenceReport({
-      path,
-      runId,
-      startedAt,
-      finishedAt: new Date().toISOString(),
-      exitCode,
-      opts,
-      ctx,
-      scenarios: selected,
-      results,
-      mcpMode: 'adt-lsp-mcp (direct LSP stdio)',
-      suite: ADT_LSP_E2E_SUITE,
-    })
-    evidencePath = path
-    console.log(`\nEvidence written: ${path}`)
-  }
-
+  const evidencePath = maybeWriteAdtLspEvidence(run, results, exitCode)
   return { exitCode, evidencePath }
 }
 

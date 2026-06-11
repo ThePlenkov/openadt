@@ -35,37 +35,39 @@ function tryParseJson(text: string | undefined): unknown {
   }
 }
 
-export function evaluateAssert(
+function collectChecksForAssert(
   assert: ScenarioAssert | undefined,
   payload: ToolCallPayload
-): AssertVerdict {
+): AssertCheck[] {
   const checks: AssertCheck[] = [mcpRepliedCheck(payload), isErrorCheck(assert, payload)]
-
-  if (assert?.notError) {
-    checks.push(agentFailureCheck(payload))
-  }
-  if (assert?.success) {
-    checks.push(successEnvelopeCheck(payload))
-  }
-  if (assert?.contentContains) {
+  if (!assert) return checks
+  if (assert.notError) checks.push(agentFailureCheck(payload))
+  if (assert.success) checks.push(successEnvelopeCheck(payload))
+  if (assert.contentContains) {
     checks.push(...contentContainsChecks(assert.contentContains, payload))
   }
-  if (assert?.destinationsInclude) {
+  if (assert.destinationsInclude) {
     checks.push(destinationsIncludeCheck(assert.destinationsInclude, payload))
   }
-  if (assert?.minCount !== undefined) {
-    checks.push(minCountCheck(assert.minCount, payload))
-  }
+  if (assert.minCount !== undefined) checks.push(minCountCheck(assert.minCount, payload))
+  return checks
+}
 
+function buildVerdictFromChecks(checks: AssertCheck[]): AssertVerdict {
   const failed = checks.filter((c) => !c.passed)
-  if (failed.length === 0) {
-    return { ok: true, detail: summarizePass(checks), checks }
-  }
+  if (failed.length === 0) return { ok: true, detail: summarizePass(checks), checks }
   return {
     ok: false,
     detail: failed.map((c) => `${c.name}: expected ${c.expected}, got ${c.actual}`).join('; '),
     checks,
   }
+}
+
+export function evaluateAssert(
+  assert: ScenarioAssert | undefined,
+  payload: ToolCallPayload
+): AssertVerdict {
+  return buildVerdictFromChecks(collectChecksForAssert(assert, payload))
 }
 
 function mcpRepliedCheck(payload: ToolCallPayload): AssertCheck {
@@ -151,22 +153,27 @@ function agentSuccess(text: string): boolean {
   return /"success"\s*:\s*true/.test(text)
 }
 
-function arrayLength(structured: unknown): number {
-  if (!structured || typeof structured !== 'object') return 0
-  const o = structured as Record<string, unknown>
-  for (const key of ['references', 'results']) {
-    const v = o[key]
+const ARRAY_KEYS = ['references', 'results'] as const
+
+function pickArrayLength(value: Record<string, unknown>): number | undefined {
+  for (const key of ARRAY_KEYS) {
+    const v = value[key]
     if (Array.isArray(v)) return v.length
   }
+  return undefined
+}
+
+function arrayLength(structured: unknown): number {
+  if (Array.isArray(structured)) return structured.length
+  if (!structured || typeof structured !== 'object') return 0
+  const o = structured as Record<string, unknown>
+  const top = pickArrayLength(o)
+  if (top !== undefined) return top
   const data = o.data
   if (Array.isArray(data)) return data.length
   if (data && typeof data === 'object') {
-    const nested = data as Record<string, unknown>
-    for (const key of ['references', 'results']) {
-      const v = nested[key]
-      if (Array.isArray(v)) return v.length
-    }
+    const nested = pickArrayLength(data as Record<string, unknown>)
+    if (nested !== undefined) return nested
   }
-  if (Array.isArray(structured)) return structured.length
   return 0
 }

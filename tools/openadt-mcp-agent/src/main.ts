@@ -232,11 +232,112 @@ function callCli(
   })
 }
 
+function buildInitializeResult(id: unknown): unknown {
+  return ok(id, {
+    protocolVersion: JSON_RPC_VERSION,
+    serverInfo: { name: 'openadt-mcp-agent', version: '0.1.0' },
+    capabilities: { tools: {} },
+  })
+}
+
+function buildToolsList(id: unknown): unknown {
+  return ok(id, {
+    tools: VERBS.map((v) => ({
+      name: v.id,
+      description: v.description,
+      inputSchema: {
+        type: 'object',
+        additionalProperties: true,
+        properties: {
+          destination: { type: 'string', description: 'Destination alias (e.g. DEV)' },
+          uri: { type: 'string', description: 'ADT URI' },
+          variant: { type: 'string' },
+          searchTerm: { type: 'string' },
+          content: { type: 'string' },
+          maxResults: { type: 'number' },
+        },
+      },
+    })),
+  })
+}
+
+function buildToolCallError(
+  id: unknown,
+  result: { ok: boolean; stdout: string; stderr: string; exit: number }
+): unknown {
+  return ok(id, {
+    isError: true,
+    content: [{ type: 'text', text: `openadt CLI exited ${result.exit}: ${result.stderr}` }],
+  })
+}
+
+function buildToolCallResult(
+  id: unknown,
+  result: { ok: boolean; stdout: string; stderr: string; exit: number }
+): unknown {
+  return ok(id, { content: [{ type: 'text', text: result.stdout.trim() }] })
+}
+
+function buildPingResult(id: unknown): unknown {
+  return ok(id, {})
+}
+
+function buildMethodNotFoundResult(id: unknown, method: string | undefined): unknown {
+  return err(id, -32601, `Method not found: ${method ?? '<none>'}`)
+}
+
+async function handleToolsCall(id: unknown, params: unknown): Promise<unknown | null> {
+  const p = params as { name?: string; arguments?: Record<string, unknown> } | undefined
+  const verbId = p?.name
+  if (!verbId) {
+    writeMessage(process.stdout, err(id, -32602, 'tools/call missing name'))
+    return null
+  }
+  const args = p?.arguments ?? {}
+  const result = await callCli(verbId, args)
+  if (!result.ok) {
+    return buildToolCallError(id, result)
+  }
+  return buildToolCallResult(id, result)
+}
+
+function dispatchMethod(
+  id: unknown,
+  method: string | undefined,
+  params: unknown
+): unknown | null | Promise<unknown | null> {
+  switch (method) {
+    case 'initialize':
+      return buildInitializeResult(id)
+    case 'notifications/initialized':
+      return null
+    case 'tools/list':
+      return buildToolsList(id)
+    case 'tools/call':
+      return handleToolsCall(id, params)
+    case 'ping':
+      return buildPingResult(id)
+    default:
+      return buildMethodNotFoundResult(id, method)
+  }
+}
+
+async function processOneMessage(msg: {
+  id?: unknown
+  method?: string
+  params?: unknown
+}): Promise<void> {
+  const { id, method, params } = msg
+  try {
+    const result = await dispatchMethod(id, method, params)
+    if (result) writeMessage(process.stdout, result)
+  } catch (error) {
+    const message = error instanceof Error ? error.message : String(error)
+    writeMessage(process.stdout, err(id, -32603, message))
+  }
+}
+
 async function main(): Promise<void> {
-  // Read MCP messages from stdin in a loop.
-  // Each message is handled synchronously w.r.t. stdin (no concurrent
-  // dispatches); this is the minimum-viable stdio bridge — a follow-up
-  // upgrade to a worker pool can land in T22.
   while (true) {
     const msg = (await readMessage(process.stdin)) as {
       id?: unknown
@@ -244,83 +345,7 @@ async function main(): Promise<void> {
       params?: unknown
     } | null
     if (!msg) break
-    const { id, method, params } = msg
-    try {
-      if (method === 'initialize') {
-        writeMessage(
-          process.stdout,
-          ok(id, {
-            protocolVersion: JSON_RPC_VERSION,
-            serverInfo: { name: 'openadt-mcp-agent', version: '0.1.0' },
-            capabilities: { tools: {} },
-          })
-        )
-      } else if (method === 'notifications/initialized') {
-        // No-op per spec.
-      } else if (method === 'tools/list') {
-        writeMessage(
-          process.stdout,
-          ok(id, {
-            tools: VERBS.map((v) => ({
-              name: v.id,
-              description: v.description,
-              inputSchema: {
-                type: 'object',
-                additionalProperties: true,
-                properties: {
-                  destination: {
-                    type: 'string',
-                    description: 'Destination alias (e.g. DEV)',
-                  },
-                  uri: { type: 'string', description: 'ADT URI' },
-                  variant: { type: 'string' },
-                  searchTerm: { type: 'string' },
-                  content: { type: 'string' },
-                  maxResults: { type: 'number' },
-                },
-              },
-            })),
-          })
-        )
-      } else if (method === 'tools/call') {
-        const p = params as { name?: string; arguments?: Record<string, unknown> } | undefined
-        const verbId = p?.name
-        const args = p?.arguments ?? {}
-        if (!verbId) {
-          writeMessage(process.stdout, err(id, -32602, 'tools/call missing name'))
-          continue
-        }
-        const result = await callCli(verbId, args)
-        if (!result.ok) {
-          writeMessage(
-            process.stdout,
-            ok(id, {
-              isError: true,
-              content: [
-                {
-                  type: 'text',
-                  text: `openadt CLI exited ${result.exit}: ${result.stderr}`,
-                },
-              ],
-            })
-          )
-        } else {
-          writeMessage(
-            process.stdout,
-            ok(id, {
-              content: [{ type: 'text', text: result.stdout.trim() }],
-            })
-          )
-        }
-      } else if (method === 'ping') {
-        writeMessage(process.stdout, ok(id, {}))
-      } else {
-        writeMessage(process.stdout, err(id, -32601, `Method not found: ${method ?? '<none>'}`))
-      }
-    } catch (error) {
-      const message = error instanceof Error ? error.message : String(error)
-      writeMessage(process.stdout, err(id, -32603, message))
-    }
+    await processOneMessage(msg)
   }
 }
 

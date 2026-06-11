@@ -39,47 +39,88 @@ export type RunAiTestsInput = {
   scenarios?: Scenario[]
 }
 
-export async function runAiTests(input: RunAiTestsInput | CliOptions): Promise<RunAiTestsOutcome> {
+function startRun(input: RunAiTestsInput | CliOptions): {
+  opts: CliOptions
+  scenarios: Scenario[]
+  startedAt: string
+  testId: string
+  ctx: ReturnType<typeof buildRunContext>
+  selected: Scenario[]
+  evidenceRoot: string
+} | null {
   const opts = 'opts' in input ? input.opts : input
   const scenarios = 'scenarios' in input ? input.scenarios : loadScenarios(aiTestsRoot)
-
   if (opts.list) {
     printCatalog(scenarios ?? [])
-    return { exitCode: 0 }
+    return null
   }
-
   const startedAt = new Date().toISOString()
   const destination = resolveDestinationId(opts)
   const ctx = buildRunContext(opts, destination)
   const selected = filterScenarios(scenarios ?? [], opts.scenario)
-
   const evidenceRoot = opts.evidenceRoot ?? defaultEvidenceRoot(resolveRepoRoot(aiTestsRoot))
   const testId = selected.map((s) => s.code).join('_')
-  const writeEvidence = opts.evidence
+  return { opts, scenarios, startedAt, testId, ctx, selected, evidenceRoot }
+}
 
-  console.log(`=== MCP AI tests ===`)
-  console.log(`destination: ${redact(destination, ctx)}`)
-  console.log(`scenarios: ${selected.map((s) => `${s.code} (${s.id})`).join(', ')}\n`)
-  if (writeEvidence) {
-    console.log(`evidence: ${evidenceRoot} (filename gets ✅/❌ on completion)\n`)
-  }
-
-  const mcpMode = selected.some((s) => (s.mode ?? 'standalone') === 'shared')
+function maybeWriteEvidence(
+  run: NonNullable<ReturnType<typeof startRun>>,
+  results: ScenarioResult[],
+  exitCode: number
+): string | undefined {
+  if (!run.opts.evidence) return undefined
+  const passed = exitCode === 0
+  const { runId, path } = createEvidencePath(run.evidenceRoot, run.testId, passed, run.startedAt)
+  const mcpMode = run.selected.some((s) => (s.mode ?? 'standalone') === 'shared')
     ? 'shared'
     : 'standalone'
-  const client = new McpStdioClient(launcher, ctx, mcpMode)
+  writeEvidenceReport({
+    path,
+    runId,
+    startedAt: run.startedAt,
+    finishedAt: new Date().toISOString(),
+    exitCode,
+    opts: run.opts,
+    ctx: run.ctx,
+    scenarios: run.selected,
+    results,
+    mcpMode,
+  })
+  console.log(`\nEvidence written: ${path}`)
+  return path
+}
 
-  const timeout = setTimeout(() => {
+function printRunHeader(run: NonNullable<ReturnType<typeof startRun>>): void {
+  console.log(`=== MCP AI tests ===`)
+  console.log(`destination: ${redact(run.ctx.destination, run.ctx)}`)
+  console.log(`scenarios: ${run.selected.map((s) => `${s.code} (${s.id})`).join(', ')}\n`)
+  if (run.opts.evidence) {
+    console.log(`evidence: ${run.evidenceRoot} (filename gets ✅/❌ on completion)\n`)
+  }
+}
+
+function startRunTimeout(client: McpStdioClient, timeoutMs: number): NodeJS.Timeout {
+  return setTimeout(() => {
     console.error('Run timeout — SSO/logon may be stuck')
     client.close()
-  }, ctx.timeoutMs).unref()
+  }, timeoutMs).unref()
+}
 
+export async function runAiTests(input: RunAiTestsInput | CliOptions): Promise<RunAiTestsOutcome> {
+  const run = startRun(input)
+  if (!run) return { exitCode: 0 }
+  printRunHeader(run)
+  const mcpMode = run.selected.some((s) => (s.mode ?? 'standalone') === 'shared')
+    ? 'shared'
+    : 'standalone'
+  const client = new McpStdioClient(launcher, run.ctx, mcpMode)
+  const timeout = startRunTimeout(client, run.ctx.timeoutMs)
   let exitCode = 1
   const results: ScenarioResult[] = []
   try {
     await client.start()
-    for (const scenario of selected) {
-      results.push(await runScenario(client, scenario, ctx))
+    for (const scenario of run.selected) {
+      results.push(await runScenario(client, scenario, run.ctx))
     }
     printSummary(results)
     exitCode = results.every((r) => r.passed) ? 0 : 1
@@ -87,27 +128,7 @@ export async function runAiTests(input: RunAiTestsInput | CliOptions): Promise<R
     clearTimeout(timeout)
     client.close()
   }
-
-  let evidencePath: string | undefined
-  if (writeEvidence) {
-    const passed = exitCode === 0
-    const { runId, path } = createEvidencePath(evidenceRoot, testId, passed, startedAt)
-    writeEvidenceReport({
-      path,
-      runId,
-      startedAt,
-      finishedAt: new Date().toISOString(),
-      exitCode,
-      opts,
-      ctx,
-      scenarios: selected,
-      results,
-      mcpMode,
-    })
-    evidencePath = path
-    console.log(`\nEvidence written: ${path}`)
-  }
-
+  const evidencePath = maybeWriteEvidence(run, results, exitCode)
   return { exitCode, evidencePath }
 }
 

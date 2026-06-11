@@ -408,20 +408,17 @@ export function createStdioMcpBridge(): StdioMcpBridge {
   }
 
   const tryAnswerLocalAgentTool = (request: ParsedRpc | undefined): boolean => {
-    if (!agentRegistry || !lspConnection || !agentDestination || !isToolCallRequest(request)) {
+    if (!canAnswerLocalTool(request)) {
       return false
     }
     const { name, args } = toolCallParams(request.params)
-    if (!agentRegistry.has(name)) {
-      return false
-    }
-    const tool = agentRegistry.get(name)
+    const tool = agentRegistry!.get(name)
     if (!tool) {
       return false
     }
     const ctx: AgentContext = {
-      lspConnection,
-      destination: agentDestination,
+      lspConnection: lspConnection!,
+      destination: agentDestination!,
       log: agentLog,
     }
     chain.append(async () => {
@@ -447,31 +444,35 @@ export function createStdioMcpBridge(): StdioMcpBridge {
     return true
   }
 
+  function canAnswerLocalTool(request: ParsedRpc | undefined): boolean {
+    if (!agentRegistry || !lspConnection || !agentDestination || !isToolCallRequest(request)) {
+      return false
+    }
+    const { name } = toolCallParams(request.params)
+    return agentRegistry.has(name)
+  }
+
+  const handleNoProxyMessage = (message: McpStdioMessage, request: ParsedRpc | undefined): void => {
+    if (tryAnswerLocalAgentTool(request)) return
+    chain.append(async () => {
+      await replyError(message, new JsonRpcError(-32001, 'Tool not available in no-proxy mode'))
+    })
+  }
+
   const forwardHttpOne = (message: McpStdioMessage): void => {
-    // In no-proxy mode, only answer agent tools locally
     if (proxyMode === 'no-proxy' && agentRegistry) {
       const request = parseRpc(message.body)
-      if (tryAnswerLocalAgentTool(request)) return
-      // Reject all other requests in no-proxy mode
-      chain.append(async () => {
-        await replyError(message, new JsonRpcError(-32001, 'Tool not available in no-proxy mode'))
-      })
+      handleNoProxyMessage(message, request)
       return
     }
-
-    // Proxy mode: forward to SAP MCP, but intercept agent tools
     if (!backend) {
       return
     }
     const request = parseRpc(message.body)
-
     if (tryAnswerLocalGuidance(request)) return
     if (tryAnswerLocalReadTool(request)) return
     if (tryAnswerLocalAgentTool(request)) return
-
-    // Methods whose backend response we rewrite to inject guidance.
     const injectMethod = guidanceEnabled() ? request?.method : undefined
-
     const outbound = new McpStdioMessage(
       rewriteToolsCallRequest({ body: message.body, registry: toolNames })
     )
@@ -627,6 +628,21 @@ export function createStdioMcpBridge(): StdioMcpBridge {
     result.tools = shortenToolNames(result.tools as Array<{ name?: unknown }>, toolNames)
   }
 
+  const applyRewritePlan = (result: RpcResult, plan: RewritePlan): void => {
+    applyGuidance(result, plan)
+    if (plan.readTools) applyReadTools(result)
+    if (plan.agentTools) applyAgentTools(result)
+    if (plan.shorten) applyShorten(result)
+  }
+
+  const parseRpcResponse = (msg: string): RpcResponse | undefined => {
+    try {
+      return JSON.parse(msg) as RpcResponse
+    } catch {
+      return undefined
+    }
+  }
+
   const rewriteForwardedMessage = (
     msg: string,
     request: ParsedRpc | undefined,
@@ -635,20 +651,12 @@ export function createStdioMcpBridge(): StdioMcpBridge {
   ): string => {
     const plan = planRewrite(request?.method, injectMethod, hasReadBackend)
     if (!plan) return msg
-    let parsed: RpcResponse
-    try {
-      parsed = JSON.parse(msg) as RpcResponse
-    } catch {
-      return msg
-    }
-    if (parsed.id !== request?.id || !parsed.result) {
+    const parsed = parseRpcResponse(msg)
+    if (!parsed || parsed.id !== request?.id || !parsed.result) {
       return msg
     }
     const result = parsed.result as RpcResult
-    applyGuidance(result, plan)
-    if (plan.readTools) applyReadTools(result)
-    if (plan.agentTools) applyAgentTools(result)
-    if (plan.shorten) applyShorten(result)
+    applyRewritePlan(result, plan)
     return JSON.stringify(parsed)
   }
 
