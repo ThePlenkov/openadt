@@ -29,8 +29,8 @@ Config defaults via `E2E_CONFIG` or `e2e.config.yaml` at repo root when omitted.
 
 ```bash
 bun run e2e -- list
-bun run e2e -- show adtls-1
-bun run e2e -- run adtls-1 --destination ABC
+bun run e2e -- show ls-1
+bun run e2e -- run ls-1 --destination ABC
 bun run e2e -- run mcp-1 --destination ABC
 ```
 

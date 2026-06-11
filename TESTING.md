@@ -34,7 +34,7 @@ Invoke via `/e2e` — the agent runs **`e2e-agent` CLI commands only** (see [SKI
 
 ```bash
 bun run e2e -- list
-bun run e2e -- run adtls-1 --destination ABC
+bun run e2e -- run ls-1 --destination ABC
 ```
 
 OpenADT adapter: `e2e/openadt-adapter.ts`. Config: `e2e.config.yaml` at repo root.
@@ -47,7 +47,7 @@ OpenADT E2E scenarios use specific prefixes to indicate their target system:
   - These scenarios test the SAP ADT Language Server MCP tools
   - Located in `e2e/scenarios/adt-lsp/`
   - Require the adtls-mcp launcher to be running
-  - Examples: `adtls-1`, `adtls-2`, `adtls-3` (formerly `adt-1`, `adt-2`, `adt-3`)
+  - Examples: `ls-1`, `ls-2`, `ls-3` (formerly `adt-1`, `adt-2`, `adt-3`)
 
 - **mcp_** - Scenarios for generic MCP tools (if any)
   - General MCP framework testing scenarios
@@ -57,7 +57,7 @@ The **adtls_** prefix is used instead of **adt_** to avoid confusion with genera
 
 ### Destination Resolution
 
-When executing E2E scenarios that require a SAP destination, the agent passes `--destination` to `e2e-agent run` (e.g. `/e2e adtls-1 ABC` → `bun run e2e -- run adtls-1 --destination ABC`). The **OpenADT adapter** resolves partial SIDs (e.g. `ABC` → `ABC_200_USER_EN`) from `~/.adtls/destinations.json`.
+When executing E2E scenarios that require a SAP destination, the agent passes `--destination` to `e2e-agent run` (e.g. `/e2e ls-1 ABC` → `bun run e2e -- run ls-1 --destination ABC`). The **OpenADT adapter** resolves partial SIDs (e.g. `ABC` → `ABC_200_USER_EN`) from `~/.adtls/destinations.json`.
 
 **Never commit real system IDs, usernames, or hostnames** — use fictional fixtures only (`ABC`, `DEV`, `ABC_200_USER_EN`). Live destinations are supplied at run time by the operator.
 

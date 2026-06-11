@@ -27,7 +27,7 @@ The runner resolves placeholders from (first wins):
 
 ## Scenario file format
 
-Path: `e2e/scenarios/<suite>/mcp-N-<id>.md` or `adtls-N-<id>.md` — **one file per scenario**.
+Path: `e2e/scenarios/<suite>/mcp-N-<id>.md` or `ls-N-<id>.md` — **one file per scenario**.
 
 ```markdown
 ---
@@ -91,8 +91,8 @@ Agents use **only** the generic CLI — see [.agents/skills/e2e/SKILL.md](../.ag
 
 ```bash
 bun run e2e -- list
-bun run e2e -- show adtls-1
-bun run e2e -- run adtls-1 --destination ABC
+bun run e2e -- show ls-1
+bun run e2e -- run ls-1 --destination ABC
 bun run e2e -- run mcp-1 --destination ABC_200_USER_EN
 bun run e2e -- dispatch mcp-1 --destination ABC --acp --agent devin
 ```
@@ -110,7 +110,7 @@ Suites (in `e2e.config.yaml`):
 
 | Suite id | Prefix    | Backend        | Scenario dir              |
 | -------- | --------- | -------------- | ------------------------- |
-| `adtls`  | `adtls-`  | `adt-lsp-mcp`  | `e2e/scenarios/adt-lsp`   |
+| `adtls`  | `ls-`     | `adt-lsp-mcp`  | `e2e/scenarios/adt-lsp`   |
 | `mcp`    | `mcp-`    | `mcp-launcher` | `e2e/scenarios/launcher`  |
 
 Exit `0` when all steps pass; `1` on missing destination, spawn failure, or assertion failure.
@@ -118,7 +118,7 @@ Exit `0` when all steps pass; `1` on missing destination, spawn failure, or asse
 ### ACP dispatch
 
 ```bash
-bun run e2e -- dispatch adtls-1 --destination ABC --acp --agent devin
+bun run e2e -- dispatch ls-1 --destination ABC --acp --agent devin
 ```
 
 Stdout ends with `E2E_DISPATCH_FILE=<path>`. External agent runs `command.local` from the JSON payload. No ACP API is wired in this repo.
@@ -126,7 +126,7 @@ Stdout ends with `E2E_DISPATCH_FILE=<path>`. External agent runs `command.local`
 ## `/e2e` entry (evidence)
 
 ```bash
-/e2e adtls-1 ABC   →   bun run e2e -- run adtls-1 --destination ABC
+/e2e ls-1 ABC   →   bun run e2e -- run ls-1 --destination ABC
 ```
 
 - `run` always writes evidence to `.e2e/results/` and prints `E2E_EVIDENCE_FILE=`.

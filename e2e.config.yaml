@@ -8,7 +8,7 @@ specPath: specs/mcp-ai-testing.md
 suites:
   adtls:
     dir: e2e/scenarios/adt-lsp
-    codePrefix: adtls-
+    codePrefix: ls-
   mcp:
     dir: e2e/scenarios/launcher
     codePrefix: mcp-

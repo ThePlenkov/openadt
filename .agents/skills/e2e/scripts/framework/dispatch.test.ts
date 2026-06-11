@@ -11,7 +11,7 @@ const projectConfig: ProjectE2eConfig = {
   specPath: 'specs/mcp-ai-testing.md',
   suites: {
     mcp: { dir: 'e2e/scenarios/launcher', codePrefix: 'mcp-' },
-    adtls: { dir: 'e2e/scenarios/adt-lsp', codePrefix: 'adtls-' },
+    adtls: { dir: 'e2e/scenarios/adt-lsp', codePrefix: 'ls-' },
   },
 }
 

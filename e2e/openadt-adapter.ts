@@ -84,7 +84,7 @@ function resolveDestinationId(opts: DestinationOptions): string {
 }
 
 function resolveSuiteId(scenario: Scenario): 'adtls' | 'mcp' {
-  if (scenario.code.startsWith('adtls-')) return 'adtls'
+  if (scenario.code.startsWith('ls-')) return 'adtls'
   if (scenario.code.startsWith('mcp-')) return 'mcp'
   throw new Error(`Unknown OpenADT suite for scenario ${scenario.code}`)
 }

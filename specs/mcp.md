@@ -532,7 +532,7 @@ Package: `tools/adt-lsp-mcp/` — stdio-only MCP for the 26 `adt_*` tools. Calls
 | `prompts/list` | Includes `adt_lsp_workflow`                                                                                                  |
 | `prompts/get`  | `{ "name": "adt_lsp_workflow" }` → workflow markdown (direct LSP model, destination id, transport namespace, getLsUri chain) |
 
-Implementation: `tools/adt-lsp-mcp/src/guidance/`. E2e: generic `e2e-agent` CLI + OpenADT adapter — `bun run e2e -- run adtls-N --destination <id>` (see [mcp-ai-testing.md](mcp-ai-testing.md)).
+Implementation: `tools/adt-lsp-mcp/src/guidance/`. E2e: generic `e2e-agent` CLI + OpenADT adapter — `bun run e2e -- run ls-N --destination <id>` (see [mcp-ai-testing.md](mcp-ai-testing.md)).
 
 ---
 
