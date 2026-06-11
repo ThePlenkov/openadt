@@ -1,20 +1,30 @@
 /**
  * Formatting contract.
- * LSP method: adtLs/format/formatting
+ * LSP method: textDocument/formatting (standard LSP)
  */
 import { lspEndpoint, type, type LspEndpoint } from '@openadt/lsp-client'
 
 export const formatting: LspEndpoint = lspEndpoint({
-  method: 'adtLs/format/formatting',
+  method: 'textDocument/formatting',
   types: {
     params: type<{
-      destination: string
-      uri: string
-      content: string
+      textDocument: {
+        uri: string
+      }
+      options?: {
+        tabSize?: number
+        insertSpaces?: boolean
+      }
     }>(),
-    response: type<{
-      success: boolean
-      formattedContent: string
-    }>(),
+    response:
+      type<
+        Array<{
+          range: {
+            start: { line: number; character: number }
+            end: { line: number; character: number }
+          }
+          newText: string
+        }>
+      >(),
   },
 })

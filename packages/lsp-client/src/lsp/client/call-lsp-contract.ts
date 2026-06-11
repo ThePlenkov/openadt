@@ -26,7 +26,7 @@ export async function callLspContract<E extends LspMethodSpec>(
 
   if (timeoutMs) {
     const timeoutPromise = new Promise<never>((_, reject) => {
-      setTimeout(() => reject(new Error('LSP call timeout')), timeoutMs)
+      setTimeout(() => reject(new Error(`LSP call timed out after ${timeoutMs}ms`)), timeoutMs)
     })
 
     const result = await Promise.race([

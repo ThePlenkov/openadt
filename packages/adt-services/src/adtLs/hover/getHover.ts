@@ -1,23 +1,30 @@
 /**
  * Get hover contract.
- * LSP method: adtLs/hover/getHover
+ * LSP method: textDocument/hover (standard LSP)
  */
 import { lspEndpoint, type, type LspEndpoint } from '@openadt/lsp-client'
 
 export const getHover: LspEndpoint = lspEndpoint({
-  method: 'adtLs/hover/getHover',
+  method: 'textDocument/hover',
   types: {
     params: type<{
-      destination: string
-      uri: string
+      textDocument: {
+        uri: string
+      }
       position: {
         line: number
         character: number
       }
     }>(),
     response: type<{
-      success: boolean
-      documentation: string
-    }>(),
+      contents:
+        | string
+        | { language: string; value: string }
+        | Array<string | { language: string; value: string }>
+      range?: {
+        start: { line: number; character: number }
+        end: { line: number; character: number }
+      }
+    } | null>(),
   },
 })

@@ -8,7 +8,8 @@ given: >-
   MCP stdio launcher runs in standalone mode with --no-proxy --import-from=adtls;
   user destination {{destination}} is registered and logon-ready.
 when: >-
-  Call adt_find_references with destination {{destination}}, uri, and position.
+  Call adt_find_references with destination {{destination}}, uri, and symbol name
+  (a type/method in the class — not the class keyword itself).
 then: >-
   MCP returns a tool result with reference list;
   isError is false; response contains reference information.
@@ -17,7 +18,7 @@ steps:
     args:
       destination: "{{destination}}"
       uri: "/sap/bc/adt/oo/classes/cl_abap_typedescr"
-      position: { line: 1, character: 0 }
+      symbol: "CL_ABAP_DATA_TYPE_HANDLE"
     assert:
       notError: true
 ---
@@ -30,7 +31,7 @@ MCP stdio launcher runs in standalone mode with `--no-proxy --import-from=adtls`
 
 ## When
 
-Call `adt_find_references` with destination, object URI, and position.
+Call `adt_find_references` with destination, object URI, and **symbol name** (not the class keyword — heavily-used globals hang or fail).
 
 ## Then
 

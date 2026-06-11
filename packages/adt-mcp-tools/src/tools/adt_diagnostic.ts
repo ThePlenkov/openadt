@@ -3,13 +3,11 @@
  * Uses MCP SDK pattern with Zod schema.
  */
 import { z } from 'zod'
-import { LSP_METHOD_REPOSITORY_GET_LS_URI } from '@openadt/adt-config'
 import { tool } from '@openadt/mcp-tools'
 import { diagnostic } from '@openadt/adt-services'
 import type { LspTransport } from '@openadt/lsp-client'
-import { callLspContract } from '@openadt/lsp-client'
+import { callLspContract, withOpenDocument } from '@openadt/lsp-client'
 
-// Zod schema (single source of truth)
 const schema = z.object({
   destination: z.string().describe('SAP destination'),
   uri: z
@@ -17,25 +15,20 @@ const schema = z.object({
     .describe('Object URI (ADT path or repotree URI; tool resolves via getLsUri if needed)'),
 })
 
-// Tool definition for MCP SDK registration
 export const adt_diagnostic = tool({
   name: 'adt_diagnostic',
-  description:
-    'Get syntax and check errors. Accepts ADT path and resolves repotree URI internally.',
+  description: 'Get syntax check diagnostics. Opens document then calls textDocument/diagnostic.',
   inputSchema: schema,
   handler: async (args: z.infer<typeof schema>, transport: LspTransport) => {
     try {
-      // Convert ADT path to repotree URI if needed
-      const lsUriResult = (await transport.sendRequest(LSP_METHOD_REPOSITORY_GET_LS_URI, {
-        destination: args.destination,
-        adtUri: args.uri,
-      })) as { uri?: string }
-      const objectUri = lsUriResult?.uri || args.uri
-
-      const lspResult = await callLspContract(diagnostic, transport, {
-        destination: args.destination,
-        uri: objectUri,
-      })
+      const lspResult = await withOpenDocument(
+        transport,
+        { destination: args.destination, uri: args.uri },
+        async (ctx) =>
+          callLspContract(diagnostic, transport, {
+            textDocument: { uri: ctx.repotreeUri },
+          })
+      )
 
       return {
         content: [

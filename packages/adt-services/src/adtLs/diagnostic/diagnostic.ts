@@ -1,20 +1,21 @@
 /**
  * Diagnostic contract.
- * LSP method: adtLs/diagnostic/diagnostic
+ * LSP method: textDocument/diagnostic (standard LSP pull diagnostics)
  */
 import { lspEndpoint, type, type LspEndpoint } from '@openadt/lsp-client'
 
 export const diagnostic: LspEndpoint = lspEndpoint({
-  method: 'adtLs/diagnostic/diagnostic',
+  method: 'textDocument/diagnostic',
   types: {
     params: type<{
-      destination: string
-      uri: string
+      textDocument: {
+        uri: string
+      }
     }>(),
     response: type<{
-      success: boolean
-      diagnostics: Array<{
-        severity: 'error' | 'warning' | 'info'
+      kind: 'full' | 'unchanged'
+      items?: Array<{
+        severity?: number
         message: string
         range: {
           start: { line: number; character: number }

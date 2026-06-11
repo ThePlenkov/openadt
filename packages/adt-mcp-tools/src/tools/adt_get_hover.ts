@@ -3,13 +3,16 @@
  * Uses MCP SDK pattern with Zod schema.
  */
 import { z } from 'zod'
-import { LSP_METHOD_REPOSITORY_GET_LS_URI } from '@openadt/adt-config'
 import { tool } from '@openadt/mcp-tools'
 import { getHover } from '@openadt/adt-services'
 import type { LspTransport } from '@openadt/lsp-client'
-import { callLspContract } from '@openadt/lsp-client'
+import {
+  callLspContract,
+  primeSemanticTokens,
+  resolveLspPosition,
+  withOpenDocument,
+} from '@openadt/lsp-client'
 
-// Zod schema (single source of truth)
 const schema = z.object({
   destination: z.string().describe('SAP destination'),
   uri: z
@@ -19,27 +22,31 @@ const schema = z.object({
     line: z.number(),
     character: z.number(),
   }),
+  symbol: z.string().optional().describe('Optional symbol name instead of explicit position'),
 })
 
-// Tool definition for MCP SDK registration
 export const adt_get_hover = tool({
   name: 'adt_get_hover',
-  description: 'Get hover documentation. Accepts ADT path and resolves repotree URI internally.',
+  description:
+    'Get hover documentation. Opens document, primes semantic tokens, then calls textDocument/hover.',
   inputSchema: schema,
   handler: async (args: z.infer<typeof schema>, transport: LspTransport) => {
     try {
-      // Convert ADT path to repotree URI if needed
-      const lsUriResult = (await transport.sendRequest(LSP_METHOD_REPOSITORY_GET_LS_URI, {
-        destination: args.destination,
-        adtUri: args.uri,
-      })) as { uri?: string }
-      const objectUri = lsUriResult?.uri || args.uri
-
-      const lspResult = await callLspContract(getHover, transport, {
-        destination: args.destination,
-        uri: objectUri,
-        position: args.position,
-      })
+      const lspResult = await withOpenDocument(
+        transport,
+        { destination: args.destination, uri: args.uri },
+        async (ctx) => {
+          await primeSemanticTokens(transport, ctx.repotreeUri)
+          const position = await resolveLspPosition(transport, ctx, {
+            position: args.position,
+            symbol: args.symbol,
+          })
+          return callLspContract(getHover, transport, {
+            textDocument: { uri: ctx.repotreeUri },
+            position,
+          })
+        }
+      )
 
       return {
         content: [

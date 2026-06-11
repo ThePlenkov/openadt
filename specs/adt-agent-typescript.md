@@ -40,9 +40,9 @@ All custom tools are prefixed with `adt_` to distinguish from SAP MCP tools.
 | `adt_lock_object`          | Lock an ABAP object for editing          | `adt/fileSystem/lockFile`                    |
 | `adt_unlock_object`        | Unlock an ABAP object                    | `adt/fileSystem/unlockFile`                  |
 | `adt_get_lock_status`      | Get lock status of an ABAP object        | `adt/fileSystem/getFileLockStatus`           |
-| `adt_format_code`          | Format ABAP code                         | `adt/format/formatting`                      |
-| `adt_get_diagnostics`      | Get syntax and check errors              | `adt/diagnostic/diagnostic`                  |
-| `adt_find_references`      | Find usages/references of an ABAP object | `adt/references/findReferences`              |
+| `adt_format_code`          | Format ABAP code                         | `textDocument/formatting` (after open-document lifecycle) |
+| `adt_get_diagnostics`      | Get syntax and check errors              | `textDocument/diagnostic` (after open-document lifecycle)  |
+| `adt_find_references`      | Find usages/references of an ABAP object | `textDocument/references` (after open-document lifecycle)  |
 | `adt_toggle_version`       | Toggle between active/inactive version   | `adt/fileSystem/toggleVersion`               |
 | `adt_check_transport_lock` | Check if transport is required for lock  | `adt/transport/checkTransportForObjectLock`  |
 | `adt_create_transport`     | Create a transport for object lock       | `adt/transport/createTransportForObjectLock` |
@@ -55,8 +55,8 @@ All custom tools are prefixed with `adt_` to distinguish from SAP MCP tools.
 | -------------------------------- | --------------------------------------- | -------------------------------------- |
 | `adt_get_inactive_objects`       | Get list of inactive objects            | `adt/activation/getInactiveObjects`    |
 | `adt_run_application`            | Run an ABAP application in console mode | `adt/applicationRun/runApplication`    |
-| `adt_get_hover`                  | Get documentation for a code element    | `adt/hover/getHover`                   |
-| `adt_document_symbols`           | Get document structure/outline          | `adt/documentSymbol/documentSymbols`   |
+| `adt_get_hover`                  | Get documentation for a code element    | `textDocument/hover` (after open-document lifecycle) |
+| `adt_document_symbols`           | Get document structure/outline          | `textDocument/documentSymbol` (after open-document lifecycle) |
 | `adt_search_transports`          | Simple search for transports            | `adt/transport/searchTransportsSimple` |
 | `adt_search_transports_advanced` | Advanced search for transports          | `adt/transport/searchTransports`       |
 | `adt_get_coverage`               | Get code coverage data                  | `adt/coverage/getCoverage`             |
@@ -71,6 +71,27 @@ All custom tools are prefixed with `adt_` to distinguish from SAP MCP tools.
 | `adt_get_package_name`   | Get package name from URI                  | `adt/fileSystem/getPackageName`   |
 | `adt_get_folder_uri`     | Get folder URI for navigation              | `adt/fileSystem/getFolderUri`     |
 | `adt_get_external_links` | Get external links (e.g., ADT for Eclipse) | `adt/fileSystem/getExternalLinks` |
+
+## Repotree open-document lifecycle (text-document LSP tools)
+
+Headless MCP calls standard LSP text-document methods (`textDocument/references`, `textDocument/documentSymbol`, …) that VS Code reaches only after opening a file. `@openadt/lsp-client` **`withOpenDocument()`** wraps each tool call:
+
+1. `adtLs/repository/getLsUri` — ADT path → repotree/AFF URI (required)
+2. `adtLs/fileSystem/forceRefresh` — `{ uri, refreshRelatedFiles: true }` (best-effort)
+3. `adtLs/fileSystem/readFile` — load source into SFS
+4. `textDocument/didOpen` — notification with file content (standalone LSP transport only)
+5. Primary LSP request (`textDocument/*`)
+6. `textDocument/didClose` — always in `finally` (standalone LSP transport only)
+
+Per-URI serialization prevents concurrent calls on the same object from closing each other's documents mid-flight.
+
+`adt_find_references` accepts **`symbol`** (preferred) or **`position`** (0-based), resolves position via outline/source search, and times out after **20s** with guidance when the symbol is too heavily referenced.
+
+Hover tools prime **`textDocument/semanticTokens/full`** before `textDocument/hover` (ABAP token cache gate).
+
+After destination logon, `adt-lsp-mcp` also runs a **session prewarm**: one cheap `adtLs/repository/quickSearch` (`CL_*`, `maxResults: 1`) to touch the RIS index.
+
+Prewarm steps after getLsUri never fail the tool — errors are logged and the primary LSP request still runs.
 
 ## Input/Output Schema
 

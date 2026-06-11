@@ -1,28 +1,33 @@
 /**
  * Document symbols contract.
- * LSP method: adtLs/documentSymbol/documentSymbols
+ * LSP method: textDocument/documentSymbol (standard LSP)
  */
 import { lspEndpoint, type, type LspEndpoint } from '@openadt/lsp-client'
 
 export const documentSymbols: LspEndpoint = lspEndpoint({
-  method: 'adtLs/documentSymbol/documentSymbols',
+  method: 'textDocument/documentSymbol',
   types: {
     params: type<{
-      destination: string
-      uri: string
+      textDocument: {
+        uri: string
+      }
     }>(),
-    response: type<{
-      success: boolean
-      symbols: Array<{
-        name: string
-        kind: string
-        detail?: string
-        range: {
-          start: { line: number; character: number }
-          end: { line: number; character: number }
-        }
-        children?: unknown[]
-      }>
-    }>(),
+    response:
+      type<
+        Array<{
+          name: string
+          kind: number
+          detail?: string
+          range: {
+            start: { line: number; character: number }
+            end: { line: number; character: number }
+          }
+          selectionRange: {
+            start: { line: number; character: number }
+            end: { line: number; character: number }
+          }
+          children?: unknown[]
+        }>
+      >(),
   },
 })

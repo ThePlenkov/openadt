@@ -20,6 +20,28 @@ export {
   type LspTransport,
 } from './lsp/client/lsp-transport'
 
+export { isRepotreeUri, resolveRepotreeUri } from './lsp/client/resolve-repotree-uri'
+
+export { applyTextEdits, type TextEdit } from './lsp/client/apply-text-edits'
+
+export { enrichFindReferencesError } from './lsp/client/find-references-error'
+
+export {
+  withOpenDocument,
+  primeSemanticTokens,
+  resolveLspPosition,
+  type WithOpenDocumentOptions,
+  type OpenDocumentContext,
+  type LspPosition,
+} from './lsp/client/with-open-document'
+
+export {
+  prewarmRepotreeObject,
+  type PrewarmRepotreeObjectOptions,
+} from './lsp/client/prewarm-repotree-object'
+
+export { prewarmDestination } from './lsp/client/prewarm-destination'
+
 export {
   lspEndpoint,
   type,

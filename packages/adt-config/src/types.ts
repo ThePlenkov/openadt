@@ -20,6 +20,7 @@ export const LSP_METHOD_MCP_SET_DESTINATION = 'adtLs/mcp/setDestination'
 export const LSP_METHOD_REPOSITORY_QUICK_SEARCH = 'adtLs/repository/quickSearch'
 export const LSP_METHOD_REPOSITORY_GET_LS_URI = 'adtLs/repository/getLsUri'
 export const LSP_METHOD_FILESYSTEM_READ_FILE = 'adtLs/fileSystem/readFile'
+export const LSP_METHOD_FILESYSTEM_FORCE_REFRESH = 'adtLs/fileSystem/forceRefresh'
 
 /** One repository object hit from `quickSearch`. `uri` is the ADT object path. */
 export type AdtObjectReference = {

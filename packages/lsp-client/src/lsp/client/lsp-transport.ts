@@ -10,6 +10,8 @@ import { ParameterStructures, type MessageConnection } from '@openadt/adt-infra'
  */
 export interface LspTransport {
   sendRequest(method: string, params: unknown): Promise<unknown>
+  /** Optional — required for textDocument/didOpen prewarm in standalone LSP mode. */
+  sendNotification?(method: string, params: unknown): void
 }
 
 /**
@@ -21,6 +23,10 @@ export class LspConnectionTransport implements LspTransport {
 
   async sendRequest(method: string, params: unknown): Promise<unknown> {
     return this.connection.sendRequest(method, ParameterStructures.byName, params)
+  }
+
+  sendNotification(method: string, params: unknown): void {
+    this.connection.sendNotification(method, ParameterStructures.byName, params)
   }
 }
 

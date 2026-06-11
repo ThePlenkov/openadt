@@ -16,6 +16,7 @@ import { locateAdtLs } from './locate'
 import {
   connectAdtLanguageServer,
   LspConnectionTransport,
+  prewarmDestination,
   type LspSession,
 } from '@openadt/lsp-client'
 import { DEFAULT_WORKSPACE } from '@openadt/adt-config'
@@ -72,6 +73,9 @@ class SimpleMcpServer {
       createProjectIds: [this.destination],
       ensureLoggedOnIds: [this.destination],
     })
+
+    const transport = new LspConnectionTransport(this.lspSession.connection)
+    void prewarmDestination(transport, this.destination)
 
     console.error('LSP connection established')
   }
