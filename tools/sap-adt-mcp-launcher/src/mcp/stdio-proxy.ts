@@ -660,7 +660,17 @@ export function createStdioMcpBridge(): StdioMcpBridge {
     }
   }
 
-  const rewriteForwardedMessage = (
+  function isMatchingRpcResponse(
+    parsed: RpcResponse | undefined,
+    request: ParsedRpc | undefined
+  ): parsed is RpcResponse & { result: RpcResult } {
+    if (!parsed) return false
+    if (parsed.id !== request?.id) return false
+    if (!parsed.result) return false
+    return true
+  }
+
+  function rewriteForwardedMessage(
     msg: string,
     request: ParsedRpc | undefined,
     injectMethod: string | undefined,
@@ -669,11 +679,8 @@ export function createStdioMcpBridge(): StdioMcpBridge {
     const plan = planRewrite(request?.method, injectMethod, hasReadBackend)
     if (!plan) return msg
     const parsed = parseRpcResponse(msg)
-    if (!parsed || parsed.id !== request?.id || !parsed.result) {
-      return msg
-    }
-    const result = parsed.result as RpcResult
-    applyRewritePlan(result, plan)
+    if (!isMatchingRpcResponse(parsed, request)) return msg
+    applyRewritePlan(parsed.result, plan)
     return JSON.stringify(parsed)
   }
 

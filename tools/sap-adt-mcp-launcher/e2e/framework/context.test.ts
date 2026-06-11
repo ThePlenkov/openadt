@@ -47,34 +47,26 @@ describe('resolveE2eExecutor', () => {
   })
 })
 
+function baseCliOptions(overrides: Partial<CliOptions> = {}): CliOptions {
+  return {
+    resolveDestination: false,
+    importFrom: 'adtls',
+    port: 2239,
+    timeoutMs: 300_000,
+    list: false,
+    evidence: false,
+    executor: 'acp',
+    ...overrides,
+  }
+}
+
 describe('resolveAcpAgent', () => {
   test('requires --agent or ACP_AGENT', () => {
-    expect(() =>
-      resolveAcpAgent({
-        resolveDestination: false,
-        importFrom: 'adtls',
-        port: 2239,
-        timeoutMs: 300_000,
-        list: false,
-        evidence: false,
-        executor: 'acp',
-      })
-    ).toThrow(/requires --agent/)
+    expect(() => resolveAcpAgent(baseCliOptions())).toThrow(/requires --agent/)
   })
 
   test('reads --agent flag', () => {
-    expect(
-      resolveAcpAgent({
-        agent: 'devin',
-        resolveDestination: false,
-        importFrom: 'adtls',
-        port: 2239,
-        timeoutMs: 300_000,
-        list: false,
-        evidence: false,
-        executor: 'acp',
-      })
-    ).toBe('devin')
+    expect(resolveAcpAgent(baseCliOptions({ agent: 'devin' }))).toBe('devin')
   })
 })
 

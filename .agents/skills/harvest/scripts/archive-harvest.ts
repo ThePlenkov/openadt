@@ -35,16 +35,37 @@ interface LiveThreadIds {
   totals: { harvested: number; open: number; archived: number }
 }
 
+function isClosedStatus(status: string): boolean {
+  return status === 'done' || status === 'wontfix' || status === 'duplicate'
+}
+
+function effectiveStatus(row: LedgerRow, overlays: Map<string, LedgerOverlay>): string {
+  return overlays.get(row.thread_id)?.status ?? row.status
+}
+
+function countOpenStatuses(all: LedgerRow[], overlays: Map<string, LedgerOverlay>): number {
+  return all.filter((r) => effectiveStatus(r, overlays) === 'open').length
+}
+
 function computeLiveThreadIds(): LiveThreadIds {
-  const all = readDebtRecords()
+  const all = readLedger()
   const overlays = readLedgerOverlays()
   const live = new Set<string>()
   for (const row of all) {
-    const overlay = overlays.get(row.thread_id)
-    const status = overlay?.status ?? row.status
-    if (status === 'done' || status === 'wontfix' || status === 'duplicate') {
+    if (isClosedStatus(effectiveStatus(row, overlays))) {
       continue
     }
+    live.add(row.thread_id)
+  }
+  return {
+    live,
+    totals: {
+      harvested: all.length,
+      open: countOpenStatuses(all, overlays),
+      archived: 0,
+    },
+  }
+}
     live.add(row.thread_id)
   }
   return {

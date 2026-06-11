@@ -76,7 +76,7 @@ class FileMcpLog implements McpLog {
 
   private emit(level: string, message: string): void {
     this.write(level, message)
-    if (level === 'error' || level === 'warn' || level === 'info') {
+    if (shouldEchoToStderr(level)) {
       console.error(`[openadt-mcp] ${level}: ${redactSecrets(message)}`)
     }
   }
@@ -89,6 +89,10 @@ class FileMcpLog implements McpLog {
 
 function isoTimestamp(): string {
   return new Date().toISOString()
+}
+
+function shouldEchoToStderr(level: string): boolean {
+  return level === 'error' || level === 'warn' || level === 'info'
 }
 
 export function eclipseWorkspaceLogPath(workspace: string): string {
