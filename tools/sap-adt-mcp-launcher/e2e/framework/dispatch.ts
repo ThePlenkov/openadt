@@ -63,7 +63,7 @@ export function defaultDispatchRoot(repoRoot: string): string {
 
 function shellQuote(value: string): string {
   if (/^[\w@./:-]+$/.test(value)) return value
-  return `"${value.replace(/"/g, '\\"')}"`
+  return `"${value.replace(/\\/g, '\\\\').replace(/"/g, '\\"')}"`
 }
 
 const adtLspE2eRoot = join(launcherE2eRoot, '..', '..', 'adt-lsp-mcp', 'e2e')

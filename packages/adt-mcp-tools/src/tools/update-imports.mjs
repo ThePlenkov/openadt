@@ -26,27 +26,27 @@ for (const file of files) {
 
   // Replace imports with shared packages
   content = content.replace(
-    /from ['"`']\.\.\/tool-factory\.js['"`'];/g,
+    /from ['"`]\.\.\/tool-factory\.js['"`];/g,
     "from '@openadt/mcp-tools';"
   )
 
   content = content.replace(
-    /from ['"`']\.\.\/\.\.\/services\/adtLs\/[^/]+\/[^/]+\.js['"`"];/g,
+    /from ['"`]\.\.\/\.\.\/services\/adtLs\/[^/]+\/[^/]+\.js['"`];/g,
     "from '@openadt/adt-services';"
   )
 
   content = content.replace(
-    /from ['"`']\.\.\/\.\.\/\.\.\/lsp\/client\/lsp-transport\.js['"`"];/g,
+    /from ['"`]\.\.\/\.\.\/\.\.\/lsp\/client\/lsp-transport\.js['"`];/g,
     "from '@openadt/lsp-client';"
   )
 
   content = content.replace(
-    /from ['"`']\.\.\/\.\.\/\.\.\/lsp\/client\/call-lsp-contract\.js['"`"];/g,
+    /from ['"`]\.\.\/\.\.\/\.\.\/lsp\/client\/call-lsp-contract\.js['"`];/g,
     "from '@openadt/lsp-client';"
   )
 
   content = content.replace(
-    /from ['"`']\.\.\/\.\.\/\.\.\/config\/types\.js['"`"];/g,
+    /from ['"`]\.\.\/\.\.\/\.\.\/config\/types\.js['"`];/g,
     "from '@openadt/adt-config';"
   )
 

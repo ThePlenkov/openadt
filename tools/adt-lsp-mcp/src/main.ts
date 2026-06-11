@@ -149,9 +149,14 @@ class SimpleMcpServer {
     }
 
     try {
+      const args = call?.arguments
+      if (args !== undefined && (args === null || typeof args !== 'object' || Array.isArray(args))) {
+        await this.sendError(id, -32602, `Invalid tool arguments: expected object, got ${typeof args}`)
+        return
+      }
       const session = await this.ensureLspReady()
       const transport = new LspConnectionTransport(session.connection)
-      const result = await tool.handler(call?.arguments ?? {}, transport)
+      const result = await tool.handler(args ?? {}, transport)
       await this.sendResult(id, result)
     } catch (err) {
       const message = err instanceof Error ? err.message : String(err)
