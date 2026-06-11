@@ -1,13 +1,12 @@
 # E2E evidence (local only)
 
-Live MCP scenario runs write **one markdown evidence file** per run to **`results/` here at the repo root**:
+Live scenario runs write **one markdown evidence file** per run to **`results/` here**:
 
-`results/<datetime>-✅-mcp-N-<hash>.md` (or `❌` when the run fails)
+`results/<datetime>-✅-<code>-<hash>.md` (or `❌` when the run fails)
 
-Each file follows **Given / When / Then** and records assertion checks (expected vs actual) plus a response payload excerpt.
+**Runner:** `bun run e2e` → generic [e2e-agent](../.agents/skills/e2e/SPEC.md) CLI with OpenADT config `e2e.config.yaml`.
 
-`scripts/e2e.ts` pins `--evidence-dir` to `<repo>/.e2e/results`.
+Dispatch JSON for ACP external agents: **`dispatch/`** (gitignored).
 
-External executor dispatch (e.g. `--acp --agent <id>`) writes handoff JSON to **`dispatch/`** here (also gitignored).
+See [specs/mcp-ai-testing.md](../specs/mcp-ai-testing.md) and [.agents/skills/e2e/SKILL.md](../.agents/skills/e2e/SKILL.md).
 
-This directory is gitignored except this README. See [specs/mcp-ai-testing.md](../specs/mcp-ai-testing.md) and [.agents/skills/e2e/SKILL.md](../.agents/skills/e2e/SKILL.md).

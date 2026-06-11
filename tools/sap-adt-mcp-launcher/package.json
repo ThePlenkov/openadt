@@ -8,10 +8,7 @@
   "scripts": {
     "build": "tsdown",
     "build:check": "tsc --noEmit",
-    "lint": "oxlint",
-    "mcp:e2e": "bun e2e/run.ts",
-    "mcp:e2e:adt": "bun e2e/run-adt.mjs",
-    "mcp:e2e:adt:all": "bun e2e/run-all-adt-sequential.mjs"
+    "lint": "oxlint"
   },
   "dependencies": {
     "@openadt/mcp-framing": "workspace:*",

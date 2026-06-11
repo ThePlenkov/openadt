@@ -9,8 +9,7 @@
   "scripts": {
     "build": "tsdown",
     "build:check": "tsc --noEmit",
-    "lint": "oxlint",
-    "mcp:e2e": "bun e2e/run.ts"
+    "lint": "oxlint"
   },
   "dependencies": {
     "@openadt/mcp-framing": "workspace:*",

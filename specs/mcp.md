@@ -532,7 +532,7 @@ Package: `tools/adt-lsp-mcp/` — stdio-only MCP for the 26 `adt_*` tools. Calls
 | `prompts/list` | Includes `adt_lsp_workflow`                                                                                                  |
 | `prompts/get`  | `{ "name": "adt_lsp_workflow" }` → workflow markdown (direct LSP model, destination id, transport namespace, getLsUri chain) |
 
-Implementation: `tools/adt-lsp-mcp/src/guidance/`. E2e: `tools/adt-lsp-mcp/e2e/` — prefer root `bun run adt:e2e -- adt-N --destination <id>` (evidence always on); package `bun run mcp:e2e -- --scenario adt-N --destination <id> --evidence` also writes `.e2e/results/`.
+Implementation: `tools/adt-lsp-mcp/src/guidance/`. E2e: generic `e2e-agent` CLI + OpenADT adapter — `bun run e2e -- run adtls-N --destination <id>` (see [mcp-ai-testing.md](mcp-ai-testing.md)).
 
 ---
 
@@ -613,7 +613,7 @@ class RepositoryToolSet {
 
 ### AI scenario testing (live landscape)
 
-User- or agent-supplied destination id (no SID in git). Runner and YAML scenarios: `tools/sap-adt-mcp-launcher/e2e/`. Contract: [mcp-ai-testing.md](mcp-ai-testing.md). Command: `bun run mcp:e2e -- --destination <ADT_DESTINATION_ID>`.
+User- or agent-supplied destination id (no SID in git). Scenarios: `e2e/scenarios/`. Contract: [mcp-ai-testing.md](mcp-ai-testing.md). Command: `bun run e2e -- run mcp-N --destination <ADT_DESTINATION_ID>`.
 
 ---
 

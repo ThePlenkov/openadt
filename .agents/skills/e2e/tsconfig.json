@@ -3,7 +3,7 @@
     "target": "ES2022",
     "module": "ES2022",
     "moduleResolution": "bundler",
-    "outDir": ".",
+    "outDir": "dist",
     "rootDir": ".",
     "strict": false,
     "esModuleInterop": true,
@@ -15,6 +15,6 @@
     "sourceMap": true,
     "types": ["node"]
   },
-  "include": ["cli.ts", "scripts/framework/*.ts"],
+  "include": ["cli.ts", "scripts/framework/**/*.ts"],
   "exclude": ["scripts/framework/*.test.ts", "**/*.test.ts"]
 }

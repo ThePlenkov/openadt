@@ -30,7 +30,14 @@ The skill provides:
 
 ### Using the Skill
 
-Invoke the skill via the `/e2e` command or import the framework modules for custom integrations. See the [skill specification](.agents/skills/e2e/SKILL.md) for complete usage details.
+Invoke via `/e2e` — the agent runs **`e2e-agent` CLI commands only** (see [SKILL.md](.agents/skills/e2e/SKILL.md)). Do not import `scripts/framework/*`.
+
+```bash
+bun run e2e -- list
+bun run e2e -- run adtls-1 --destination BHF
+```
+
+OpenADT adapter: `e2e/openadt-adapter.ts`. Config: `e2e.config.yaml` at repo root.
 
 ### Scenario Naming Conventions
 
@@ -50,11 +57,7 @@ The **adtls_** prefix is used instead of **adt_** to avoid confusion with genera
 
 ### Destination Resolution
 
-When executing E2E scenarios that require a SAP destination, the AI agent must:
-
-1. **Extract destination from user prompt** - The destination ID is typically provided in the prompt (e.g., `/e2e adtls-1 BHF` where BHF is the destination)
-2. **Validate destination exists** - Check if the destination is registered in the ADT configuration
-3. **Pass destination to scenario** - Include the destination in the RunContext as `destination` parameter
+When executing E2E scenarios that require a SAP destination, the agent passes `--destination` to `e2e-agent run` (e.g. `/e2e adtls-1 BHF` → `bun run e2e -- run adtls-1 --destination BHF`). The **OpenADT adapter** resolves partial SIDs (e.g. `BHF` → `BHF_200_USER_EN`) from `~/.adtls/destinations.json`.
 
 Common destinations:
 - **BHF** - Sandbox environment (most isolated)

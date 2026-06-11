@@ -1,6 +1,8 @@
 # MCP AI scenario testing
 
-Live MCP acceptance tests for **real SAP landscapes**. Scenarios live in `tools/sap-adt-mcp-launcher/e2e/` and never embed a system ID (SID) or destination id — the **agent user supplies** the target at run time.
+Live acceptance tests for **real SAP landscapes**. Scenarios live in `e2e/scenarios/` and never embed a system ID (SID) or destination id — the **agent user supplies** the target at run time.
+
+**Framework:** generic [e2e-agent](../.agents/skills/e2e/SPEC.md) CLI (domain-agnostic). **OpenADT profile:** `e2e.config.yaml` + `e2e/openadt-adapter.ts` (SAP/MCP wiring).
 
 ## Goals
 
@@ -25,7 +27,7 @@ The runner resolves placeholders from (first wins):
 
 ## Scenario file format
 
-Path: `tools/sap-adt-mcp-launcher/e2e/scenarios/mcp-N-<id>.md` — **one file per scenario** (filename is `code` + slug `id` for sortable, readable names; e.g. `mcp-2-read-standard-class.md`).
+Path: `e2e/scenarios/<suite>/mcp-N-<id>.md` or `adtls-N-<id>.md` — **one file per scenario**.
 
 ```markdown
 ---
@@ -83,97 +85,52 @@ Codes are stable operator ids (issue trackers, agent prompts: _«run mcp-3»_). 
 | `minCount`            | Minimum length of `references` / `results` array in structured JSON   |
 | `destinationsInclude` | `abap_list_destinations` output includes `{{destination}}`            |
 
-## Runner
+## Runner (`e2e-agent` + OpenADT adapter)
+
+Agents use **only** the generic CLI — see [.agents/skills/e2e/SKILL.md](../.agents/skills/e2e/SKILL.md). Default config: `e2e.config.yaml` at repo root.
 
 ```bash
-bun run mcp:e2e -- --destination ABC_200_USER_EN
-bun run mcp:e2e -- --destination ABC_200_USER_EN --scenario mcp-2
-bun run mcp:e2e -- --destination ABC_200_USER_EN --scenario read-standard-class
-bun run mcp:e2e -- --resolve-destination --system ABC --list
+bun run e2e -- list
+bun run e2e -- show adtls-1
+bun run e2e -- run adtls-1 --destination BHF
+bun run e2e -- run mcp-1 --destination ABC_200_USER_EN
+bun run e2e -- dispatch mcp-1 --destination BHF --acp --agent devin
 ```
 
-| Flag                       | Default                                                           | Meaning                                                                                                                                                                    |
-| -------------------------- | ----------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `--destination`            | env `OPENADT_MCP_DESTINATION`                                     | Full ADT destination id                                                                                                                                                    |
-| `--resolve-destination`    | off                                                               | Pick id from `~/.adtls/destinations.json` using `--system` + optional `--user` / `--client`                                                                                |
-| `--scenario`               | all                                                               | Run one scenario by `code` (`mcp-2`) or slug `id`                                                                                                                          |
-| `--list`                   | off                                                               | Print scenario catalog (intent summaries) and exit                                                                                                                         |
-| `--import-from`            | `adtls`                                                           | Forwarded to MCP launcher                                                                                                                                                  |
-| `--timeout-ms`             | `300000`                                                          | Whole run budget (SSO logon)                                                                                                                                               |
-| `--evidence`               | off (on via `bun run e2e`)                                        | Write one `.md` report under `.e2e/results/`                                                                                                                               |
-| `--evidence-dir`           | `<repo>/.e2e/results`                                             | Override evidence directory                                                                                                                                                |
-| `--agent`                  | env `OPENADT_E2E_AGENT`, else `openadt-runner`                    | Who orchestrated the run (Cursor agent vs bare CLI)                                                                                                                        |
-| `--model`                  | env `OPENADT_E2E_MODEL`, else `(none — deterministic MCP runner)` | LLM model when agent-orchestrated                                                                                                                                          |
-| `--command` / `--executor` | `local` (default)                                                 | Who **runs** the SAP-backed scenario — see [Executor routing](#executor-routing)                                                                                           |
-| `--acp`                    | off                                                               | Boolean alias for `--command=acp` / `--executor=acp`                                                                                                                       |
-| `--agent` (ACP dispatch)   | env `ACP_AGENT`                                                   | **Required** with `--acp` — ACP registry agent id (e.g. `devin`, `cursor`); see [agentclientprotocol.com/overview/agents](https://agentclientprotocol.com/overview/agents) |
+| OpenADT param (→ adapter) | Meaning |
+| ------------------------- | ------- |
+| `--destination`           | Full id or partial SID (`BHF` → resolved via `~/.adtls/destinations.json`) |
+| `--import-from`           | MCP launcher import mode (default `adtls`) |
+| `--timeout-ms`            | Run budget (default `300000`) |
+| `--port`                  | MCP launcher port (default `2239`) |
 
-Exit `0` when all scenarios pass; `1` on missing destination, spawn failure, or assertion failure.
+Framework flags (`--evidence`, `--agent`, `--model`, `--acp`): see [e2e SPEC](../.agents/skills/e2e/SPEC.md).
 
-### Executor routing
+Suites (in `e2e.config.yaml`):
 
-When Cursor credits are limited, delegate the live SAP run to an external ACP-compatible agent instead of executing `bun run e2e` locally.
+| Suite id | Prefix    | Backend        | Scenario dir              |
+| -------- | --------- | -------------- | ------------------------- |
+| `adtls`  | `adtls-`  | `adt-lsp-mcp`  | `e2e/scenarios/adt-lsp`   |
+| `mcp`    | `mcp-`    | `mcp-launcher` | `e2e/scenarios/launcher`  |
 
-| `--command` / `--executor`    | `--acp` | `--agent`    | Behavior                                                                                                    |
-| ----------------------------- | ------- | ------------ | ----------------------------------------------------------------------------------------------------------- |
-| _(omit)_ / `local` / `cursor` | off     | —            | **Local** — `bun run e2e` spawns MCP and writes `.e2e/results/<run>.md`                                     |
-| `acp`                         | on      | **required** | **Dispatch** — no local MCP spawn; writes `.e2e/dispatch/<run-id>.json` and prints ACP handoff instructions |
+Exit `0` when all steps pass; `1` on missing destination, spawn failure, or assertion failure.
 
-Dispatch entry points:
+### ACP dispatch
 
 ```bash
-bun run e2e -- mcp-1 --destination ABC_200_USER_EN --acp --agent devin
-bun run e2e -- mcp-1 --destination ABC_200_USER_EN --command=acp --agent cursor
-ACP_AGENT=gemini-cli bun run e2e:dispatch -- mcp-1 --destination ABC_200_USER_EN --acp
+bun run e2e -- dispatch adtls-1 --destination BHF --acp --agent devin
 ```
 
-On dispatch, stdout ends with `E2E_DISPATCH_FILE=<path>`. The JSON payload includes `executor: "acp"`, `acpAgent`, `command.local` (exact runner for the external agent), `prompt`, and `env` (including `ACP_AGENT`).
-
-**ACP:** no ACP CLI or API is wired in this repo. The dispatch file is the handoff contract; operators submit `prompt` via an ACP client to the chosen agent (see [Agent Client Protocol](https://agentclientprotocol.com/get-started/introduction) and [agents overview](https://agentclientprotocol.com/overview/agents)). Full ACP automation is a future integration gap.
+Stdout ends with `E2E_DISPATCH_FILE=<path>`. External agent runs `command.local` from the JSON payload. No ACP API is wired in this repo.
 
 ## `/e2e` entry (evidence)
 
-Agent skill: [.agents/skills/e2e/SKILL.md](../.agents/skills/e2e/SKILL.md)
-
 ```bash
-bun run e2e -- mcp-1 --destination ABC_200_USER_EN
-bun run e2e -- mcp-1 --destination ABC_200_USER_EN --acp --agent devin
+/e2e adtls-1 BHF   →   bun run e2e -- run adtls-1 --destination BHF
 ```
 
-- Sets `OPENADT_E2E_EVIDENCE=1` and always passes `--evidence` on **local** runs.
-- Positional first non-flag arg is the scenario code (`mcp-1`, …).
-- On local completion prints `E2E_EVIDENCE_FILE=<path>` for agents.
-- With `--acp` (or `--command=acp`) and `--agent <acp-agent-id>`, prints dispatch instructions and `E2E_DISPATCH_FILE=<path>` — **do not** spawn MCP locally in Cursor.
-
-### `@openadt/adt-lsp-mcp` entry (evidence)
-
-Direct LSP stdio MCP (`tools/adt-lsp-mcp/`). Scenarios: `tools/adt-lsp-mcp/e2e/scenarios/adt-N-<id>.md` (`adt-1` … `adt-26`).
-
-```bash
-bun run adt:e2e -- adt-1 --destination ABC_200_USER_EN
-OPENADT_E2E_AGENT=cursor OPENADT_E2E_MODEL=Auto bun run adt:e2e -- adt-2 --destination ABC_200_USER_EN
-bun run adt:e2e -- adt-1 --destination ABC_200_USER_EN --acp --agent devin
-```
-
-Package-local (evidence only with `--evidence` or `OPENADT_E2E_EVIDENCE=1`):
-
-```bash
-cd tools/adt-lsp-mcp && bun run build
-cd tools/adt-lsp-mcp && bun run mcp:e2e -- --scenario adt-1 --destination ABC_200_USER_EN --evidence
-```
-
-- Root `bun run adt:e2e` sets `OPENADT_E2E_EVIDENCE=1` and always passes `--evidence` on **local** runs.
-- Positional first non-flag arg is the scenario code (`adt-1`, …) or slug `id`.
-- On local completion prints `E2E_EVIDENCE_FILE=<path>` for agents.
-- With `--acp` and `--agent <acp-agent-id>`, prints dispatch instructions (`bun run adt:e2e:dispatch -- …` is equivalent). External agent runs `command.local` from `.e2e/dispatch/<run-id>.json`.
-
-**Devin / external agents:** do **not** use bare `devin -p` with `bun run mcp:e2e` in `tools/adt-lsp-mcp` — that bypasses evidence. Use:
-
-```bash
-OPENADT_E2E_AGENT=devin bun run adt:e2e -- adt-1 --destination <ADT_DESTINATION_ID>
-```
-
-Or dispatch: `bun run adt:e2e -- adt-1 --destination <ID> --acp --agent devin` and submit the printed prompt via ACP.
+- `run` always writes evidence to `.e2e/results/` and prints `E2E_EVIDENCE_FILE=`.
+- With `--acp --agent <id>`, use `dispatch` — do not spawn SAP locally in Cursor.
 
 ### Evidence file (single markdown)
 
@@ -198,11 +155,9 @@ Assertion table rows include: `mcp_replied`, `mcp_is_error`, plus each machine a
 
 ## Agent workflow
 
-1. Ask the user which SAP system / destination to test (or run `abap_list_destinations` after MCP start).
-2. Export `OPENADT_MCP_DESTINATION` or pass `--destination`.
-3. Run `bun run e2e -- mcp-N …` (evidence on) with `OPENADT_E2E_AGENT` / `OPENADT_E2E_MODEL` (or `--agent` / `--model`) when an LLM agent orchestrates the run **or** `bun run mcp:e2e` **or** open `e2e/scenarios/mcp-N-<id>.md` and follow the markdown body via MCP.
-4. For full `adt_*` agent tools, use `mode: standalone` scenarios (launcher spawns with `--standalone`).
-5. Report evidence file from `E2E_EVIDENCE_FILE` or `Evidence written:` line; cite assertion table rows on failure.
+1. Ask the user which SAP destination to test (or run `mcp-1` first).
+2. Run `bun run e2e -- run <code> --destination <id-or-SID>` — do **not** import framework modules or generate runner scripts.
+3. Report `E2E_EVIDENCE_FILE`, PASS/FAIL, Given/When/Then, assertion table on failure.
 
 ## CI
 

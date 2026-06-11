@@ -1,0 +1,14 @@
+# OpenADT e2e-agent project profile. See specs/mcp-ai-testing.md
+
+autoclean: true
+
+adapter: e2e/openadt-adapter.ts
+specPath: specs/mcp-ai-testing.md
+
+suites:
+  adtls:
+    dir: e2e/scenarios/adt-lsp
+    codePrefix: adtls-
+  mcp:
+    dir: e2e/scenarios/launcher
+    codePrefix: mcp-
