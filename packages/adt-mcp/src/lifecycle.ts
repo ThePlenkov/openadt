@@ -69,29 +69,10 @@ export async function startOwnBackend(
   })
 
   const token = generateMcpToken()
-  const MAX_ATTEMPTS = 32
-  const MAX_PORT = 65535
-  let lastError: Error | undefined
-  let started: { port: number; token: string }
-
-  for (let attempt = 0; attempt < MAX_ATTEMPTS; attempt++) {
-    const port = Math.min(backendPort + attempt, MAX_PORT)
-    try {
-      started = await startMcpServer(session.connection, { port, token })
-      break
-    } catch (err) {
-      lastError = err instanceof Error ? err : new Error(String(err))
-      if (!isPortInUseMessage(lastError.message)) {
-        throw lastError
-      }
-      if (attempt === MAX_ATTEMPTS - 1) {
-        throw new Error(
-          `Port ${backendPort} already in use; auto-increment failed after ${MAX_ATTEMPTS} attempts (up to port ${MAX_PORT})`
-        )
-      }
-      console.error(`[openadt-mcp] port ${port} in use, trying ${port + 1}...`)
-    }
-  }
+  const started = await startMcpServerOnFreePort(session.connection, {
+    startPort: backendPort,
+    token,
+  })
 
   const ready = await waitForMcpHttp(started.port, started.token)
   if (!ready) {
@@ -113,7 +94,7 @@ export async function startOwnBackend(
     pid: process.pid,
     adtLscPid: session.child.pid,
     startedAt: new Date().toISOString(),
-    destination: cfg.destination,
+    destination: defaultDestination,
     destinations: ids,
     workspace: cfg.workspace,
     mode: options.mode ?? 'standalone',
@@ -130,6 +111,37 @@ export async function startOwnBackend(
   }
 
   return { session, port: started.port, token: started.token, destinations: ids, shutdown }
+}
+
+/** Max sequential ports tried when the requested port is already bound. */
+const MAX_PORT_ATTEMPTS = 32
+const MAX_PORT = 65535
+
+/**
+ * Start the SAP HTTP MCP, auto-incrementing the port when it is already in use.
+ *
+ * Only port-in-use failures are retried; any other error is rethrown
+ * immediately. Throws if no free port is found within {@link MAX_PORT_ATTEMPTS}.
+ */
+async function startMcpServerOnFreePort(
+  connection: Parameters<typeof startMcpServer>[0],
+  options: { startPort: number; token: string }
+): Promise<{ port: number; token: string }> {
+  for (let attempt = 0; attempt < MAX_PORT_ATTEMPTS; attempt++) {
+    const port = Math.min(options.startPort + attempt, MAX_PORT)
+    try {
+      return await startMcpServer(connection, { port, token: options.token })
+    } catch (err) {
+      const error = err instanceof Error ? err : new Error(String(err))
+      if (!isPortInUseMessage(error.message)) {
+        throw error
+      }
+      console.error(`[openadt-mcp] port ${port} in use, trying ${port + 1}...`)
+    }
+  }
+  throw new Error(
+    `Port ${options.startPort} already in use; auto-increment failed after ${MAX_PORT_ATTEMPTS} attempts (up to port ${MAX_PORT})`
+  )
 }
 
 async function safeStop(session: LspSession): Promise<void> {

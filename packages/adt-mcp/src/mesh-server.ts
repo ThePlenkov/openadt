@@ -113,7 +113,10 @@ export class MeshMcpServer {
           properties: {},
         },
       },
-    ]
+    ].map((tool) => ({
+      ...tool,
+      name: this.registry.exportName(tool.name),
+    }))
     if (!this.lspActive) {
       return [...sap, ...openadt]
     }
