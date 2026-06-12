@@ -236,7 +236,8 @@ jobs:
                '.version = $ver | .architecture["64bit"].url = $url | .architecture["64bit"].hash = $sha' \
                packaging/scoop/openadt.json > /tmp/openadt.json
             mv /tmp/openadt.json packaging/scoop/openadt.json
-            sed -i "s/sha256 \"[^\"]*\"/sha256 \"${openadt_sha}\"/" Formula/openadt.rb
+            sed -i "s/sha256 \"[^\"]*\"/sha256 \"${openadt_sha}\"/" packaging/homebrew/openadt.rb
+            cp packaging/homebrew/openadt.rb Formula/openadt.rb
           else
             echo "No openadt jar sha256 found, skipping openadt manifests." >&2
           fi
@@ -271,7 +272,8 @@ jobs:
               mv /tmp/openadt-mcp.json packaging/scoop/openadt-mcp.json
             elif [[ "${platform}" == "darwin-arm64" ]]; then
               echo "Patching openadt-mcp Homebrew formula (${platform}) with SHA256: ${sha}"
-              sed -i "s/sha256 \"[^\"]*\"/sha256 \"${sha}\"/" Formula/openadt-mcp.rb
+              sed -i "s/sha256 \"[^\"]*\"/sha256 \"${sha}\"/" packaging/homebrew/openadt-mcp.rb
+              cp packaging/homebrew/openadt-mcp.rb Formula/openadt-mcp.rb
             else
               echo "openadt-mcp ${platform}: archive produced but not wired into a manifest in v1." >&2
             fi
