@@ -12,7 +12,7 @@ import { resolveSapSource, type SapSource } from './sap-mcp/source.js'
 import { generateMcpToken } from './sap-mcp/control.js'
 import { collectSapTools, MeshMcpServer } from './mesh-server.js'
 import { serveStdio } from './transport/stdio.js'
-import { serveHttp, type HttpHandle } from './transport/http.js'
+import { serveHttpOnFreePort, type HttpHandle } from './transport/http.js'
 
 const EXIT_OK = 0
 const EXIT_ERROR = 1
@@ -67,7 +67,7 @@ async function runHttp(
   const token = generateMcpToken()
   let http: HttpHandle
   try {
-    http = await serveHttp(server, { port: cfg.port, token })
+    http = await serveHttpOnFreePort(server, { port: cfg.port, token })
   } catch (err) {
     console.error(`[openadt-mcp] HTTP listen on ${cfg.port} failed: ${String(err)}`)
     await source.shutdown()

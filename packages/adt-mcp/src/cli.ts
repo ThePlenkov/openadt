@@ -16,7 +16,9 @@ import {
   parseStatusArgv,
   parseStopArgv,
 } from '@openadt/adt-config'
+import { locateAdtLs, findExtensionRoots, pickNewestExtension } from '@openadt/adt-infra'
 import { runServe } from './server.js'
+import { deriveDestinations, adtlsDestinationsStorePath } from './destinations.js'
 import { mcpHttpClientConfig, probeMcpHttp } from './sap-mcp/control.js'
 import {
   listEndpoints,
@@ -116,6 +118,62 @@ async function cmdPrintConfig(argv: string[]): Promise<number> {
   return EXIT_OK
 }
 
+async function cmdCheck(): Promise<number> {
+  console.log('ADT LS Extension Detection')
+  console.log('==========================\n')
+
+  const override = process.env.ADT_LS_PATH
+  if (override) {
+    console.log(`ADT_LS_PATH override: ${override}\n`)
+  }
+
+  const allExtensions = findExtensionRoots()
+  if (allExtensions.length === 0 && !override) {
+    console.log('No ADT VS Code extensions found.')
+    console.log('Install SAP ADT extension or set ADT_LS_PATH environment variable.')
+    reportDestinations()
+    return EXIT_OK
+  }
+
+  if (allExtensions.length > 0) {
+    console.log(`Found ${allExtensions.length} extension(s):\n`)
+    allExtensions.forEach((ext) => {
+      console.log(`  - ${ext.path}`)
+      console.log(`    Version: ${ext.version}`)
+    })
+
+    const newest = pickNewestExtension(allExtensions)
+    if (newest) {
+      console.log('\nSelected (newest):')
+      console.log(`  Path: ${newest.path}`)
+      console.log(`  Version: ${newest.version}`)
+    }
+  }
+
+  const install = locateAdtLs()
+  if (install) {
+    console.log(`\nadt-lsc: ${install.adtLscPath}`)
+  } else {
+    console.log('\nadt-lsc: NOT FOUND (binary missing in extension)')
+  }
+
+  reportDestinations()
+  return EXIT_OK
+}
+
+/** Print the destination store path and the destinations openadt would register. */
+function reportDestinations(): void {
+  console.log('\nDestinations')
+  console.log('------------')
+  const { ids } = deriveDestinations()
+  console.log(`  Store: ${adtlsDestinationsStorePath()}`)
+  if (ids.length === 0) {
+    console.log('  (none — open a project in ADT or check ~/.adtls/destinations.json)')
+    return
+  }
+  console.log(`  ${ids.length} destination(s): ${ids.join(', ')}`)
+}
+
 function compact<T>(items: (T | undefined)[]): T[] {
   return items.filter((x): x is T => x !== undefined)
 }
@@ -128,6 +186,7 @@ function usage(): void {
   console.error('  stop          Stop tracked MCP backend(s)')
   console.error('  list          List active MCP endpoints')
   console.error('  print-config  Emit HTTP MCP client JSON (url + headers)')
+  console.error('  check         Detect ADT LS extension version')
 }
 
 async function main(): Promise<number> {
@@ -145,6 +204,8 @@ async function main(): Promise<number> {
       return cmdList(rest)
     case 'print-config':
       return cmdPrintConfig(rest)
+    case 'check':
+      return cmdCheck()
     case undefined:
     case '--help':
     case '-h':

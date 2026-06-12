@@ -17,8 +17,14 @@ export type HttpServeOptions = {
 
 export type HttpHandle = {
   server: Server
+  /** The port the server actually bound (may differ from the requested port). */
+  port: number
   close: () => Promise<void>
 }
+
+/** Max sequential ports tried when the requested port is already bound. */
+const MAX_PORT_ATTEMPTS = 32
+const MAX_PORT = 65535
 
 /** Start the mesh HTTP server. Rejects if the port cannot be bound. */
 export function serveHttp(server: MeshMcpServer, options: HttpServeOptions): Promise<HttpHandle> {
@@ -34,6 +40,7 @@ export function serveHttp(server: MeshMcpServer, options: HttpServeOptions): Pro
       console.error(`[openadt-mcp] mesh MCP server running on http://${host}:${options.port}/mcp`)
       resolve({
         server: httpServer,
+        port: options.port,
         close: () =>
           new Promise<void>((done) => {
             httpServer.close(() => done())
@@ -41,6 +48,35 @@ export function serveHttp(server: MeshMcpServer, options: HttpServeOptions): Pro
       })
     })
   })
+}
+
+/**
+ * Start the mesh HTTP server, auto-incrementing the port when it is already in
+ * use. Only `EADDRINUSE` is retried; any other listen error is rethrown. Throws
+ * if no free port is found within {@link MAX_PORT_ATTEMPTS}.
+ */
+export async function serveHttpOnFreePort(
+  server: MeshMcpServer,
+  options: HttpServeOptions
+): Promise<HttpHandle> {
+  for (let attempt = 0; attempt < MAX_PORT_ATTEMPTS; attempt++) {
+    const port = Math.min(options.port + attempt, MAX_PORT)
+    try {
+      return await serveHttp(server, { ...options, port })
+    } catch (err) {
+      if (!isAddrInUse(err)) {
+        throw err
+      }
+      console.error(`[openadt-mcp] port ${port} in use, trying ${port + 1}...`)
+    }
+  }
+  throw new Error(
+    `Port ${options.port} already in use; auto-increment failed after ${MAX_PORT_ATTEMPTS} attempts (up to port ${MAX_PORT})`
+  )
+}
+
+function isAddrInUse(err: unknown): boolean {
+  return (err as NodeJS.ErrnoException | undefined)?.code === 'EADDRINUSE'
 }
 
 async function handleRequest(ctx: {
