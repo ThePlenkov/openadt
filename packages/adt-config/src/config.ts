@@ -25,9 +25,14 @@ export function parseServeArgv(argv: string[]): McpServeConfig {
     logFile: undefined,
     logonTimeoutMs: DEFAULT_LOGON_TIMEOUT_MS,
     stdio: false,
+    http: false,
     standalone: false,
     restart: false,
     proxyMode: 'proxy',
+    lsp: true,
+    sapPort: undefined,
+    sapToken: undefined,
+    shared: false,
   }
 
   const handlers = buildServeArgvHandlers()
@@ -58,12 +63,22 @@ type ServeArgvState = {
   logFile: string | undefined
   logonTimeoutMs: number
   stdio: boolean
+  /** When true, serve the mesh over HTTP (`--http`) instead of stdio. */
+  http: boolean
   /** When true, --stdio is monolithic (own adt-lsc, kill on exit). */
   standalone: boolean
   /** When true (shared stdio), stop an existing daemon first so a fresh one spawns. */
   restart: boolean
   /** Proxy mode: 'proxy' serves SAP + custom tools, 'no-proxy' serves only custom tools. */
   proxyMode: 'proxy' | 'no-proxy'
+  /** When true, include adt-lsp-mcp tools as additional MCP tools. */
+  lsp: boolean
+  /** Attach to an external SAP MCP HTTP server on this port instead of spawning adt-lsc. */
+  sapPort: number | undefined
+  /** Bearer token for the attached SAP MCP (`--sap-port`). */
+  sapToken: string | undefined
+  /** Use a shared detached daemon (find/spawn via endpoint store). */
+  shared: boolean
 }
 
 type ServeArgvHandler = {
@@ -133,6 +148,18 @@ function booleanFlagArgvHandlers(): ServeArgvHandler[] {
     ),
     boolFlag(
       (s) => {
+        s.http = true
+      },
+      ['--http']
+    ),
+    boolFlag(
+      (s) => {
+        s.shared = true
+      },
+      ['--shared']
+    ),
+    boolFlag(
+      (s) => {
         s.standalone = true
       },
       ['--standalone']
@@ -161,6 +188,18 @@ function booleanFlagArgvHandlers(): ServeArgvHandler[] {
       },
       ['--no-proxy']
     ),
+    boolFlag(
+      (s) => {
+        s.lsp = true
+      },
+      ['--lsp']
+    ),
+    boolFlag(
+      (s) => {
+        s.lsp = false
+      },
+      ['--no-lsp']
+    ),
   ]
 }
 
@@ -185,6 +224,18 @@ function valuedArgvHandlers(): ServeArgvHandler[] {
       },
       ['--port']
     ),
+    numberValue(
+      (_arg, value, s) => {
+        s.sapPort = value
+      },
+      ['--sap-port']
+    ),
+    stringValue(
+      (_arg, value, s) => {
+        s.sapToken = value
+      },
+      ['--sap-token']
+    ),
     stringValue(
       (_arg, value, s) => {
         s.workspace = value
@@ -204,6 +255,9 @@ function valuedArgvHandlers(): ServeArgvHandler[] {
 function finalizeServeArgv(state: ServeArgvState): void {
   if (!isValidPort(state.port)) {
     throw new Error(`Invalid --port: ${state.port}`)
+  }
+  if (state.sapPort !== undefined && !isValidPort(state.sapPort)) {
+    throw new Error(`Invalid --sap-port: ${state.sapPort}`)
   }
   if (!Number.isFinite(state.logonTimeoutMs) || state.logonTimeoutMs < 5_000) {
     throw new Error(`Invalid --logon-timeout (seconds must be >= 5)`)

@@ -83,14 +83,27 @@ export type McpServeConfig = {
   verbose: boolean
   logFile?: string
   logonTimeoutMs: number
-  /** Stdio MCP transport: proxy stdin/stdout to local HTTP MCP (no token in agent config). */
+  /** Stdio MCP transport (default). Serves the mesh over stdin/stdout. */
   stdio: boolean
+  /** HTTP MCP transport (`--http`). Serves the mesh over Streamable HTTP `/mcp`. */
+  http: boolean
   /** Proxy mode: 'proxy' serves SAP + custom tools, 'no-proxy' serves only custom tools. */
   proxyMode: 'proxy' | 'no-proxy'
   /** Monolithic mode: own adt-lsc, kill on exit. Default false (shared). */
   standalone: boolean
   /** Shared stdio: stop any existing daemon first so a fresh one spawns. */
   restart: boolean
+  /** When true, include adt-lsp-mcp tools as additional MCP tools (own mode only). */
+  lsp: boolean
+  /**
+   * SAP source: attach to an already-running/handed-out SAP MCP HTTP server on
+   * this port instead of spawning our own adt-lsc. SAP tools only (no in-process LSP).
+   */
+  sapPort?: number
+  /** Bearer token for an attached SAP MCP (`--sap-port`); read from endpoint store when omitted. */
+  sapToken?: string
+  /** Use a shared detached daemon (find/spawn via endpoint store). SAP tools only. */
+  shared: boolean
 }
 
 export type McpRuntimeState = {

@@ -170,7 +170,7 @@ export async function runE2e(argv: string[], opts: CliOptions): Promise<RunE2eOu
     console.error('Run timeout — remote logon or handshake may be stuck')
   }, timeoutMs).unref()
 
-  let results: ScenarioResult[] = []
+  const results: ScenarioResult[] = []
   try {
     for (const scenario of selected) {
       results.push(await runScenarioSteps(adapter, scenario, ctx, suiteId))

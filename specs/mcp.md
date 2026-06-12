@@ -1,15 +1,38 @@
-# SAP ADT MCP (launcher)
+# SAP ADT MCP (mesh)
 
-OpenADT **does not implement MCP tools**. The Bun launcher in `tools/sap-adt-mcp-launcher/` starts the **official SAP ADT MCP** from the [SAP ADT VS Code extension](https://marketplace.visualstudio.com/items?itemName=SAPSE.adt-vscode): spawn `adt-lsc` as a child process, LSP handshake, then `adtLs/mcp/startMCPServer` (HTTP + Bearer on localhost).
+OpenADT ships `@openadt/adt-mcp` — a **unified MCP mesh** that merges two tool groups behind one endpoint:
 
-OpenADT adds:
+| Group           | Source                                                                   |
+| --------------- | ------------------------------------------------------------------------ |
+| SAP `abap_*`    | Proxied from the **official SAP ADT MCP** (HTTP `/mcp`) inside `adt-lsc`  |
+| OpenADT `adt_*` | Run **in-process** over the same `adt-lsc` LSP connection (26 tools)      |
 
-| Mode                | Who connects                    | Transport                                                                   |
-| ------------------- | ------------------------------- | --------------------------------------------------------------------------- |
-| `mcp serve`         | Agent/IDE with HTTP MCP support | `http://localhost:<port>/mcp` + Bearer                                      |
-| `mcp serve --stdio` | Agent/IDE with stdio MCP only   | Content-Length JSON-RPC on stdin/stdout → proxied to the same HTTP endpoint |
+It also adds OpenADT-owned workflow **prompts** (authored in TypeScript) and shortens long SAP tool names for
+agent backends with name limits. One owned `adt-lsc` child backs both groups. The mesh serves **stdio**
+(default) or **HTTP** (`--http`), driven entirely by the CLI (`serve` / `status` / `stop` / `list` /
+`print-config`). The official SAP layer is still SAP-owned — OpenADT orchestrates it and adds the `adt_*` group
+and prompts on top.
 
-SAP exposes MCP **only over HTTP**. Stdio mode is an **OpenADT adapter**, not a second MCP server.
+| Transport       | Who connects                    | Detail                                                            |
+| --------------- | ------------------------------- | ----------------------------------------------------------------- |
+| `serve` (stdio) | Agent/IDE with stdio MCP        | Content-Length / NDJSON on stdin/stdout; the merged mesh surface  |
+| `serve --http`  | Agent/IDE with HTTP MCP support | `http://localhost:<port>/mcp` + Bearer; the merged mesh surface   |
+
+### SAP source modes
+
+The SAP `abap_*` group can come from three sources (the `adt_*` group needs the owned LSP connection, so it is
+available in **own** mode only):
+
+| Mode              | Trigger                            | `adt-lsc`      | `adt_*` | `abap_*` |
+| ----------------- | ---------------------------------- | -------------- | ------- | -------- |
+| **own** (default) | `serve`                            | spawned, owned | ✅      | ✅       |
+| **attach**        | `serve --sap-port N [--sap-token]` | external       | —       | ✅       |
+| **shared**        | `serve --shared`                   | shared daemon  | —       | ✅       |
+
+Implementation: `packages/adt-mcp/` (mesh server, CLI, transports), reusing `@openadt/adt-lsp-client`
+(`connectAdtLanguageServer`, `LspConnectionTransport`) and `@openadt/adt-lsp-mcp-tools` (the `adt_*` handlers).
+The lower-level SAP HTTP MCP and `adtLs/mcp/*` control plane documented below are still used verbatim by the
+mesh's own mode.
 
 ---
 
@@ -24,7 +47,7 @@ SAP exposes MCP **only over HTTP**. Stdio mode is an **OpenADT adapter**, not a 
 | Daemon spawn       | `serve --stdio` cold start **re-execs the binary itself** via `process.execPath`; there is no `bun main.ts` lookup on disk. See [mcp-shared-backend.md](mcp-shared-backend.md#launcher-resolution-resolvedetachedspawn). |
 | Install            | `scoop install openadt-mcp` (Windows) or `brew install openadt-mcp` (Linux, macOS). Independent of `scoop install openadt` / `brew install openadt`.                                                                     |
 | Endpoint store     | `~/.openadt/mcp/endpoints/<port>.json` (unchanged).                                                                                                                                                                      |
-| In-repo dev paths  | Unchanged: `bun run mcp:stdio`, `./dev-openadt mcp`, `openadt-mcp-dev` shim. Dev path still uses Bun + source from `tools/sap-adt-mcp-launcher/`.                                                                        |
+| In-repo dev paths  | Unchanged: `bun run mcp:stdio`, `./dev-openadt mcp`, `openadt-mcp-dev` shim. Dev path still uses Bun + source from `packages/adt-mcp/`.                                                                        |
 | Java wrapper       | `openadt mcp …` stays and **wraps** `openadt-mcp`. The wrapper resolves and spawns the binary; see [cli.md](cli.md#openadt-mcp).                                                                                         |
 | Release artifact   | `openadt-mcp-X.Y.Z-{platform}.{zip\|tar.gz}` per release — see [packaging.md](packaging.md).                                                                                                                             |
 
@@ -64,7 +87,7 @@ sequenceDiagram
 
 ### Step 1 — Spawn `adt-lsc`
 
-Binary from the SAP ADT VS Code extension (`tools/sap-adt-mcp-launcher/src/locate.ts`, override `ADT_LS_PATH`).
+Binary from the SAP ADT VS Code extension (`packages/adt-mcp/src/locate.ts`, override `ADT_LS_PATH`).
 
 **Pipe mode (production):**
 
@@ -86,7 +109,7 @@ adt-lsc --pipe=<pipeName> -consoleLog -Djco.trace_path=<workspace> -data <worksp
 | 4    | `adtLs/destinations/createProject`     | Optional; destination id string param.                                                                     |
 | 5    | `adtLs/destinations/ensureLoggedOn`    | Optional; SSO / Secure Login / browser handlers on the LSP connection.                                     |
 
-OpenADT reference: `tools/sap-adt-mcp-launcher/src/lsp-client.ts`, `logon-handlers.ts`.
+OpenADT reference: `packages/adt-mcp/src/lsp-client.ts`, `logon-handlers.ts`.
 
 ### Step 3 — LSP MCP control plane (`adtLs/mcp/*`)
 
@@ -126,7 +149,7 @@ No params. Stops Jetty MCP listener. Response: success string.
 
 Optional after start. Registers **destination-scoped dynamic IDE-action tools** on the running HTTP MCP server. Static extension tools are registered at `startMCPServer` without this call.
 
-OpenADT calls this when `--destination` is set (`tools/sap-adt-mcp-launcher/src/mcp.ts`).
+OpenADT calls this when `--destination` is set (`packages/adt-mcp/src/mcp.ts`).
 
 ### Step 4 — HTTP MCP data plane
 
@@ -225,51 +248,54 @@ Token never leaves the parent; agent config is command-only (no URL/headers).
 
 ## Command reference
 
-| Command                      | Role                                                                  |
-| ---------------------------- | --------------------------------------------------------------------- |
-| `serve`                      | Child `adt-lsc` + HTTP MCP; hold until Ctrl+C; **no stdio**           |
-| `serve --stdio`              | Shared (auto-ensure + attach stdio bridge) — **default**              |
-| `serve --stdio --standalone` | Monolithic (owns adt-lsc, kills on exit)                              |
-| `status`                     | Probe HTTP MCP (`initialize` POST)                                    |
-| `list`                       | List active endpoints in store                                        |
-| `print-config`               | Emit `{ url, headers }` for HTTP-native clients                       |
-| `stop`                       | Stop MCP backend (see [mcp-shared-backend.md](mcp-shared-backend.md)) |
-| `bridge --stdio`             | Attach-only; fail if no healthy backend                               |
+| Command          | Role                                                            |
+| ---------------- | -------------------------------------------------------------- |
+| `serve`          | Mesh over **stdio** (own `adt-lsc`); default                   |
+| `serve --http`   | Mesh over **HTTP** `/mcp` + Bearer on localhost                |
+| `status`         | Probe active endpoint health                                   |
+| `list`           | List active endpoints in the store                             |
+| `stop`           | Stop tracked MCP backend(s)                                    |
+| `print-config`   | Emit `{ url, headers }` for HTTP-native clients                |
 
 ```bash
-./dev-openadt mcp serve --port 2236
-./dev-openadt mcp serve --stdio
-./dev-openadt mcp serve --stdio --port 2236 --destination DEV_100_developer_en
-./dev-openadt mcp list
-./dev-openadt mcp print-config --port 2236
+bun run mcp:stdio                                  # stdio mesh (IDE/agent config)
+adt-mcp serve --http --port 2236                   # HTTP mesh
+adt-mcp serve --no-lsp                             # SAP abap_* only
+adt-mcp serve --sap-port 2236 --sap-token <tok>    # attach to a running SAP MCP
+adt-mcp list
+adt-mcp print-config --port 2236
 ```
 
-Run via `./dev-openadt mcp …` (clone) or `openadt mcp …` (Scoop/Homebrew). Requires **Bun** and SAP ADT VS Code extension.
+Run via `bun packages/adt-mcp/src/cli.ts …` (clone) or `openadt-mcp …` (Scoop/Homebrew). Requires **Bun** and
+the SAP ADT VS Code extension.
 
-### `serve` flags (HTTP backend)
+### `serve` flags
 
-| Flag                           | Default                       | Meaning                                                 |
-| ------------------------------ | ----------------------------- | ------------------------------------------------------- |
-| `--port`                       | `2236`                        | HTTP MCP listen port                                    |
-| `--workspace`                  | `~/.openadt/adt-ls-workspace` | Eclipse `-data` for adt-lsc                             |
-| `--import-from`                | `adtls`                       | Destinations: `auto`, `adtls`, `gui`, `openadt`, `none` |
-| `--destination`                | (all imported)                | Restrict MCP destination                                |
-| `--logon-timeout`              | `300`                         | Seconds for `ensureLoggedOn`                            |
-| `--verbose` / `--log-file`     | off                           | Debug logging                                           |
-| `--standalone` (serve --stdio) | off (shared)                  | Own adt-lsc, kill on exit (monolithic path)             |
-| `--restart` (serve --stdio)    | off                           | Stop the existing shared daemon first, then spawn fresh |
+| Flag                     | Default                       | Meaning                                                 |
+| ------------------------ | ----------------------------- | ------------------------------------------------------- |
+| `--http`                 | off (stdio)                   | Serve the mesh over Streamable HTTP `/mcp`              |
+| `--port`                 | `2236`                        | Mesh HTTP port (`--http`); else SAP backend port        |
+| `--workspace`            | `~/.openadt/adt-ls-workspace` | Eclipse `-data` for `adt-lsc`                           |
+| `--lsp` / `--no-lsp`     | `--lsp`                       | Include / exclude the OpenADT `adt_*` group (own mode)  |
+| `--proxy` / `--no-proxy` | `--proxy`                     | Include / exclude the SAP `abap_*` group                |
+| `--sap-port` N           | —                             | Attach to an external SAP MCP on this port              |
+| `--sap-token` T          | endpoint store                | Bearer token for `--sap-port`                           |
+| `--shared`               | off                           | Reuse a healthy shared daemon from the endpoint store   |
+| `--destination`          | (all derived)                 | Pre-logon + `setDestination` for one destination        |
+| `--logon-timeout`        | `300`                         | Seconds for `ensureLoggedOn`                            |
+| `--show-token`           | off                           | Print the Bearer token on `--http`                      |
+| `--verbose` / `--log-file` | off                         | Debug logging                                           |
 
-### `serve --stdio` (additional behavior)
+Destinations are **auto-derived** from `~/.adtls/destinations.json` (`ADTLS_HOME` to override the directory);
+there is no `--import` flag — point `--workspace` at the data directory and destinations are pulled in.
 
-Same flags as `serve`. **Shared mode (default):** finds or spawns a detached daemon, attaches stdio bridge, does NOT kill backend on exit. **Standalone mode (`--standalone`):** owns `adt-lsc`, kills on exit (legacy monolithic path).
+### stdio streams
 
 | Stream     | Content                                                                         |
 | ---------- | ------------------------------------------------------------------------------- |
 | **stdout** | MCP messages only (Content-Length or NDJSON framing, matching client transport) |
 | **stderr** | Startup, logon hints, errors (never MCP payload)                                |
 | **stdin**  | Client → server MCP messages                                                    |
-
-**Not in scope for `--stdio`:** fake `initialize` responses, or attaching to a foreign long-running `serve` without owning its child. One invocation = one parent that owns `adt-lsc` and HTTP MCP; `--standalone` is the legacy monolithic path where the parent does NOT own a shared backend.
 
 ---
 
@@ -369,7 +395,7 @@ Do **not** set `"cwd": "${workspaceFolder}"` — some agent builds break MCP spa
 }
 ```
 
-Requires [Bun](https://bun.sh) on `PATH` (repo `packageManager`). Script chain: `mcp:stdio` → `bun scripts/mcp-stdio.ts` → `mcp-stdio-entry.ts`. Manual/CI: `nx run sap-adt-mcp-launcher:serve-stdio` (`cache: false`). Avoid `npx nx …` as the MCP command on Windows agent — `npx` invokes `cmd.exe`, which is absent from agent minimal `PATH`; use `bun run mcp:stdio` instead.
+Requires [Bun](https://bun.sh) on `PATH` (repo `packageManager`). Script chain: `mcp:stdio` → `bun scripts/mcp-stdio.ts` → `mcp-stdio-entry.ts`. Manual/CI: `nx run adt-mcp:serve-stdio` (`cache: false`). Avoid `npx nx …` as the MCP command on Windows agent — `npx` invokes `cmd.exe`, which is absent from agent minimal `PATH`; use `bun run mcp:stdio` instead.
 
 `mcp-stdio-entry.ts` merges `~/.openadt/local.openadt.toml` `[runtime]` paths (JCo, sapcrypto) into the child environment so agent minimal `PATH` still loads SAP natives. Windows `taskkill` uses `%SystemRoot%\\System32\\taskkill.exe` (not PATH). Entry uses **shared mode** by default: finds or spawns a detached daemon, attaches stdio bridge, does NOT kill backend on exit. Override with `OPENADT_MCP_PORT` for explicit port. **Pipes** stdin/stdout to the launcher child (stdio `inherit` breaks some MCP clients on Windows).
 
@@ -406,7 +432,7 @@ len(serverKey) + len(toolName) ≤ 57    // because mcp__ (5) + __ (2) = 7 overh
 **Mitigations (in order):**
 
 1. **Keep the MCP server key short** — use `sap-adt` or `adt` in `.mcp.json` and `.cursor/mcp.json`. Do **not** use descriptive suffixes like `-dev` unless you also shorten tool exposure.
-2. **Stdio proxy shortening (OpenADT)** — `serve --stdio` shortens SAP tool names longer than **45 characters** in `tools/list` and maps aliases back on `tools/call` (`tools/sap-adt-mcp-launcher/src/tool-name-limit.ts`). Override with `OPENADT_MCP_MAX_TOOL_NAME` (minimum 16).
+2. **Stdio proxy shortening (OpenADT)** — `serve --stdio` shortens SAP tool names longer than **45 characters** in `tools/list` and maps aliases back on `tools/call` (`packages/adt-mcp/src/tool-name-limit.ts`). Override with `OPENADT_MCP_MAX_TOOL_NAME` (minimum 16).
 3. **Tighter limit for long server keys** — if you must keep a long server key, set `OPENADT_MCP_MAX_TOOL_NAME` to `57 - len(serverKey)`.
 
 Repo-local configs shipped in git must use the short key `sap-adt`. User-facing troubleshooting: [docs/usage.md](../docs/usage.md#mcp-troubleshooting).
@@ -438,11 +464,11 @@ Each `serve` / `serve --stdio` writes `~/.openadt/mcp/endpoints/<port>.json` (`u
 | Component              | Path                                                                         |
 | ---------------------- | ---------------------------------------------------------------------------- |
 | CLI entry              | `apps/openadt-cli` → `McpServeCommand` → Bun launcher                        |
-| Launcher               | `tools/sap-adt-mcp-launcher/src/main.ts`                                     |
-| Stdio bridge           | `tools/sap-adt-mcp-launcher/src/stdio-proxy.ts`                              |
-| Tool name limits       | `tools/sap-adt-mcp-launcher/src/tool-name-limit.ts`                          |
-| Content-Length framing | `tools/sap-adt-mcp-launcher/src/mcp-framing.ts` (`node:stream` Transform)    |
-| Stdio agent entry      | `scripts/mcp-stdio.ts` → `tools/sap-adt-mcp-launcher/src/mcp-stdio-entry.ts` |
+| Launcher               | `packages/adt-mcp/src/main.ts`                                              |
+| Stdio bridge           | `packages/adt-mcp/src/stdio-proxy.ts`                                       |
+| Tool name limits       | `packages/adt-mcp/src/tool-name-limit.ts`                                   |
+| Content-Length framing | `packages/adt-mcp/src/mcp-framing.ts` (`node:stream` Transform)            |
+| Stdio agent entry      | `scripts/mcp-stdio.ts` → `packages/adt-mcp/src/mcp-stdio-entry.ts`          |
 | LSP + logon            | `lsp-client.ts`, `logon-handlers.ts`                                         |
 | HTTP MCP API           | `mcp.ts` (`startMcpServer`, `stopMcpServer`, `probeMcpHttp`)                 |
 | Extension locate       | `locate.ts`                                                                  |
@@ -485,7 +511,7 @@ Target is the contract above. Simplify implementation; remove experimental paths
 
 ### Phase 4 — Packaging & docs
 
-- [ ] Remove `sap-adt-mcp-launcher/` from `openadt.zip`; ship `openadt-mcp-X.Y.Z-{platform}.{zip|tar.gz}` per release (see [packaging.md](packaging.md)).
+- [ ] Remove `adt-mcp/` from `openadt.zip`; ship `openadt-mcp-X.Y.Z-{platform}.{zip|tar.gz}` per release (see [packaging.md](packaging.md)).
 - [ ] `scoop install openadt-mcp` and `brew install openadt-mcp` are independent of `openadt` install.
 - [x] `specs/cli.md` sync; remove `--attach` references from help text.
 - [x] Optional: `scripts/mcp-stdio.cmd` — user-local Windows workaround only; not used in committed `.cursor/mcp.json`.

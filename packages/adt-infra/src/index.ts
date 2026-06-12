@@ -17,7 +17,13 @@ export {
   redactSecrets,
 } from './log'
 
-export { sleep, spawnAdtLsc, killProcessTree } from './process'
+export {
+  sleep,
+  spawnAdtLsc,
+  killProcessTree,
+  killProcessByPid,
+  waitForProcessExit,
+} from './process'
 
 export {
   buildAdtLscSpawnRuntime,
@@ -30,3 +36,10 @@ export {
 export { Env, envVar, isTruthyEnv } from './env'
 
 export { SEMANTIC_CACHE_SUFFIX, DESTINATION_FILE } from './cache-paths'
+
+export {
+  locateAdtLs,
+  resolveAdtLscFromExtension,
+  findExtensionRoots,
+  pickNewestExtension,
+} from './locate'

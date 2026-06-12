@@ -6,6 +6,8 @@ export type {
   McpStartParams,
   McpStartResult,
   DestinationImportMode,
+  McpServeConfig,
+  McpRuntimeState,
 } from './types'
 
 export {
@@ -28,6 +30,17 @@ export {
   LSP_METHOD_FILESYSTEM_FORCE_REFRESH,
   DEFAULT_MCP_PORT,
   MARKETPLACE_URL,
+  DEFAULT_IMPORT_FROM,
 } from './types'
 
-export { PID_FILE, DEFAULT_WORKSPACE, parseServeArgv } from './config'
+export {
+  PID_FILE,
+  DEFAULT_WORKSPACE,
+  parseServeArgv,
+  parseStatusArgv,
+  parsePrintConfigArgv,
+  parseListArgv,
+  parseStopArgv,
+  parseBridgeArgv,
+  parseSubcommandArgv,
+} from './config'

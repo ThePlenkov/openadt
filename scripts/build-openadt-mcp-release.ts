@@ -10,7 +10,7 @@
  * Output layout under <dir>:
  *   openadt-mcp[.exe]      compiled Bun binary
  *   LICENSE                 copy of repo LICENSE
- *   README.md               copy of tools/sap-adt-mcp-launcher/README.md
+ *   README.md               copy of packages/adt-mcp/README.md
  *   VERSION                 "<version>" (one line, trailing newline)
  *
  * Default <out> = packaging/dist/openadt-mcp-<version>-<platform>
@@ -79,7 +79,7 @@ function main(): void {
 
   mkdirSync(outDir, { recursive: true })
   const ext = platform.startsWith('win-') ? '.exe' : ''
-  const entry = join(root, 'tools/sap-adt-mcp-launcher/src/openadt-mcp-bin.ts')
+  const entry = join(root, 'packages/adt-mcp/src/cli.ts')
   const outfile = join(outDir, `openadt-mcp${ext}`)
 
   spawnOrThrow('bun', [
@@ -93,7 +93,7 @@ function main(): void {
   ])
 
   cpSync(join(root, 'LICENSE'), join(outDir, 'LICENSE'))
-  cpSync(join(root, 'tools/sap-adt-mcp-launcher/README.md'), join(outDir, 'README.md'))
+  cpSync(join(root, 'packages/adt-mcp/README.md'), join(outDir, 'README.md'))
   const postInstallSrc = join(root, 'packaging/scoop/openadt-mcp-post-install.ps1')
   if (existsSync(postInstallSrc)) {
     mkdirSync(join(outDir, 'bin'), { recursive: true })

@@ -4,17 +4,14 @@
   "packageManager": "bun@1.3.11",
   "workspaces": [
     "packages/*",
-    "tools/adt-lsp-mcp",
-    "tools/adt-mcp-proxy",
-    "tools/sap-adt-mcp-launcher",
     ".agents/skills/e2e"
   ],
   "scripts": {
     "bootstrap:devcontainer": "bun tools/devcontainer-bootstrap/src/main.ts",
     "package:release": "bun tools/package-release/src/main.ts",
     "release:version": "bun tools/release-version/src/main.ts",
-    "mcp:build": "cd tools/sap-adt-mcp-launcher && bun run build",
-    "mcp:build:check": "cd tools/sap-adt-mcp-launcher && bun run build:check",
+    "mcp:build": "cd packages/adt-mcp && bun run build",
+    "mcp:build:check": "cd packages/adt-mcp && bun run build:check",
     "mcp:build:compile": "bun scripts/build-openadt-mcp-release.ts",
     "format": "biome format --write .",
     "format:check": "biome format .",
@@ -38,7 +35,7 @@
     "harvest:resolve": "bun .agents/skills/harvest/scripts/harvest-cli.ts resolve",
     "harvest:archive": "bun .agents/skills/harvest/scripts/harvest-cli.ts archive",
     "harvest:test": "bun .agents/skills/harvest/scripts/harvest-cli.ts test",
-    "test:mcp:stdio": "bun tools/sap-adt-mcp-launcher/src/test-mcp-stdio.ts",
+    "test:mcp:stdio": "bun packages/adt-mcp/src/test/test-mcp-stdio.ts",
     "e2e": "bun .agents/skills/e2e/cli.ts",
     "prepare": "husky",
     "precommit:format": "biome format --write --no-errors-on-unmatched . && git update-index --again",

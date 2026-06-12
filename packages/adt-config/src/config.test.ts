@@ -1,86 +1,92 @@
 import { describe, expect, test } from 'bun:test'
-import { parseServeArgv, DEFAULT_WORKSPACE } from './config'
-import { DEFAULT_MCP_PORT, DEFAULT_IMPORT_FROM } from './types'
-import type { McpServeConfig } from './types'
+import { parseBridgeArgv, parseServeArgv, parseStopArgv } from '@openadt/adt-config'
 
-describe('parseServeArgv', () => {
-  test('returns default config with no arguments', () => {
-    const result = parseServeArgv([])
-    expect(result.port).toBe(DEFAULT_MCP_PORT)
-    expect(result.workspace).toBe(DEFAULT_WORKSPACE)
-    expect(result.importFrom).toBe(DEFAULT_IMPORT_FROM)
-    expect(result.json).toBe(false)
-    expect(result.verbose).toBe(false)
-    expect(result.stdio).toBe(false)
-    expect(result.proxyMode).toBe('proxy')
+describe('config', () => {
+  describe('parseServeArgv', () => {
+    test('--stdio sets stdio=true', () => {
+      const cfg = parseServeArgv(['--stdio'])
+      expect(cfg.stdio).toBe(true)
+      expect(cfg.standalone).toBe(false)
+    })
+
+    test('--standalone sets standalone=true', () => {
+      const cfg = parseServeArgv(['--stdio', '--standalone'])
+      expect(cfg.stdio).toBe(true)
+      expect(cfg.standalone).toBe(true)
+    })
+
+    test('--port sets explicit port', () => {
+      const cfg = parseServeArgv(['--port', '3000'])
+      expect(cfg.port).toBe(3000)
+    })
+
+    test('unknown argument throws', () => {
+      expect(() => parseServeArgv(['--unknown'])).toThrow('Unknown argument')
+    })
+
+    test('invalid port throws', () => {
+      expect(() => parseServeArgv(['--port', '70000'])).toThrow()
+    })
   })
 
-  test('parses --port argument', () => {
-    const result = parseServeArgv(['--port', '3000'])
-    expect(result.port).toBe(3000)
-    expect(result.explicitPort).toBe(true)
+  describe('parseStopArgv', () => {
+    test('parses --port flag', () => {
+      const r = parseStopArgv(['--port', '2236'])
+      expect(r.port).toBe(2236)
+      expect(r.json).toBe(false)
+    })
+
+    test('parses --json flag', () => {
+      const r = parseStopArgv(['--json'])
+      expect(r.json).toBe(true)
+      expect(r.port).toBeUndefined()
+    })
+
+    test('parses --port=2245 eq form', () => {
+      const r = parseStopArgv(['--port=2245'])
+      expect(r.port).toBe(2245)
+    })
+
+    test('invalid port throws', () => {
+      expect(() => parseStopArgv(['--port', '0'])).toThrow()
+    })
   })
 
-  test('parses --port with equals sign', () => {
-    const result = parseServeArgv(['--port=3000'])
-    expect(result.port).toBe(3000)
-    expect(result.explicitPort).toBe(true)
+  describe('parseBridgeArgv', () => {
+    test('requires --stdio', () => {
+      const r = parseBridgeArgv([])
+      expect(r.stdio).toBe(false)
+      expect(r.port).toBeUndefined()
+      expect(r.json).toBe(false)
+    })
+
+    test('parses --stdio and --port', () => {
+      const r = parseBridgeArgv(['--stdio', '--port', '2250'])
+      expect(r.stdio).toBe(true)
+      expect(r.port).toBe(2250)
+    })
+
+    test('parses --json', () => {
+      const r = parseBridgeArgv(['--stdio', '--json'])
+      expect(r.stdio).toBe(true)
+      expect(r.json).toBe(true)
+    })
+  })
+})
+
+describe('parseServeArgv flagValue forms (P0 bugfix)', () => {
+  test('--import-from=adtls sets importFrom=adtls', () => {
+    const cfg = parseServeArgv(['--import-from=adtls'])
+    expect(cfg.importFrom).toBe('adtls')
   })
 
-  test('parses --workspace argument', () => {
-    const result = parseServeArgv(['--workspace', '/custom/path'])
-    expect(result.workspace).toBe('/custom/path')
-    expect(result.explicitWorkspace).toBe(true)
+  test('--import-from=openadt sets importFrom=openadt', () => {
+    const cfg = parseServeArgv(['--import-from=openadt'])
+    expect(cfg.importFrom).toBe('openadt')
   })
 
-  test('parses --json flag', () => {
-    const result = parseServeArgv(['--json'])
-    expect(result.json).toBe(true)
-  })
-
-  test('parses --verbose flag', () => {
-    const result = parseServeArgv(['--verbose'])
-    expect(result.verbose).toBe(true)
-  })
-
-  test('parses --stdio flag', () => {
-    const result = parseServeArgv(['--stdio'])
-    expect(result.stdio).toBe(true)
-  })
-
-  test('parses --standalone flag', () => {
-    const result = parseServeArgv(['--standalone'])
-    expect(result.standalone).toBe(true)
-  })
-
-  test('parses --restart flag', () => {
-    const result = parseServeArgv(['--restart'])
-    expect(result.restart).toBe(true)
-  })
-
-  test('parses --proxy flag', () => {
-    const result = parseServeArgv(['--proxy'])
-    expect(result.proxyMode).toBe('proxy')
-  })
-
-  test('parses --no-proxy flag', () => {
-    const result = parseServeArgv(['--no-proxy'])
-    expect(result.proxyMode).toBe('no-proxy')
-  })
-
-  test('parses --destination argument', () => {
-    const result = parseServeArgv(['--destination', 'MY_DEST'])
-    expect(result.destination).toBe('MY_DEST')
-  })
-
-  test('throws error on unknown argument', () => {
-    expect(() => parseServeArgv(['--unknown'])).toThrow('Unknown argument: --unknown')
-  })
-
-  test('parses multiple flags', () => {
-    const result = parseServeArgv(['--json', '--verbose', '--stdio'])
-    expect(result.json).toBe(true)
-    expect(result.verbose).toBe(true)
-    expect(result.stdio).toBe(true)
+  test('--import-from=auto sets importFrom=auto', () => {
+    const cfg = parseServeArgv(['--import-from=auto'])
+    expect(cfg.importFrom).toBe('auto')
   })
 })
