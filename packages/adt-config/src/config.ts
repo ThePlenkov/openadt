@@ -124,82 +124,57 @@ function importFromArgvHandlers(): ServeArgvHandler[] {
   ]
 }
 
+function setJson(s: ServeArgvState): void {
+  s.json = true
+}
+function setShowToken(s: ServeArgvState): void {
+  s.showToken = true
+}
+function setStdio(s: ServeArgvState): void {
+  s.stdio = true
+}
+function setHttp(s: ServeArgvState): void {
+  s.http = true
+}
+function setShared(s: ServeArgvState): void {
+  s.shared = true
+}
+function setStandalone(s: ServeArgvState): void {
+  s.standalone = true
+}
+function setRestart(s: ServeArgvState): void {
+  s.restart = true
+}
+function setVerbose(s: ServeArgvState): void {
+  s.verbose = true
+}
+function setProxy(s: ServeArgvState): void {
+  s.proxyMode = 'proxy'
+}
+function setNoProxy(s: ServeArgvState): void {
+  s.proxyMode = 'no-proxy'
+}
+function setLsp(s: ServeArgvState): void {
+  s.lsp = true
+}
+function unsetLsp(s: ServeArgvState): void {
+  s.lsp = false
+}
+
 function booleanFlagArgvHandlers(): ServeArgvHandler[] {
-  const boolFlag = (apply: (s: ServeArgvState) => void, forms: readonly string[]) =>
-    flag(apply, forms)
   return [
-    boolFlag(
-      (s) => {
-        s.json = true
-      },
-      ['--json']
-    ),
-    boolFlag(
-      (s) => {
-        s.showToken = true
-      },
-      ['--show-token']
-    ),
-    boolFlag(
-      (s) => {
-        s.stdio = true
-      },
-      ['--stdio']
-    ),
-    boolFlag(
-      (s) => {
-        s.http = true
-      },
-      ['--http']
-    ),
-    boolFlag(
-      (s) => {
-        s.shared = true
-      },
-      ['--shared']
-    ),
-    boolFlag(
-      (s) => {
-        s.standalone = true
-      },
-      ['--standalone']
-    ),
-    boolFlag(
-      (s) => {
-        s.restart = true
-      },
-      ['--restart']
-    ),
-    boolFlag(
-      (s) => {
-        s.verbose = true
-      },
-      ['--verbose', '-v']
-    ),
-    boolFlag(
-      (s) => {
-        s.proxyMode = 'proxy'
-      },
-      ['--proxy']
-    ),
-    boolFlag(
-      (s) => {
-        s.proxyMode = 'no-proxy'
-      },
-      ['--no-proxy']
-    ),
-    boolFlag(
-      (s) => {
-        s.lsp = true
-      },
-      ['--lsp']
-    ),
-    boolFlag(
-      (s) => {
-        s.lsp = false
-      },
-      ['--no-lsp']
-    ),
+    flag(setJson, ['--json']),
+    flag(setShowToken, ['--show-token']),
+    flag(setStdio, ['--stdio']),
+    flag(setHttp, ['--http']),
+    flag(setShared, ['--shared']),
+    flag(setStandalone, ['--standalone']),
+    flag(setRestart, ['--restart']),
+    flag(setVerbose, ['--verbose', '-v']),
+    flag(setProxy, ['--proxy']),
+    flag(setNoProxy, ['--no-proxy']),
+    flag(setLsp, ['--lsp']),
+    flag(unsetLsp, ['--no-lsp']),
   ]
 }
 
