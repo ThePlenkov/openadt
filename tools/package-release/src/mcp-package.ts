@@ -11,7 +11,7 @@
  * the split).
  */
 import AdmZip from 'adm-zip'
-import { dirname } from 'node:path'
+import { basename, dirname } from 'node:path'
 import { rmSync, writeFileSync } from 'node:fs'
 import { spawnSync } from 'node:child_process'
 import { planArchiveLayout } from './mcp-archive-layout.ts'
@@ -128,7 +128,9 @@ function packArchive(opts: ArchivePackingOptions): void {
     return
   }
   const distDir = dirname(opts.archivePath)
-  const tar = spawnSync('tar', ['czf', opts.archivePath, opts.stageDirName], {
+  // tar runs with cwd=distDir, so the archive must be named by basename;
+  // passing the full path would resolve to distDir/distDir/... and fail.
+  const tar = spawnSync('tar', ['czf', basename(opts.archivePath), opts.stageDirName], {
     cwd: distDir,
     stdio: 'inherit',
   })
