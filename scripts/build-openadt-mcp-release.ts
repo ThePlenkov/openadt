@@ -81,13 +81,27 @@ function main(): void {
   const ext = platform.startsWith('win-') ? '.exe' : ''
   const entry = join(root, 'packages/adt-mcp/src/cli.ts')
   const outfile = join(outDir, `openadt-mcp${ext}`)
+  const bundledFile = join(outDir, `bundle.mjs`)
 
+  // First bundle all dependencies (including workspace deps) into a single file
+  spawnOrThrow('bun', [
+    'build',
+    '--minify',
+    '--target=bun',
+    entry,
+    '--outfile',
+    bundledFile,
+    '--external',
+    'bun:*',
+  ])
+
+  // Then compile the bundled file for the target platform
   spawnOrThrow('bun', [
     'build',
     '--compile',
     '--minify',
     `--target=${target.bunTarget}`,
-    entry,
+    bundledFile,
     '--outfile',
     outfile,
   ])

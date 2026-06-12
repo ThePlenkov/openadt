@@ -136,8 +136,6 @@ jobs:
 
       - name: Build openadt-mcp binary
         if: matrix.os != 'windows-latest'
-        # On windows-latest, package-release already built and packaged
-        # openadt-mcp-win-x64.zip as part of the openadt build flow.
         shell: bash
         run: |
           mkdir -p packaging/dist
