@@ -20,10 +20,11 @@ on:
         description: Pre-release id — only used with prerelease/prepatch/preminor/premajor bumps
         required: false
         type: choice
+        default: alpha
         options:
-          - rc
-          - beta
           - alpha
+          - beta
+          - rc
       draft:
         description: Create as draft release — assets are attached but release stays hidden until published
         required: false
