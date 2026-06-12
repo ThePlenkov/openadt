@@ -54,8 +54,8 @@ export function defaultDispatchRoot(repoRoot: string): string {
 }
 
 function shellQuote(value: string): string {
-  if (/^[\w@./:-]+$/.test(value)) return value
-  return `"${value.replace(/\\/g, '\\\\').replace(/"/g, '\\"')}"`
+  if (/^[\w@./:=+-]+$/.test(value)) return value
+  return `'${value.replace(/'/g, "'\\''")}'`
 }
 
 type LocalRunCommandInput = {
@@ -72,15 +72,15 @@ function buildLocalRunCommand(input: LocalRunCommandInput): string {
     'bun',
     '.agents/skills/e2e/cli.ts',
     'run',
-    scenario,
+    shellQuote(scenario),
     '--config',
     shellQuote(configPath),
     '--evidence',
     ...Object.entries(ctx)
       .filter(([k]) => k !== 'prompt')
-      .flatMap(([k, v]) => [`--${k}`, shellQuote(String(v))]),
+      .flatMap(([k, v]) => [shellQuote(`--${k}`), shellQuote(String(v))]),
     '--agent',
-    agent,
+    shellQuote(agent),
   ]
   if (model && !model.startsWith('(none')) {
     parts.push('--model', shellQuote(model))
