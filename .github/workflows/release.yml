@@ -139,13 +139,13 @@ jobs:
         shell: bash
         run: |
           # Build all workspace packages that adt-mcp depends on
-          cd packages/adt-config && bun run build
-          cd ../adt-infra && bun run build
-          cd ../adt-lsp-client && bun run build
-          cd ../adt-lsp-mcp-tools && bun run build
-          cd ../mcp-framing && bun run build
-          cd ../mcp-tools && bun run build
-          cd ../adt-mcp && bun run build
+          cd packages/adt-config && bun install && bun run build
+          cd ../adt-infra && bun install && bun run build
+          cd ../adt-lsp-client && bun install && bun run build
+          cd ../adt-lsp-mcp-tools && bun install && bun run build
+          cd ../mcp-framing && bun install && bun run build
+          cd ../mcp-tools && bun install && bun run build
+          cd ../adt-mcp && bun install && bun run build
           # Use the MCP packaging script directly (handles compile, archive, and checksum)
           bun scripts/package-mcp-only.ts --version=${{ needs.bump.outputs.version }} --platform=${{ matrix.platform }}
 
