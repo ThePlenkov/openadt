@@ -134,7 +134,7 @@ function isHelpInvocation(command: string | undefined): boolean {
   return command === undefined || command === '--help' || command === '-h'
 }
 
-function runCommand(command: string, rest: string[]): number {
+function runCommand(command: string, rest: string[]): Promise<number> {
   switch (command) {
     case 'serve':
       return cmdServe(rest)
@@ -149,7 +149,7 @@ function runCommand(command: string, rest: string[]): number {
     default:
       console.error(`Unknown command: ${command}`)
       usage()
-      return EXIT_ERROR
+      return Promise.resolve(EXIT_ERROR)
   }
 }
 

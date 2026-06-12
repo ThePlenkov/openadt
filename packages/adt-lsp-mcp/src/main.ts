@@ -232,13 +232,13 @@ class SimpleMcpServer {
       )
       return
     }
-    await this.invokeTool(id, tool, args)
+    await this.invokeTool(id, tool, args as Record<string, unknown>)
   }
 
   private async invokeTool(
     id: number | string,
     tool: (typeof mcpTools)[number],
-    args: object
+    args: Record<string, unknown>
   ): Promise<void> {
     try {
       const merged = this.resolveToolArguments(args)
