@@ -51,6 +51,7 @@
     },
     "build": {
       "cache": true,
+      "dependsOn": ["^build"],
       "inputs": ["default", "typescriptSources"],
       "outputs": ["{projectRoot}/dist"]
     },

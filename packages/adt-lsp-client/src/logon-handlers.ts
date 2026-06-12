@@ -10,8 +10,6 @@ import {
   LSP_METHOD_DESTINATIONS_STOP_LOGON,
 } from '@openadt/adt-config'
 
-export const DEFAULT_LOGON_TIMEOUT_MS = 300_000
-
 export type RequestBrowserBasedLogonParams = {
   id: string
   title?: string

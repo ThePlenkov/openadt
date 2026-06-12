@@ -37,6 +37,7 @@ export type QuickSearchResult = {
 }
 
 export const DEFAULT_MCP_PORT = 2236
+export const DEFAULT_LOGON_TIMEOUT_MS = 300_000
 export const MARKETPLACE_URL =
   'https://marketplace.visualstudio.com/items?itemName=SAPSE.adt-vscode'
 

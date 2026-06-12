@@ -129,9 +129,9 @@ jobs:
           chmod +x ./mvnw
           ./mvnw -q -f pom.xml -pl apps/openadt-cli -am -Pdistribution -Dopenadt.distribution=true package -Dmaven.test.skip=true
 
-      - name: Build workspace packages
+      - name: Build openadt-mcp workspace dependencies
         shell: bash
-        run: bunx nx run-many --target=build
+        run: bunx nx run adt-mcp:build
 
       - name: Package openadt.zip and compute checksum
         if: matrix.os == 'windows-latest'

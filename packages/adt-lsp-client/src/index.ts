@@ -8,10 +8,10 @@ export {
 } from './lsp-client'
 
 export {
-  DEFAULT_LOGON_TIMEOUT_MS,
   ensureDestinationLoggedOn,
   registerLogonHandlers,
 } from './logon-handlers'
+export { DEFAULT_LOGON_TIMEOUT_MS } from '@openadt/adt-config'
 
 export { callLspContract } from './lsp/client/call-lsp-contract'
 

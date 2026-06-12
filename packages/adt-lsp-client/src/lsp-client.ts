@@ -10,12 +10,9 @@ import {
 } from '@openadt/adt-infra'
 import type { McpLog } from '@openadt/adt-infra'
 import { redactSecrets } from '@openadt/adt-infra'
+import { ensureDestinationLoggedOn, registerLogonHandlers } from './logon-handlers'
 import {
   DEFAULT_LOGON_TIMEOUT_MS,
-  ensureDestinationLoggedOn,
-  registerLogonHandlers,
-} from './logon-handlers'
-import {
   LSP_METHOD_DESTINATIONS_CREATE_PROJECT,
   LSP_METHOD_DESTINATIONS_GET_STORE_PATH,
   LSP_METHOD_DESTINATIONS_INIT,

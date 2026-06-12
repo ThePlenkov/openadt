@@ -2,11 +2,11 @@ import { homedir } from 'node:os'
 import { join, resolve } from 'node:path'
 import {
   DEFAULT_IMPORT_FROM,
+  DEFAULT_LOGON_TIMEOUT_MS,
   DEFAULT_MCP_PORT,
   type DestinationImportMode,
   type McpServeConfig,
 } from './types'
-import { DEFAULT_LOGON_TIMEOUT_MS } from '@openadt/adt-lsp-client'
 
 export const DEFAULT_WORKSPACE = join(homedir(), '.openadt', 'adt-ls-workspace')
 export const PID_FILE = join(homedir(), '.openadt', 'adt-ls-mcp.pid')
