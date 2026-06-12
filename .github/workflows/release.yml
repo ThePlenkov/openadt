@@ -138,42 +138,16 @@ jobs:
         if: matrix.os != 'windows-latest'
         shell: bash
         run: |
-          mkdir -p packaging/dist
-          out="packaging/dist/openadt-mcp-${{ needs.bump.outputs.version }}-${{ matrix.platform }}"
-          bun run mcp:build:compile -- --platform=${{ matrix.platform }} --out="${out}"
-
-      - name: Package openadt-mcp archive
-        if: matrix.os != 'windows-latest'
-        shell: bash
-        run: |
-          version="${{ needs.bump.outputs.version }}"
-          platform="${{ matrix.platform }}"
-          ext="${{ matrix.ext }}"
-          dir="packaging/dist/openadt-mcp-${version}-${platform}"
-          archive="packaging/dist/openadt-mcp-${version}-${platform}.${ext}"
-          cd packaging/dist
-          if [[ "${ext}" == "zip" ]]; then
-            zip -r "${archive##*/}" "${dir##*/}"
-          else
-            tar czf "${archive##*/}" "${dir##*/}"
-          fi
-          echo "Created ${archive}"
-
-      - name: Compute archive sha256
-        if: matrix.os != 'windows-latest'
-        shell: bash
-        run: |
-          version="${{ needs.bump.outputs.version }}"
-          platform="${{ matrix.platform }}"
-          ext="${{ matrix.ext }}"
-          archive="packaging/dist/openadt-mcp-${version}-${platform}.${ext}"
-          if command -v sha256sum >/dev/null 2>&1; then
-            sha256=$(sha256sum "${archive}" | awk '{print tolower($1)}')
-          else
-            sha256=$(shasum -a 256 "${archive}" | awk '{print tolower($1)}')
-          fi
-          echo "${sha256}  $(basename "${archive}")" > "${archive}.sha256"
-          echo "SHA256 (${platform}): ${sha256}"
+          # Build all workspace packages that adt-mcp depends on
+          cd packages/adt-config && bun run build
+          cd ../adt-infra && bun run build
+          cd ../adt-lsp-client && bun run build
+          cd ../adt-lsp-mcp-tools && bun run build
+          cd ../mcp-framing && bun run build
+          cd ../mcp-tools && bun run build
+          cd ../adt-mcp && bun run build
+          # Use the MCP packaging script directly (handles compile, archive, and checksum)
+          bun scripts/package-mcp-only.ts --version=${{ needs.bump.outputs.version }} --platform=${{ matrix.platform }}
 
       - name: Upload artifacts
         uses: actions/upload-artifact@v4
