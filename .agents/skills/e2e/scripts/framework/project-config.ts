@@ -30,12 +30,10 @@ export function resolveConfigPath(repoRoot: string, argv: string[]): string {
   return path
 }
 
-export function loadProjectConfig(repoRoot: string, argv: string[]): ProjectE2eConfig {
-  const path = resolveConfigPath(repoRoot, argv)
-  if (!existsSync(path)) {
-    throw new Error(`Project config not found: ${path}`)
-  }
-  const parsed = yaml.load(readFileSync(path, 'utf8')) as ProjectE2eConfig
+function validateProjectConfig(
+  parsed: ProjectE2eConfig | null | undefined,
+  path: string
+): ProjectE2eConfig {
   if (!parsed?.adapter?.trim()) {
     throw new Error(`Project config ${path} requires adapter: <module-path>`)
   }
@@ -43,6 +41,15 @@ export function loadProjectConfig(repoRoot: string, argv: string[]): ProjectE2eC
     throw new Error(`Project config ${path} requires at least one suite under suites:`)
   }
   return parsed
+}
+
+export function loadProjectConfig(repoRoot: string, argv: string[]): ProjectE2eConfig {
+  const path = resolveConfigPath(repoRoot, argv)
+  if (!existsSync(path)) {
+    throw new Error(`Project config not found: ${path}`)
+  }
+  const parsed = yaml.load(readFileSync(path, 'utf8')) as ProjectE2eConfig
+  return validateProjectConfig(parsed, path)
 }
 
 export function resolveSuiteId(config: ProjectE2eConfig, input: string): string {

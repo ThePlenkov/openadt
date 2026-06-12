@@ -58,13 +58,16 @@ function shellQuote(value: string): string {
   return `"${value.replace(/\\/g, '\\\\').replace(/"/g, '\\"')}"`
 }
 
-function buildLocalRunCommand(
-  scenario: string,
-  configPath: string,
-  ctx: RunContext,
-  agent: string,
+type LocalRunCommandInput = {
+  scenario: string
+  configPath: string
+  ctx: RunContext
+  agent: string
   model: string
-): string {
+}
+
+function buildLocalRunCommand(input: LocalRunCommandInput): string {
+  const { scenario, configPath, ctx, agent, model } = input
   const parts = [
     'bun',
     '.agents/skills/e2e/cli.ts',
@@ -83,6 +86,36 @@ function buildLocalRunCommand(
     parts.push('--model', shellQuote(model))
   }
   return parts.join(' ')
+}
+
+function assertDispatchSupported(opts: CliOptions, usageExample: string): string {
+  if (opts.list) {
+    throw new Error('Dispatch does not support --list; run without --acp.')
+  }
+  const scenarioKey = opts.scenario?.trim()
+  if (!scenarioKey) {
+    throw new Error(`Dispatch requires a scenario code. Usage: ${usageExample}`)
+  }
+  return scenarioKey
+}
+
+function relativeConfigPath(configPath: string, repoRoot: string): string {
+  if (configPath.startsWith(repoRoot)) {
+    return configPath.slice(repoRoot.length + 1)
+  }
+  return configPath
+}
+
+function resolveDispatchScenario(
+  projectConfig: ProjectE2eConfig,
+  repoRoot: string,
+  scenarioKey: string
+): { suiteId: string; scenario: Scenario; scenarioFilePath: string } {
+  const suiteId = resolveSuiteId(projectConfig, scenarioKey)
+  const suite = projectConfig.suites[suiteId]!
+  const scenarios = filterScenarios(loadScenariosFromDir(suiteDir(repoRoot, suite)), scenarioKey)
+  const scenario = scenarios[0]!
+  return { suiteId, scenario, scenarioFilePath: join(suite.dir, scenario.file) }
 }
 
 function buildAcpPrompt(input: {
@@ -125,26 +158,24 @@ export function buildE2eDispatch(
   repoRoot: string,
   config: DispatchBuildConfig
 ): E2eDispatchPayload {
-  if (opts.list) {
-    throw new Error('Dispatch does not support --list; run without --acp.')
-  }
-  const scenarioKey = opts.scenario?.trim()
-  if (!scenarioKey) {
-    throw new Error(`Dispatch requires a scenario code. Usage: ${config.usageExample}`)
-  }
+  const scenarioKey = assertDispatchSupported(opts, config.usageExample)
   const acpAgent = resolveAcpAgent(opts)
-  const suiteId = resolveSuiteId(config.projectConfig, scenarioKey)
-  const suite = config.projectConfig.suites[suiteId]!
-  const scenarios = filterScenarios(loadScenariosFromDir(suiteDir(repoRoot, suite)), scenarioKey)
-  const scenario = scenarios[0]!
+  const { scenario, scenarioFilePath } = resolveDispatchScenario(
+    config.projectConfig,
+    repoRoot,
+    scenarioKey
+  )
   const model = resolveE2eModel(opts)
   const evidenceDir = opts.evidenceRoot ?? defaultEvidenceRoot(repoRoot)
   const ctx = buildRunContext(opts)
-  const relConfig = config.configPath.startsWith(repoRoot)
-    ? config.configPath.slice(repoRoot.length + 1)
-    : config.configPath
-  const localCommand = buildLocalRunCommand(scenario.code, relConfig, ctx, acpAgent, model)
-  const scenarioFilePath = join(suite.dir, scenario.file)
+  const relConfig = relativeConfigPath(config.configPath, repoRoot)
+  const localCommand = buildLocalRunCommand({
+    scenario: scenario.code,
+    configPath: relConfig,
+    ctx,
+    agent: acpAgent,
+    model,
+  })
   const prompt = buildAcpPrompt({
     scenario: scenario.code,
     scenarioFilePath,

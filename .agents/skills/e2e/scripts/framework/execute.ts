@@ -132,44 +132,19 @@ export function showScenario(scenario: Scenario): void {
   console.log(`\nSteps: ${scenario.steps.length}`)
 }
 
-export async function runE2e(argv: string[], opts: CliOptions): Promise<RunE2eOutcome> {
-  const repoRoot = resolveRepoRoot(process.cwd())
-  const projectConfig = loadProjectConfig(repoRoot, argv)
-  const adapter = await loadProjectAdapter(repoRoot, projectConfig)
+type RunSelectionInput = {
+  adapter: ProjectAdapter
+  selected: Scenario[]
+  ctx: RunContext
+  suiteId: string
+  timeoutMs: number
+}
 
-  const scenarioKey = opts.scenario?.trim()
-  if (!scenarioKey) {
-    throw new Error('run requires a scenario code (e.g. test-1).')
-  }
-
-  const suiteId = resolveSuiteId(projectConfig, scenarioKey)
-  const suite = projectConfig.suites[suiteId]!
-  const allInSuite = loadScenariosFromDir(suiteDir(repoRoot, suite))
-  const selected = filterScenarios(allInSuite, scenarioKey)
-  const ctx = await mergeContext(adapter, opts, suiteId)
-  const startedAt = new Date().toISOString()
-  const evidenceRoot = opts.evidenceRoot ?? defaultEvidenceRoot(repoRoot)
-  const testId = selected.map((s) => s.code).join('_')
-  const agentConfig = readE2eAgentConfig(repoRoot, argv)
-
-  if (opts.autoclean || agentConfig.autoclean) {
-    for (const s of selected) autocleanOldEvidence(evidenceRoot, s.code)
-  }
-
-  const serviceMode = adapter.serviceMode?.(selected[0]!, suiteId) ?? `suite:${suiteId}`
-
-  console.log(`=== e2e-agent run ===`)
-  console.log(`suite: ${suiteId}`)
-  console.log(`scenarios: ${selected.map((s) => s.code).join(', ')}`)
-  if (opts.evidence) {
-    console.log(`evidence: ${evidenceRoot}\n`)
-  }
-
-  const timeoutMs = Number(ctx.timeoutMs ?? 300_000)
+async function runSelectedScenarios(input: RunSelectionInput): Promise<ScenarioResult[]> {
+  const { adapter, selected, ctx, suiteId, timeoutMs } = input
   const timeout = setTimeout(() => {
     console.error('Run timeout — remote logon or handshake may be stuck')
   }, timeoutMs).unref()
-
   const results: ScenarioResult[] = []
   try {
     for (const scenario of selected) {
@@ -179,26 +154,130 @@ export async function runE2e(argv: string[], opts: CliOptions): Promise<RunE2eOu
   } finally {
     clearTimeout(timeout)
   }
+  return results
+}
 
+type EvidenceWriteInput = {
+  evidenceRoot: string
+  testId: string
+  exitCode: number
+  startedAt: string
+  opts: CliOptions
+  ctx: RunContext
+  selected: Scenario[]
+  results: ScenarioResult[]
+  serviceMode: string
+}
+
+function writeRunEvidence(input: EvidenceWriteInput): string {
+  const { evidenceRoot, testId, exitCode, startedAt, opts, ctx, selected, results, serviceMode } =
+    input
+  const { path } = createEvidencePath(evidenceRoot, testId, exitCode === 0, startedAt)
+  writeEvidenceReport({
+    path,
+    runId: path.split(/[/\\]/).pop()!.replace('.md', ''),
+    startedAt,
+    finishedAt: new Date().toISOString(),
+    exitCode,
+    opts,
+    ctx,
+    scenarios: selected,
+    results,
+    serviceMode,
+  })
+  console.log(`\nEvidence written: ${path}`)
+  console.log(`E2E_EVIDENCE_FILE=${path}`)
+  return path
+}
+
+type RunInputs = {
+  selected: Scenario[]
+  ctx: RunContext
+  startedAt: string
+  evidenceRoot: string
+  testId: string
+  suiteId: string
+  serviceMode: string
+}
+
+type PrepareRunInputsArgs = {
+  argv: string[]
+  opts: CliOptions
+  repoRoot: string
+  adapter: ProjectAdapter
+  projectConfig: ProjectE2eConfig
+}
+
+async function prepareRunInputs(args: PrepareRunInputsArgs): Promise<RunInputs> {
+  const { argv, opts, repoRoot, adapter, projectConfig } = args
+  const scenarioKey = opts.scenario?.trim()
+  if (!scenarioKey) {
+    throw new Error('run requires a scenario code (e.g. test-1).')
+  }
+  const suiteId = resolveSuiteId(projectConfig, scenarioKey)
+  const suite = projectConfig.suites[suiteId]!
+  const allInSuite = loadScenariosFromDir(suiteDir(repoRoot, suite))
+  const selected = filterScenarios(allInSuite, scenarioKey)
+  const ctx = await mergeContext(adapter, opts, suiteId)
+  const evidenceRoot = opts.evidenceRoot ?? defaultEvidenceRoot(repoRoot)
+  const serviceMode = adapter.serviceMode?.(selected[0]!, suiteId) ?? `suite:${suiteId}`
+
+  const agentConfig = readE2eAgentConfig(repoRoot, argv)
+  if (opts.autoclean || agentConfig.autoclean) {
+    for (const s of selected) autocleanOldEvidence(evidenceRoot, s.code)
+  }
+
+  return {
+    selected,
+    ctx,
+    startedAt: new Date().toISOString(),
+    evidenceRoot,
+    testId: selected.map((s) => s.code).join('_'),
+    suiteId,
+    serviceMode,
+  }
+}
+
+function logRunHeader(input: RunInputs, opts: CliOptions): void {
+  console.log(`=== e2e-agent run ===`)
+  console.log(`suite: ${input.suiteId}`)
+  console.log(`scenarios: ${input.selected.map((s) => s.code).join(', ')}`)
+  if (opts.evidence) {
+    console.log(`evidence: ${input.evidenceRoot}\n`)
+  }
+}
+
+export async function runE2e(argv: string[], opts: CliOptions): Promise<RunE2eOutcome> {
+  const repoRoot = resolveRepoRoot(process.cwd())
+  const projectConfig = loadProjectConfig(repoRoot, argv)
+  const adapter = await loadProjectAdapter(repoRoot, projectConfig)
+  const inputs = await prepareRunInputs({ argv, opts, repoRoot, adapter, projectConfig })
+
+  logRunHeader(inputs, opts)
+
+  const timeoutMs = Number(inputs.ctx.timeoutMs ?? 300_000)
+  const results = await runSelectedScenarios({
+    adapter,
+    selected: inputs.selected,
+    ctx: inputs.ctx,
+    suiteId: inputs.suiteId,
+    timeoutMs,
+  })
   const exitCode = results.every((r) => r.passed) ? 0 : 1
+
   let evidencePath: string | undefined
   if (opts.evidence) {
-    const { path } = createEvidencePath(evidenceRoot, testId, exitCode === 0, startedAt)
-    writeEvidenceReport({
-      path,
-      runId: path.split(/[/\\]/).pop()!.replace('.md', ''),
-      startedAt,
-      finishedAt: new Date().toISOString(),
+    evidencePath = writeRunEvidence({
+      evidenceRoot: inputs.evidenceRoot,
+      testId: inputs.testId,
       exitCode,
+      startedAt: inputs.startedAt,
       opts,
-      ctx,
-      scenarios: selected,
+      ctx: inputs.ctx,
+      selected: inputs.selected,
       results,
-      serviceMode,
+      serviceMode: inputs.serviceMode,
     })
-    evidencePath = path
-    console.log(`\nEvidence written: ${path}`)
-    console.log(`E2E_EVIDENCE_FILE=${path}`)
   }
 
   return { exitCode, evidencePath }

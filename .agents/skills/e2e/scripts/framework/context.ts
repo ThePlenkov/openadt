@@ -101,67 +101,95 @@ function positionalScenario(argv: string[]): string | undefined {
   return undefined
 }
 
-export function parseCli(argv: string[]): CliOptions {
-  const get = (flag: string): string | undefined => getCliFlag(argv, flag)
+function parseDynamicArg(
+  arg: string,
+  argv: string[],
+  i: number
+): { name: string; value: string | boolean; consumed: number } {
+  const eq = arg.indexOf('=')
+  if (eq !== -1) {
+    return { name: arg.slice(2, eq), value: arg.slice(eq + 1), consumed: 0 }
+  }
+  const next = argv[i + 1]
+  if (next && !next.startsWith('-')) {
+    return { name: arg.slice(2), value: next, consumed: 1 }
+  }
+  return { name: arg.slice(2), value: true, consumed: 0 }
+}
 
-  // Parse arbitrary dynamic arguments (not framework flags)
+const FRAMEWORK_FLAGS = new Set([
+  '--scenario',
+  '--config',
+  '--list',
+  '--evidence',
+  '--evidence-dir',
+  '--agent',
+  '--model',
+  '--acp',
+  '--command',
+  '--executor',
+  '--prompt',
+  '--autoclean',
+  '--suite',
+])
+
+function collectDynamicArgs(argv: string[]): Record<string, string | boolean | number> {
   const args: Record<string, string | boolean | number> = {}
-  const frameworkFlags = new Set([
-    '--scenario',
-    '--config',
-    '--list',
-    '--evidence',
-    '--evidence-dir',
-    '--agent',
-    '--model',
-    '--acp',
-    '--command',
-    '--executor',
-    '--prompt',
-    '--autoclean',
-    '--suite',
-  ])
-
   for (let i = 0; i < argv.length; i++) {
     const arg = argv[i]
     if (!arg?.startsWith('--')) continue
-    if (frameworkFlags.has(arg)) continue
-
-    // Parse --flag=value or --flag value
-    if (arg.includes('=')) {
-      const [key, value] = arg.split('=', 2)
-      const flagName = key.slice(2)
-      args[flagName] = value
-    } else {
-      const flagName = arg.slice(2)
-      const next = argv[i + 1]
-      if (next && !next.startsWith('-')) {
-        args[flagName] = next
-        i++ // skip next arg
-      } else {
-        args[flagName] = true
-      }
-    }
+    if (FRAMEWORK_FLAGS.has(arg)) continue
+    const parsed = parseDynamicArg(arg, argv, i)
+    args[parsed.name] = parsed.value
+    i += parsed.consumed
   }
+  return args
+}
 
-  // Read runner options (e2e.config.yaml or TESTING.md frontmatter)
+function resolveAutoclean(
+  argv: string[],
+  projectConfig: ReturnType<typeof readE2eAgentConfig>
+): boolean {
+  if (argv.includes('--autoclean')) return true
+  if (process.env.E2E_AUTOCLEAN === '1') return true
+  return projectConfig.autoclean === true
+}
+
+function resolveEvidenceFlag(argv: string[]): boolean {
+  if (argv.includes('--evidence')) return true
+  return process.env.E2E_EVIDENCE === '1'
+}
+
+function resolveAgent(
+  argv: string[],
+  get: (flag: string) => string | undefined
+): string | undefined {
+  return get('--agent') ?? process.env.E2E_AGENT?.trim()
+}
+
+function resolveModel(
+  argv: string[],
+  get: (flag: string) => string | undefined
+): string | undefined {
+  return get('--model') ?? process.env.E2E_MODEL?.trim()
+}
+
+export function parseCli(argv: string[]): CliOptions {
+  const get = (flag: string): string | undefined => getCliFlag(argv, flag)
   const repoRoot = resolveRepoRoot(process.cwd())
   const projectConfig = readE2eAgentConfig(repoRoot, argv)
 
   return {
     scenario: get('--scenario') ?? positionalScenario(argv),
     list: argv.includes('--list'),
-    evidence: argv.includes('--evidence') || process.env.E2E_EVIDENCE === '1',
+    evidence: resolveEvidenceFlag(argv),
     evidenceRoot: get('--evidence-dir'),
-    agent: get('--agent') ?? process.env.E2E_AGENT?.trim(),
-    model: get('--model') ?? process.env.E2E_MODEL?.trim(),
+    agent: resolveAgent(argv, get),
+    model: resolveModel(argv, get),
     executor: resolveE2eExecutor(argv),
     prompt: get('--prompt'),
-    autoclean:
-      argv.includes('--autoclean') ||
-      process.env.E2E_AUTOCLEAN === '1' ||
-      projectConfig.autoclean === true,
-    args,
+    autoclean: resolveAutoclean(argv, projectConfig),
+    args: collectDynamicArgs(argv),
   }
 }
 
