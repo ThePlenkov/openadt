@@ -1,0 +1,29 @@
+/**
+ * LSP method: textDocument/hover
+ */
+import { lspEndpoint, type, type LspEndpoint } from '../lsp/contract-core'
+
+export const hover: LspEndpoint = lspEndpoint({
+  method: 'textDocument/hover',
+  types: {
+    params: type<{
+      textDocument: {
+        uri: string
+      }
+      position: {
+        line: number
+        character: number
+      }
+    }>(),
+    response: type<{
+      contents:
+        | string
+        | { language: string; value: string }
+        | Array<string | { language: string; value: string }>
+      range?: {
+        start: { line: number; character: number }
+        end: { line: number; character: number }
+      }
+    } | null>(),
+  },
+})

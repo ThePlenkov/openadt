@@ -1,0 +1,34 @@
+{
+  "version": "0.1.0",
+  "description": "ADT LSP MCP server - stdio-only MCP for OpenADT tools (compiled Bun binary)",
+  "homepage": "https://github.com/abapify/openadt",
+  "license": "Apache-2.0",
+  "notes": "Requires SAP ADT for VS Code (adt-lsc). JDK 21 needed only for adt-lsc's bundled JRE/SNC; adt-lsp-mcp itself has no Java dependency.",
+  "architecture": {
+    "64bit": {
+      "url": "https://github.com/abapify/openadt/releases/download/v0.1.0/adt-lsp-mcp-0.1.0-win-x64.zip",
+      "hash": "PLACEHOLDER_RUN_PACKAGE_RELEASE"
+    }
+  },
+  "extract_dir": "adt-lsp-mcp-0.1.0-win-x64",
+  "bin": "adt-lsp-mcp.exe",
+  "suggest": {
+    "JDK 21": "java/openjdk21",
+    "SAP ADT for VS Code": "https://marketplace.visualstudio.com/items?itemName=SAPSE.adt-vscode"
+  },
+  "checkver": {
+    "github": "abapify/openadt"
+  },
+  "autoupdate": {
+    "architecture": {
+      "64bit": {
+        "url": "https://github.com/abapify/openadt/releases/download/v$version/adt-lsp-mcp-$version-win-x64.zip"
+      }
+    },
+    "hash": {
+      "url": "$baseurl/adt-lsp-mcp-$version-win-x64.zip.sha256",
+      "regex": "^(?<hash>[A-Fa-f0-9]{64})"
+    },
+    "extract_dir": "adt-lsp-mcp-$version-win-x64"
+  }
+}

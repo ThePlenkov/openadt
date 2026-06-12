@@ -1,0 +1,13 @@
+{
+  "categories": {
+    "correctness": "warn",
+    "suspicious": "warn",
+    "perf": "warn",
+    "style": "warn",
+    "restriction": "warn"
+  },
+  "ignore": ["node_modules", "dist", ".nx", ".e2e", "tmp"],
+  "rules": {
+    "unicorn/no-thenable": "off"
+  }
+}

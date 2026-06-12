@@ -4,6 +4,10 @@
   "tui": {
     "enabled": false
   },
+  "workspaceLayout": {
+    "appsDir": "apps",
+    "libsDir": "packages"
+  },
   "namedInputs": {
     "sharedGlobals": ["{workspaceRoot}/.github/workflows/ci.yml"],
     "default": ["sharedGlobals"],
@@ -21,6 +25,12 @@
       "{workspaceRoot}/.mvn/**/*",
       "{workspaceRoot}/apps/**/pom.xml",
       "{workspaceRoot}/apps/**/src/**/*"
+    ],
+    "typescriptSources": [
+      "{projectRoot}/src/**/*",
+      "{projectRoot}/tsconfig.json",
+      "{projectRoot}/tsdown.config.ts",
+      "{workspaceRoot}/tsdown.config.ts"
     ]
   },
   "targetDefaults": {
@@ -38,7 +48,26 @@
       "cache": true,
       "inputs": ["javaMonorepoSources"],
       "outputs": ["{projectRoot}/target"]
+    },
+    "build": {
+      "cache": true,
+      "inputs": ["default", "typescriptSources"],
+      "outputs": ["{projectRoot}/dist"]
+    },
+    "lint": {
+      "cache": true,
+      "inputs": ["default", "typescriptSources"],
+      "executor": "nx:run-commands",
+      "options": {
+        "command": "oxlint {projectRoot}/src"
+      }
+    },
+    "format": {
+      "cache": true,
+      "inputs": ["default", "typescriptSources"],
+      "outputs": ["{projectRoot}/src/**/*"]
     }
   },
-  "analytics": true
+  "analytics": true,
+  "nxCloudId": "6a29d3fb3765f3e608af78f0"
 }

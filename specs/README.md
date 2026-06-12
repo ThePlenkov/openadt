@@ -4,18 +4,20 @@ Behavior contracts for OpenADT. **SDD enforcement:** [DESIGN.md](../DESIGN.md). 
 
 ## Index
 
-| Spec                                           | Scope                                                         |
-| ---------------------------------------------- | ------------------------------------------------------------- |
-| [vision.md](vision.md)                         | Product north star, package map                               |
-| [cli.md](cli.md)                               | Commands: `fetch`, `proxy`, `adt`, `config`, `setup`          |
-| [sdk-capabilities.md](sdk-capabilities.md)     | SAP ADT SDK APIs used by OpenADT                              |
-| [sdk-services.md](sdk-services.md)             | Registered SDK service registry and handlers                  |
-| [config.md](config.md)                         | `~/.openadt/config.toml` schema                               |
-| [proxy.md](proxy.md)                           | Local HTTP proxy, auth, redaction                             |
-| [setup.md](setup.md)                           | Detectors and bootstrap output                                |
-| [mcp.md](mcp.md)                               | SAP ADT MCP launcher + official server interface (LSP + HTTP) |
-| [mcp-shared-backend.md](mcp-shared-backend.md) | MCP shared backend (auto-ensure + attach)                     |
-| [packaging.md](packaging.md)                   | Releases, Scoop, Homebrew                                     |
+| Spec                                           | Scope                                                           |
+| ---------------------------------------------- | --------------------------------------------------------------- |
+| [vision.md](vision.md)                         | Product north star, package map                                 |
+| [cli.md](cli.md)                               | Commands: `fetch`, `proxy`, `adt`, `config`, `setup`            |
+| [sdk-capabilities.md](sdk-capabilities.md)     | SAP ADT SDK APIs used by OpenADT                                |
+| [sdk-services.md](sdk-services.md)             | Registered SDK service registry and handlers                    |
+| [config.md](config.md)                         | `~/.openadt/config.toml` schema                                 |
+| [proxy.md](proxy.md)                           | Local HTTP proxy, auth, redaction                               |
+| [setup.md](setup.md)                           | Detectors and bootstrap output                                  |
+| [mcp.md](mcp.md)                               | SAP ADT MCP launcher + official server interface (LSP + HTTP)   |
+| [adt-lsp-mcp-local.md](adt-lsp-mcp-local.md)   | Repo/global MCP config for `@openadt/adt-lsp-mcp` (`adt-lsp`)     |
+| [mcp-ai-testing.md](mcp-ai-testing.md)         | Live MCP AI scenario tests (`adt_*`, user-supplied destination) |
+| [mcp-shared-backend.md](mcp-shared-backend.md) | MCP shared backend (auto-ensure + attach)                       |
+| [packaging.md](packaging.md)                   | Releases, Scoop, Homebrew                                       |
 
 ## Workflow
 

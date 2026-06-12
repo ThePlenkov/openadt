@@ -69,10 +69,13 @@ jobs:
       - name: Verify spec sync
         run: bun scripts/verify-spec-sync.ts
 
+      - name: Verify fixtures only
+        run: bun scripts/verify-fixtures-only.ts
+
       - name: Verify package docs
         run: bun scripts/verify-package-docs.ts
 
-      - run: bunx nx format:check --base="${NX_BASE:-origin/main}" --head="${NX_HEAD:-HEAD}"
+      - run: bun run format:check
       - run: bunx nx affected -t lint typecheck --base="${NX_BASE:-origin/main}" --head="${NX_HEAD:-HEAD}"
 
       - uses: actions/setup-java@v5

@@ -33,6 +33,7 @@ source: <path to memory/experience entry or PR URL>
 2. **Link to source** — if the item came from a retrospective or experience, reference it in `source:`.
 3. **One item per file** — keep atomic, easy to close by deleting the file.
 4. **Close by deleting** — when done, remove the file (git tracks history).
+5. **Same landscape rules as memory** — [agent-memory-landscape-redaction](../memory/mental-models/agent-memory-landscape-redaction.md): omit real ids; do not substitute fixtures for redacted live values.
 
 ## `/backlog <source>` — sources
 

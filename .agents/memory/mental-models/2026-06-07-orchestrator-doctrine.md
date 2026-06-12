@@ -19,7 +19,7 @@ delegate to specialized subagents rather than reimplementing.
    for work with writes.
 5. Pass file paths, not topics, to subagents. Specify return format.
 6. After 3 pushes on the same branch per `/act` cycle, stop and report.
-7. Scratch files: always `/tmp/agent_*/`. Never the worktree root.
+7. Scratch files: always repo `./tmp/` (e.g. `tmp/agent/<run>/`). Never system `/tmp`, never the worktree root outside `tmp/`.
 8. macOS: `gsed`/`gdate`. Linux: `sed`/`date`. Detect once via `uname -s`.
 9. **Never pin models in agent configs** — let the agent inherit the active
    plan's default. Pinned models route to whatever provider they belong to

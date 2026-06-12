@@ -13,5 +13,6 @@
 | [openadt-sap-sdk-apis](openadt-sap-sdk-apis/SKILL.md) | SDK APIs |
 | [openadt-local-sap-runtime](openadt-local-sap-runtime/SKILL.md) | JCo, SNC, HTTP SSO, failures |
 | [openadt-devcontainer-host-runtime](openadt-devcontainer-host-runtime/SKILL.md) | WSL / devcontainer vs host |
+| [e2e](e2e/SKILL.md) | `/e2e mcp-N` — live MCP scenario + `.e2e/results/` evidence |
 
 [DESIGN.md](../../DESIGN.md) · [AGENTS.md](../../AGENTS.md) · [REVIEW.md](../../REVIEW.md). Update the matching skill in the same PR as code/spec changes.

@@ -1,0 +1,44 @@
+{
+  "name": "adt-mcp",
+  "root": "packages/adt-mcp",
+  "sourceRoot": "packages/adt-mcp/src",
+  "projectType": "application",
+  "targets": {
+    "build": {
+      "executor": "nx:run-commands",
+      "options": {
+        "command": "bun run build",
+        "cwd": "packages/adt-mcp"
+      },
+      "outputs": ["{projectRoot}/dist"]
+    },
+    "test": {
+      "executor": "nx:run-commands",
+      "options": {
+        "command": "bun test packages/adt-mcp/src"
+      }
+    },
+    "typecheck": {
+      "executor": "nx:run-commands",
+      "options": {
+        "command": "bunx tsc -p packages/adt-mcp/tsconfig.json --noEmit"
+      }
+    },
+    "serve-stdio": {
+      "executor": "nx:run-commands",
+      "cache": false,
+      "options": {
+        "command": "bun scripts/mcp-stdio.ts",
+        "cwd": "{workspaceRoot}",
+        "forwardAllArgs": true
+      }
+    },
+    "build:compile": {
+      "executor": "nx:run-commands",
+      "options": {
+        "command": "bun scripts/build-openadt-mcp-release.ts",
+        "forwardAllArgs": true
+      }
+    }
+  }
+}

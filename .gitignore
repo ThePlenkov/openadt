@@ -26,8 +26,17 @@ replay_pid*
 # Maven build output
 target/
 
-# TypeScript build output
-tools/sap-adt-mcp-launcher/dist/
+# TypeScript build output (packages use outDir: dist/; Bun runs .ts in-repo)
+dist/
+*.js
+!*.config.js
+*.mjs
+!*.config.mjs
+*.cjs
+!*.config.cjs
+*.d.ts
+*.js.map
+*.d.ts.map
 
 # IDE files
 .idea/
@@ -42,6 +51,12 @@ bun.lock
 bun.lockb
 pnpm-lock.yaml
 yarn.lock
+
+# E2E evidence (live SAP runs — see .e2e/README.md; always use repo-root .e2e/)
+.e2e/results/
+**/.e2e/results/
+.e2e/dispatch/
+**/.e2e/dispatch/
 
 # Local OpenADT runtime and config
 .openadt/

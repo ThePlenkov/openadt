@@ -11,17 +11,17 @@
  *   bun run act:debt:done -- --status done --fix-pr 99 --thread-id PRRT_…
  *   bun run act:debt:test
  */
-import { spawnSync } from "node:child_process";
+import { spawnSync } from 'node:child_process'
 
-const SCRIPT_DIR = import.meta.dir;
+const SCRIPT_DIR = import.meta.dir
 
 const SUBCOMMANDS = {
-  query: "query-debt.ts",
-  plan: "plan-debt-batch.ts",
-  done: "update-debt-status.ts",
-} as const;
+  query: 'query-debt.ts',
+  plan: 'plan-debt-batch.ts',
+  done: 'update-debt-status.ts',
+} as const
 
-type Subcommand = keyof typeof SUBCOMMANDS;
+type Subcommand = keyof typeof SUBCOMMANDS
 
 function usage(): never {
   console.error(`Usage:
@@ -35,23 +35,22 @@ Commands:
 
 Examples:
   bun run act:debt:query -- --status open --limit 25 --format tsv
-  bun run act:debt:plan -- --limit 25 --out /tmp/agent_$$/debt-batch-plan.md
-  bun run act:debt:done -- --status done --fix-pr 99 --thread-id PRRT_…`);
-  process.exit(1);
+  bun run act:debt:plan -- --limit 25 --out tmp/agent_$$/debt-batch-plan.md
+  bun run act:debt:done -- --status done --fix-pr 99 --thread-id PRRT_…`)
+  process.exit(1)
 }
-
 function runBun(script: string, args: string[]): number {
-  const result = spawnSync("bun", [joinScript(script), ...args], {
-    stdio: "inherit",
-  });
+  const result = spawnSync('bun', [joinScript(script), ...args], {
+    stdio: 'inherit',
+  })
   if (result.error) {
-    throw result.error;
+    throw result.error
   }
-  return result.status ?? 1;
+  return result.status ?? 1
 }
 
 function joinScript(name: string): string {
-  return `${SCRIPT_DIR}/${name}`;
+  return `${SCRIPT_DIR}/${name}`
 }
 
 function runTests(): number {
@@ -60,46 +59,46 @@ function runTests(): number {
     `${SCRIPT_DIR}/../../harvest/scripts/resolve-harvest-prs.test.ts`,
     `${SCRIPT_DIR}/../../harvest/scripts/resolve-harvest-target.test.ts`,
     `${SCRIPT_DIR}/update-debt-status.test.ts`,
-  ];
-  const result = spawnSync("bun", ["test", ...tests], { stdio: "inherit" });
+  ]
+  const result = spawnSync('bun', ['test', ...tests], { stdio: 'inherit' })
   if (result.error) {
-    throw result.error;
+    throw result.error
   }
-  return result.status ?? 1;
+  return result.status ?? 1
 }
 
 function wantsUsage(cmd: string | undefined): boolean {
   if (!cmd) {
-    return true;
+    return true
   }
-  return cmd === "--help" || cmd === "-h";
+  return cmd === '--help' || cmd === '-h'
 }
 
 function subcommandScript(cmd: string): string {
-  const script = SUBCOMMANDS[cmd as Subcommand];
+  const script = SUBCOMMANDS[cmd as Subcommand]
   if (script) {
-    return script;
+    return script
   }
-  console.error(`Unknown command: ${cmd}`);
-  usage();
+  console.error(`Unknown command: ${cmd}`)
+  usage()
 }
 
 function runCommand(cmd: string, rest: string[]): number {
-  if (cmd === "test") {
-    return runTests();
+  if (cmd === 'test') {
+    return runTests()
   }
-  const script = subcommandScript(cmd)!;
-  return runBun(script, rest);
+  const script = subcommandScript(cmd)
+  return runBun(script, rest)
 }
 
 function main(): void {
-  const [cmd, ...rest] = process.argv.slice(2);
+  const [cmd, ...rest] = process.argv.slice(2)
   if (wantsUsage(cmd)) {
-    usage();
+    usage()
   }
-  process.exit(runCommand(cmd!, rest));
+  process.exit(runCommand(cmd!, rest))
 }
 
 if (import.meta.main) {
-  main();
+  main()
 }

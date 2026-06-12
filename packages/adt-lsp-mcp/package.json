@@ -1,0 +1,25 @@
+{
+  "name": "@openadt/adt-lsp-mcp",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "bin": {
+    "adt-lsp-mcp": "./dist/main.mjs"
+  },
+  "scripts": {
+    "build": "tsdown",
+    "build:check": "tsc --noEmit",
+    "lint": "oxlint"
+  },
+  "dependencies": {
+    "@openadt/mcp-framing": "workspace:*",
+    "@openadt/adt-lsp-mcp-tools": "workspace:*",
+    "@openadt/adt-lsp-client": "workspace:*",
+    "@openadt/adt-config": "workspace:*",
+    "@openadt/adt-infra": "workspace:*"
+  },
+  "exports": {
+    ".": "./dist/main.mjs",
+    "./package.json": "./package.json"
+  }
+}

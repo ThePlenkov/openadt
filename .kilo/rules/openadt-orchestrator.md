@@ -77,8 +77,8 @@ Not: "Tell me about labels in the codebase."
 - **macOS:** use `gsed` / `gdate` (or `sed -i ''` / `date -j`).
 - **Linux / cloud-agent container:** `sed` / `date` (no GNU prefix needed).
 - Detect once: `uname -s` → `Darwin` ⇒ assume BSD; else ⇒ GNU.
-- **Scratch files:** always `/tmp/agent_*/` (cloud-agent pre-approved). Never the worktree root — the pre-commit `nx format:write --uncommitted && git update-index --again` hook will re-stage them.
-- **Use absolute paths** in `/tmp/agent_*/` for scratch inputs to `.agents/skills/act/scripts/reply-threads.sh --file …`.
+- **Scratch files:** always repo **`./tmp/`** (e.g. `tmp/agent/<run>/`). **Not** system `/tmp`. Never the worktree root outside `tmp/` — pre-commit `nx format:write --uncommitted` re-stages stray root files.
+- **Paths** under `tmp/` for scratch inputs to `.agents/skills/act/scripts/reply-threads.sh --file …`.
 
 ## 7. When the push fails or the gate won't go green
 
@@ -94,15 +94,15 @@ P5 and P6 are **required** before any merge-ready declaration. Skipping them is 
 ```bash
 # Orchestrator-side setup (run ONCE per /act cycle).
 # one scratch dir per /act run — never re-extract after scoring begins
-mkdir -p /tmp/agent_$$
-bun .agents/skills/act/scripts/extract-findings.ts OWNER REPO PR > /tmp/agent_$$/findings.jsonl
+mkdir -p tmp/agent_$$
+bun .agents/skills/act/scripts/extract-findings.ts OWNER REPO PR > tmp/agent_$$/findings.jsonl
 ```
 
 ```bash
 # Subagent-side scoring (run INSIDE the spawned `general` subagent, model = haiku).
 # The orchestrator must NOT run these commands itself.
 bun .agents/skills/act/scripts/submit-scores.ts OWNER REPO PR --evaluator <subagent-model-id> \
-  --findings /tmp/agent_$$/findings.jsonl --scores /tmp/agent_$$/scores.tsv
+  --findings tmp/agent_$$/findings.jsonl --scores tmp/agent_$$/scores.tsv
 ```
 
 ```bash
@@ -115,10 +115,10 @@ Spawn the subagent with the explicit task contract (do not execute scoring in th
 
 ```text
 task --subagent_type general --model <evaluator-id> \
-  "Read /tmp/agent_$$/findings.jsonl, score each finding 0–5 with a one-line reason,
-   write /tmp/agent_$$/scores.tsv (finding_id<TAB>score<TAB>why), then run
+  "Read tmp/agent_$$/findings.jsonl, score each finding 0–5 with a one-line reason,
+   write tmp/agent_$$/scores.tsv (finding_id<TAB>score<TAB>why), then run
    `bun .agents/skills/act/scripts/submit-scores.ts OWNER REPO PR --evaluator <evaluator-id>
-   --findings /tmp/agent_$$/findings.jsonl --scores /tmp/agent_$$/scores.tsv`.
+   --findings tmp/agent_$$/findings.jsonl --scores tmp/agent_$$/scores.tsv`.
    Do not re-run extract-findings.ts — the snapshot is already on disk."
 ```
 

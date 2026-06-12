@@ -16,11 +16,7 @@
       "settings": {
         "java.configuration.updateBuildConfiguration": "interactive"
       },
-      "extensions": [
-        "vscjava.vscode-java-pack",
-        "redhat.java",
-        "vscjava.vscode-maven"
-      ]
+      "extensions": ["vscjava.vscode-java-pack", "redhat.java", "vscjava.vscode-maven"]
     }
   }
 }

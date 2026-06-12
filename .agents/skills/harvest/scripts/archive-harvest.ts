@@ -20,168 +20,152 @@ import {
   readFileSync,
   renameSync,
   writeFileSync,
-} from "node:fs";
-import { join } from "node:path";
-import {
-  listHarvestPaths,
-  readDebtRecords,
-  readLedgerOverlays,
-} from "./review-debt-lib.ts";
+} from 'node:fs'
+import { dirname, join } from 'node:path'
+import { listHarvestPaths, readDebtRecords, readLedgerOverlays } from './review-debt-lib.ts'
 
-const ARCHIVE_DIR_NAME = "archive";
-
-const TERMINAL_STATUSES = new Set(["done", "wontfix", "duplicate"]);
-
-function isTerminalStatus(status: string): boolean {
-  return TERMINAL_STATUSES.has(status);
-}
-
-function effectiveStatus(
-  overlays: Map<string, { status?: string }>,
-  row: { thread_id: string; status: string },
-): string {
-  return overlays.get(row.thread_id)?.status ?? row.status;
-}
-
-function defaultDebtDir(): string {
-  return join(import.meta.dir, "../../../review-debt");
-}
+const ARCHIVE_DIR_NAME = 'archive'
 
 function archiveDir(): string {
-  const debtRoot = process.env.OPENADT_DEBT_DIR ?? defaultDebtDir();
-  return join(debtRoot, "harvests", ARCHIVE_DIR_NAME);
+  return join(dirname(listHarvestPaths()[0] ?? ''), ARCHIVE_DIR_NAME)
 }
 
 interface LiveThreadIds {
-  live: Set<string>;
-  totals: { harvested: number; open: number; archived: number };
+  live: Set<string>
+  totals: { harvested: number; open: number; archived: number }
 }
 
-function collectLiveThreadIds(
-  all: Array<{ thread_id: string; status: string }>,
-  overlays: Map<string, { status?: string }>,
-): Set<string> {
-  const live = new Set<string>();
+function isClosedStatus(status: string): boolean {
+  return status === 'done' || status === 'wontfix' || status === 'duplicate'
+}
+
+function effectiveStatus(row: LedgerRow, overlays: Map<string, LedgerOverlay>): string {
+  return overlays.get(row.thread_id)?.status ?? row.status
+}
+
+function countOpenStatuses(all: LedgerRow[], overlays: Map<string, LedgerOverlay>): number {
+  return all.filter((r) => effectiveStatus(r, overlays) === 'open').length
+}
+
+function computeLiveThreadIds(): LiveThreadIds {
+  const all = readLedger()
+  const overlays = readLedgerOverlays()
+  const live = new Set<string>()
   for (const row of all) {
-    if (isTerminalStatus(effectiveStatus(overlays, row))) {
-      continue;
+    if (isClosedStatus(effectiveStatus(row, overlays))) {
+      continue
     }
-    live.add(row.thread_id);
+    live.add(row.thread_id)
   }
-  return live;
-}
-
-function loadLiveThreadIds(): LiveThreadIds {
-  const all = readDebtRecords();
-  const overlays = readLedgerOverlays();
-  const live = collectLiveThreadIds(all, overlays);
-  const totals = {
-    harvested: all.length,
-    open: all.filter((r) => effectiveStatus(overlays, r) === "open").length,
-    archived: 0,
-  };
-  return { live, totals };
+  return {
+    live,
+    totals: {
+      harvested: all.length,
+      open: countOpenStatuses(all, overlays),
+      archived: 0,
+    },
+  }
 }
 
 function archivedCount(): number {
-  const dir = archiveDir();
+  const dir = archiveDir()
   if (!existsSync(dir)) {
-    return 0;
+    return 0
   }
-  return readdirSync(dir).filter((n) => n.endsWith(".jsonl")).length;
+  return readdirSync(dir).filter((n) => n.endsWith('.jsonl')).length
 }
 
 interface ArchiveFileResult {
-  path: string;
-  archivedAt: string;
-  removedRows: number;
-  liveRows: number;
+  path: string
+  archivedAt: string
+  removedRows: number
+  liveRows: number
 }
 
 function archiveFile(opts: {
-  path: string;
-  liveThreadIds: Set<string>;
-  dryRun: boolean;
+  path: string
+  liveThreadIds: Set<string>
+  dryRun: boolean
 }): ArchiveFileResult | null {
   if (!existsSync(opts.path)) {
-    return null;
+    return null
   }
-  const raw = readFileSync(opts.path, "utf8");
+  const raw = readFileSync(opts.path, 'utf8')
   const lines = raw
-    .split("\n")
+    .split('\n')
     .map((line) => line.trim())
-    .filter((line) => line.length > 0);
-  let liveRows = 0;
+    .filter((line) => line.length > 0)
+  let liveRows = 0
   for (const line of lines) {
     try {
-      const row = JSON.parse(line) as { thread_id: string };
+      const row = JSON.parse(line) as { thread_id: string }
       if (opts.liveThreadIds.has(row.thread_id)) {
-        liveRows += 1;
+        liveRows += 1
       }
     } catch {
-      liveRows += 1;
+      liveRows += 1
     }
   }
   if (liveRows > 0) {
-    return null;
+    return null
   }
-  const archivedAt = new Date().toISOString();
+  const archivedAt = new Date().toISOString()
   if (opts.dryRun) {
-    return { path: opts.path, archivedAt, removedRows: lines.length, liveRows: 0 };
+    return { path: opts.path, archivedAt, removedRows: lines.length, liveRows: 0 }
   }
-  const dest = join(archiveDir(), opts.path.split("/").pop()!);
-  renameSync(opts.path, dest);
-  return { path: dest, archivedAt, removedRows: lines.length, liveRows: 0 };
+  const dest = join(archiveDir(), opts.path.split('/').pop()!)
+  renameSync(opts.path, dest)
+  return { path: dest, archivedAt, removedRows: lines.length, liveRows: 0 }
 }
 
 function writeArchiveMarker(opts: { dest: string; archivedAt: string; removedRows: number }): void {
-  const marker = opts.dest.replace(/\.jsonl$/, ".archived.json");
+  const marker = opts.dest.replace(/\.jsonl$/, '.archived.json')
   writeFileSync(
     marker,
     `${JSON.stringify({ archived_at: opts.archivedAt, rows: opts.removedRows }, null, 2)}\n`,
-    "utf8",
-  );
+    'utf8'
+  )
 }
 
 function parseArgs(argv: string[]): { dryRun: boolean } {
-  return { dryRun: argv.includes("--dry-run") };
+  return { dryRun: argv.includes('--dry-run') }
 }
 
 export function main(): void {
-  const args = parseArgs(process.argv.slice(2));
-  const { live, totals } = loadLiveThreadIds();
-  const paths = listHarvestPaths();
+  const args = parseArgs(process.argv.slice(2))
+  const { live, totals } = computeLiveThreadIds()
+  const paths = listHarvestPaths()
   if (paths.length === 0) {
-    console.error("archive: no harvest files found");
-    return;
+    console.error('archive: no harvest files found')
+    return
   }
   if (!args.dryRun) {
-    mkdirSync(archiveDir(), { recursive: true });
+    mkdirSync(archiveDir(), { recursive: true })
   }
-  let archived = 0;
-  let removedRows = 0;
+  let archived = 0
+  let removedRows = 0
   for (const path of paths) {
-    const result = archiveFile({ path, liveThreadIds: live, dryRun: args.dryRun });
+    const result = archiveFile({ path, liveThreadIds: live, dryRun: args.dryRun })
     if (!result) {
-      continue;
+      continue
     }
-    archived += 1;
-    removedRows += result.removedRows;
+    archived += 1
+    removedRows += result.removedRows
     if (!args.dryRun) {
       writeArchiveMarker({
         dest: result.path,
         archivedAt: result.archivedAt,
         removedRows: result.removedRows,
-      });
+      })
     }
   }
-  totals.archived = archivedCount();
+  totals.archived = archivedCount()
   console.error(
-    `archive: ${archived} file(s) ${args.dryRun ? "would archive" : "archived"} ` +
-      `(${removedRows} row(s)); ledger now ${totals.open} open, ${totals.harvested} harvested, ${totals.archived} archived`,
-  );
+    `archive: ${archived} file(s) ${args.dryRun ? 'would archive' : 'archived'} ` +
+      `(${removedRows} row(s)); ledger now ${totals.open} open, ${totals.harvested} harvested, ${totals.archived} archived`
+  )
 }
 
 if (import.meta.main) {
-  main();
+  main()
 }

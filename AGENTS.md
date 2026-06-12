@@ -24,7 +24,7 @@ Product: `openadt fetch`, `openadt proxy` ([specs/vision.md](specs/vision.md)). 
 | Proxy                                             | [specs/proxy.md](specs/proxy.md)                                                                       |
 | Setup / detectors                                 | [specs/setup.md](specs/setup.md)                                                                       |
 | SDK usage                                         | [specs/sdk-capabilities.md](specs/sdk-capabilities.md), [specs/sdk-services.md](specs/sdk-services.md) |
-| **MCP / `adt-lsc` / stdio bridge / SAP HTTP MCP** | [specs/mcp.md](specs/mcp.md), [specs/mcp-shared-backend.md](specs/mcp-shared-backend.md)               |
+| **MCP / `adt-lsc` / stdio bridge / SAP HTTP MCP** | [specs/mcp.md](specs/mcp.md), [specs/mcp-shared-backend.md](specs/mcp-shared-backend.md), [specs/adt-lsp-mcp-local.md](specs/adt-lsp-mcp-local.md) |
 | Packaging / releases                              | [specs/packaging.md](specs/packaging.md)                                                               |
 | Product scope                                     | [specs/vision.md](specs/vision.md)                                                                     |
 
@@ -36,6 +36,7 @@ Workflow detail: [openadt-sdd skill](.agents/skills/openadt-sdd/SKILL.md).
 | ------------------------------------------------------------------ | -------------------------------------------------------------- |
 | [DESIGN.md](DESIGN.md)                                             | **SDD enforcement** — spec gate, architecture, verify workflow |
 | [specs/README.md](specs/README.md)                                 | Spec index + `verify-spec-sync`                                |
+| [TESTING.md](TESTING.md)                                           | Testing approaches (E2E framework, scenarios, evidence)        |
 | [README.md](README.md)                                             | User-facing overview                                           |
 | [docs/usage.md](docs/usage.md)                                     | Installed CLI (Scoop/Homebrew)                                 |
 | [docs/contributing.md](docs/contributing.md)                       | Clone, build, test, devcontainer                               |
@@ -48,18 +49,19 @@ Workflow detail: [openadt-sdd skill](.agents/skills/openadt-sdd/SKILL.md).
 
 ## Skills (load by task)
 
-| Skill                               | Path                                                                                                                   | When                              |
-| ----------------------------------- | ---------------------------------------------------------------------------------------------------------------------- | --------------------------------- |
-| `act`                               | [.agents/skills/act/SKILL.md](.agents/skills/act/SKILL.md)                                                             | `/act` on a PR                    |
-| `codescene`                         | [.agents/skills/codescene/SKILL.md](.agents/skills/codescene/SKILL.md)                                                 | CodeScene CI, CLI, token, Docker  |
-| `memory-bank`                       | [.agents/skills/memory-bank/SKILL.md](.agents/skills/memory-bank/SKILL.md)                                             | `/remember` — agent memory        |
-| `retrospect`                        | [.agents/skills/retrospect/SKILL.md](.agents/skills/retrospect/SKILL.md)                                               | `/retrospect` — reflect + backlog |
-| `backlog`                           | [.agents/skills/backlog/SKILL.md](.agents/skills/backlog/SKILL.md)                                                     | action items                      |
-| `openadt-product`                   | [.agents/skills/openadt-product/SKILL.md](.agents/skills/openadt-product/SKILL.md)                                     | fetch, proxy, transport, MCP      |
-| `openadt-sdd`                       | [.agents/skills/openadt-sdd/SKILL.md](.agents/skills/openadt-sdd/SKILL.md)                                             | spec → test → code                |
-| `openadt-sap-sdk-apis`              | [.agents/skills/openadt-sap-sdk-apis/SKILL.md](.agents/skills/openadt-sap-sdk-apis/SKILL.md)                           | SDK discover / logon              |
-| `openadt-local-sap-runtime`         | [.agents/skills/openadt-local-sap-runtime/SKILL.md](.agents/skills/openadt-local-sap-runtime/SKILL.md)                 | JCo, SNC, HTTP SSO, failures      |
-| `openadt-devcontainer-host-runtime` | [.agents/skills/openadt-devcontainer-host-runtime/SKILL.md](.agents/skills/openadt-devcontainer-host-runtime/SKILL.md) | WSL / devcontainer vs host        |
+| Skill                               | Path                                                                                                                   | When                               |
+| ----------------------------------- | ---------------------------------------------------------------------------------------------------------------------- | ---------------------------------- |
+| `act`                               | [.agents/skills/act/SKILL.md](.agents/skills/act/SKILL.md)                                                             | `/act` on a PR                     |
+| `codescene`                         | [.agents/skills/codescene/SKILL.md](.agents/skills/codescene/SKILL.md)                                                 | CodeScene CI, CLI, token, Docker   |
+| `memory-bank`                       | [.agents/skills/memory-bank/SKILL.md](.agents/skills/memory-bank/SKILL.md)                                             | `/remember` — agent memory         |
+| `retrospect`                        | [.agents/skills/retrospect/SKILL.md](.agents/skills/retrospect/SKILL.md)                                               | `/retrospect` — reflect + backlog  |
+| `backlog`                           | [.agents/skills/backlog/SKILL.md](.agents/skills/backlog/SKILL.md)                                                     | action items                       |
+| `openadt-product`                   | [.agents/skills/openadt-product/SKILL.md](.agents/skills/openadt-product/SKILL.md)                                     | fetch, proxy, transport, MCP       |
+| `openadt-sdd`                       | [.agents/skills/openadt-sdd/SKILL.md](.agents/skills/openadt-sdd/SKILL.md)                                             | spec → test → code                 |
+| `openadt-sap-sdk-apis`              | [.agents/skills/openadt-sap-sdk-apis/SKILL.md](.agents/skills/openadt-sap-sdk-apis/SKILL.md)                           | SDK discover / logon               |
+| `openadt-local-sap-runtime`         | [.agents/skills/openadt-local-sap-runtime/SKILL.md](.agents/skills/openadt-local-sap-runtime/SKILL.md)                 | JCo, SNC, HTTP SSO, failures       |
+| `openadt-devcontainer-host-runtime` | [.agents/skills/openadt-devcontainer-host-runtime/SKILL.md](.agents/skills/openadt-devcontainer-host-runtime/SKILL.md) | WSL / devcontainer vs host         |
+| `e2e`                               | [.agents/skills/e2e/SKILL.md](.agents/skills/e2e/SKILL.md)                                                             | `/e2e mcp-N` — live MCP + evidence |
 
 `/act` helpers: [EVALUATE.md](.agents/skills/act/EVALUATE.md), `act/resolve-open-threads.sh`.
 
@@ -80,11 +82,12 @@ Index: [.agents/skills/README.md](.agents/skills/README.md).
 ## Rules
 
 1. **SDD** — follow the [SDD gate](#sdd-gate-before-any-code); [DESIGN.md](DESIGN.md) is the full spec index.
-2. **Fixtures only** in git: `DEV`, `dev-ms.example.com`. No SAP jars, no real landscape.
-3. **Host OS owns JCo natives** — run `./dev-openadt` from a clone (not bare `openadt` in the repo root on Windows CMD); see `openadt-devcontainer-host-runtime` skill.
-4. **`tmp/`** for scratch and local SAP research; redact secrets in logs — mirror any product contract into `specs/` before code changes.
-5. **Never pin models in agent configs** — let the agent inherit the active plan's default. A pinned `model` field in `kilo.jsonc` or per-agent overrides routes every invocation to the named provider, even if the user's plan is on a different/cheaper tier. This burns tokens against a balance the user did not intend. Drop the field; the active plan wins.
-6. **Always-loaded instructions go in `AGENTS.md`** (root or per-subdir), or `CLAUDE.md` / `CONTEXT.md`. `kilo.jsonc`'s `instructions` array also works but is one extra hop. Do not put orchestrator self-instructions in undocumented locations like `.kilo/rules/*.md` that are not in Kilo's recognized auto-load list.
+2. **Fixtures only** in git: `DEV`, `dev-ms.example.com`. No SAP jars, no real landscape. Enforced: `bun scripts/verify-fixtures-only.ts`.
+3. **Agent memory is not fiction** — `.agents/memory/` and `.agents/backlog/` record what happened; **omit** real SIDs/destination ids (do not replace with `ABC`/`DEV` and pretend that was the session). See [.agents/memory/mental-models/agent-memory-landscape-redaction.md](.agents/memory/mental-models/agent-memory-landscape-redaction.md).
+4. **Host OS owns JCo natives** — run `./dev-openadt` from a clone (not bare `openadt` in the repo root on Windows CMD); see `openadt-devcontainer-host-runtime` skill.
+5. **Repo `./tmp/` only — never system `/tmp`** — all ephemeral agent output (scratch TSV/JSONL, one-off scripts, SAP research notes, history-scrub helpers) goes under **`./tmp/`** at the **repo root**. Cloud agents: do **not** write to host `/tmp` — you may land outside the clone or in a path you cannot control. **Never** commit ephemeral helpers to `scripts/` (`scripts/` = durable CI/repo tooling only). Redact secrets; mirror product contracts into `specs/` before code changes.
+6. **Never pin models in agent configs** — let the agent inherit the active plan's default. A pinned `model` field in `kilo.jsonc` or per-agent overrides routes every invocation to the named provider, even if the user's plan is on a different/cheaper tier. This burns tokens against a balance the user did not intend. Drop the field; the active plan wins.
+7. **Always-loaded instructions go in `AGENTS.md`** (root or per-subdir), or `CLAUDE.md` / `CONTEXT.md`. `kilo.jsonc`'s `instructions` array also works but is one extra hop. Do not put orchestrator self-instructions in undocumented locations like `.kilo/rules/*.md` that are not in Kilo's recognized auto-load list.
 
 ## Orchestrator self-instructions (PR work, multi-step tasks)
 
@@ -97,7 +100,7 @@ These apply when orchestrating `/act` or any multi-step PR workflow. Inline with
 - **Script over steps** — a CLI/script call is **one tool call** at fixed context cost, however much it does internally; an agent step costs a tool call _plus_ output _plus_ reasoning, and compounds across the window. Push mechanical work (fetch, parse, join, format, dedupe) into a `scripts/` helper; invoke the model only for irreducible judgment, and never have it re-echo data a script already holds. If a review step burns more than a few tool calls doing what a helper could collapse, file a [backlog](.agents/skills/backlog/SKILL.md) item — not necessarily fixed in the same `/act` (this is the self-learning loop, enforced at P6).
 - **Subagent choice** — `explore` for read-only research; `general` for multi-step work with writes. Never spawn `general` for a read-only question. Pass file paths, not topics; specify return format.
 - **3-push limit** — after 3 pushes on the same branch per `/act` cycle, stop and report back.
-- **Scratch in `/tmp/agent_*/`** — never in the worktree root. The `nx format:write --uncommitted` pre-commit hook re-stages whatever sits there.
+- **Scratch in `./tmp/` only** (e.g. `tmp/agent/<run>/`) — **not** system `/tmp`, not `scripts/`, not the worktree root. `tmp/` is gitignored; the pre-commit `nx format:write --uncommitted` hook re-stages stray files at repo root.
 - **macOS portability** — `gsed`/`gdate` on Darwin; `sed`/`date` on Linux. Detect once via `uname -s`.
 - **Design to 10.0 on the CodeScene delta** — target function CC ≤ 6 (hard cap 9); group args at 4+; extract method at 2+ cohesive blocks at depth ≥ 2; extract predicate at 2+ logical operators. Never inherit low-CC code into a small PR — split the refactor or suppress deltas in the CodeScene UI first.
 
@@ -172,6 +175,7 @@ its own PR or suppress the deltas in CodeScene's UI before opening.
 ```bash
 bunx eslint scripts/ .agents/skills/ --max-warnings 0 --no-error-on-unmatched-pattern
 bun scripts/verify-spec-sync.ts
+bun scripts/verify-fixtures-only.ts
 bun scripts/verify-package-docs.ts
 ./mvnw -q verify -Pdistribution
 bun run openadt:test
@@ -219,7 +223,7 @@ Hello-world without SAP: create a fixture destination profile:
 
 ```bash
 java -jar apps/openadt-cli/target/openadt-*.jar config destinations create \
-  --config /tmp/openadt.toml --alias DEV --profile sso --transport http \
+  --config tmp/openadt.toml --alias DEV --profile sso --transport http \
   --auth browser-sso --base-url https://dev-adt.example.com --client 100 --language EN
 ```
 
