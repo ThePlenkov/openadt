@@ -7,7 +7,7 @@
     <parent>
         <groupId>org.openadt</groupId>
         <artifactId>openadt-parent</artifactId>
-        <version>6.1.0-alpha.1</version>
+        <version>2.0.0-alpha.1</version>
         <relativePath>../../pom.xml</relativePath>
     </parent>
 

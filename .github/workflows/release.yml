@@ -127,6 +127,17 @@ jobs:
           chmod +x ./mvnw
           ./mvnw -q -f pom.xml -pl apps/openadt-cli -am -Pdistribution -Dopenadt.distribution=true package -Dmaven.test.skip=true
 
+      - name: Build workspace packages
+        shell: bash
+        run: |
+          cd packages/adt-config && bun install && bun run build
+          cd ../adt-infra && bun install && bun run build
+          cd ../adt-lsp-client && bun install && bun run build
+          cd ../adt-lsp-mcp-tools && bun install && bun run build
+          cd ../mcp-framing && bun install && bun run build
+          cd ../mcp-tools && bun install && bun run build
+          cd ../adt-mcp && bun install && bun run build
+
       - name: Package openadt.zip and compute checksum
         if: matrix.os == 'windows-latest'
         shell: bash
@@ -137,17 +148,7 @@ jobs:
       - name: Build openadt-mcp binary
         if: matrix.os != 'windows-latest'
         shell: bash
-        run: |
-          # Build all workspace packages that adt-mcp depends on
-          cd packages/adt-config && bun install && bun run build
-          cd ../adt-infra && bun install && bun run build
-          cd ../adt-lsp-client && bun install && bun run build
-          cd ../adt-lsp-mcp-tools && bun install && bun run build
-          cd ../mcp-framing && bun install && bun run build
-          cd ../mcp-tools && bun install && bun run build
-          cd ../adt-mcp && bun install && bun run build
-          # Use the MCP packaging script directly (handles compile, archive, and checksum)
-          bun scripts/package-mcp-only.ts --version=${{ needs.bump.outputs.version }} --platform=${{ matrix.platform }}
+        run: bun scripts/package-mcp-only.ts --version=${{ needs.bump.outputs.version }} --platform=${{ matrix.platform }}
 
       - name: Upload artifacts
         uses: actions/upload-artifact@v4
