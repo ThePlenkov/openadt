@@ -56,6 +56,9 @@ class SimpleMcpServer {
     this.decoder.on('data', (body: string) => {
       void this.onMessage(body)
     })
+    process.stdin.on('error', (err) => {
+      console.error(`[adt-lsp-mcp] stdin error: ${err.message}`)
+    })
     process.stdin.pipe(this.decoder)
   }
 
@@ -229,6 +232,14 @@ class SimpleMcpServer {
       )
       return
     }
+    await this.invokeTool(id, tool, args as Record<string, unknown>)
+  }
+
+  private async invokeTool(
+    id: number | string,
+    tool: (typeof mcpTools)[number],
+    args: Record<string, unknown>
+  ): Promise<void> {
     try {
       const merged = this.resolveToolArguments(args)
       const callDestination =

@@ -75,35 +75,41 @@ async function cmdDispatch(argv: string[]): Promise<number> {
   return exitCode
 }
 
+function isHelpInvocation(command: string | undefined, argv: string[]): boolean {
+  if (!command) return true
+  if (command === 'help') return true
+  return argv.includes('--help') || argv.includes('-h')
+}
+
+async function runCommand(command: string, rest: string[]): Promise<number> {
+  switch (command) {
+    case 'list':
+      return cmdList(rest)
+    case 'show':
+      return cmdShow(rest)
+    case 'run':
+      return cmdRun(rest)
+    case 'dispatch':
+      return cmdDispatch(rest)
+    default:
+      console.error(`Unknown command: ${command}\n`)
+      console.log(USAGE)
+      return 1
+  }
+}
+
 async function main(): Promise<void> {
   const argv = process.argv.slice(2)
   const [command, ...rest] = argv
 
-  if (!command || command === 'help' || argv.includes('--help') || argv.includes('-h')) {
+  if (isHelpInvocation(command, argv)) {
     console.log(USAGE)
     process.exit(0)
   }
 
   let exitCode = 1
   try {
-    switch (command) {
-      case 'list':
-        exitCode = await cmdList(rest)
-        break
-      case 'show':
-        exitCode = await cmdShow(rest)
-        break
-      case 'run':
-        exitCode = await cmdRun(rest)
-        break
-      case 'dispatch':
-        exitCode = await cmdDispatch(rest)
-        break
-      default:
-        console.error(`Unknown command: ${command}\n`)
-        console.log(USAGE)
-        exitCode = 1
-    }
+    exitCode = await runCommand(command!, rest)
   } catch (err) {
     console.error(err instanceof Error ? err.message : String(err))
     exitCode = 1

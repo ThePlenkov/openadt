@@ -42,6 +42,48 @@ function trackedFiles(): string[] {
   return out.split('\0').filter(Boolean)
 }
 
+function checkDestinationId(rel: string, line: string, lineNo: number): string[] {
+  const errors: string[] = []
+  for (const match of line.matchAll(DESTINATION_ID)) {
+    const [full, sid, , user] = match
+    const userKey = user!
+    if (!ALLOWED_SIDS.has(sid!)) {
+      errors.push(`${rel}:${lineNo} destination id uses non-fixture SID "${sid}" in ${full}`)
+    } else if (!ALLOWED_USERS.has(userKey) && !ALLOWED_USERS.has(userKey.toUpperCase())) {
+      errors.push(`${rel}:${lineNo} destination id uses non-fixture user "${user}" in ${full}`)
+    }
+  }
+  return errors
+}
+
+function checkCliPartialSid(rel: string, line: string, lineNo: number): string[] {
+  const errors: string[] = []
+  for (const match of line.matchAll(CLI_PARTIAL_SID)) {
+    const sid = match[1]!
+    if (!ALLOWED_SIDS.has(sid)) {
+      errors.push(`${rel}:${lineNo} --destination uses non-fixture SID "${sid}"`)
+    }
+  }
+  return errors
+}
+
+function checkHomePath(rel: string, line: string, lineNo: number): string[] {
+  const errors: string[] = []
+  for (const match of line.matchAll(HOME_PATH)) {
+    errors.push(`${rel}:${lineNo} local home path leaked: ${match[0]}`)
+  }
+  return errors
+}
+
+function scanLine(rel: string, line: string, lineNo: number): string[] {
+  if (line.includes('SID_CLIENT_USER_LANG')) return []
+  return [
+    ...checkDestinationId(rel, line, lineNo),
+    ...checkCliPartialSid(rel, line, lineNo),
+    ...checkHomePath(rel, line, lineNo),
+  ]
+}
+
 function scanFile(rel: string): string[] {
   if (SKIP_SUFFIX.has(rel.slice(rel.lastIndexOf('.')))) return []
   if (rel === 'scripts/verify-fixtures-only.ts') return []
@@ -56,33 +98,9 @@ function scanFile(rel: string): string[] {
 
   const errors: string[] = []
   const lines = content.split('\n')
-
   for (let i = 0; i < lines.length; i++) {
-    const line = lines[i]!
-    if (line.includes('SID_CLIENT_USER_LANG')) continue
-
-    for (const match of line.matchAll(DESTINATION_ID)) {
-      const [full, sid, , user] = match
-      const userKey = user!
-      if (!ALLOWED_SIDS.has(sid!)) {
-        errors.push(`${rel}:${i + 1} destination id uses non-fixture SID "${sid}" in ${full}`)
-      } else if (!ALLOWED_USERS.has(userKey) && !ALLOWED_USERS.has(userKey.toUpperCase())) {
-        errors.push(`${rel}:${i + 1} destination id uses non-fixture user "${user}" in ${full}`)
-      }
-    }
-
-    for (const match of line.matchAll(CLI_PARTIAL_SID)) {
-      const sid = match[1]!
-      if (!ALLOWED_SIDS.has(sid)) {
-        errors.push(`${rel}:${i + 1} --destination uses non-fixture SID "${sid}"`)
-      }
-    }
-
-    for (const match of line.matchAll(HOME_PATH)) {
-      errors.push(`${rel}:${i + 1} local home path leaked: ${match[0]}`)
-    }
+    errors.push(...scanLine(rel, lines[i]!, i + 1))
   }
-
   errors.push(...scanAgentMemoryFile(rel, content))
   return errors
 }

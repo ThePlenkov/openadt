@@ -136,7 +136,10 @@ export class MeshMcpServer {
     }
     const name = this.registry.importName(exposed)
     const args = (call?.arguments ?? {}) as Record<string, unknown>
+    return this.dispatchTool(name, args)
+  }
 
+  private async dispatchTool(name: string, args: Record<string, unknown>): Promise<unknown> {
     // OpenADT in-process tools (no SAP/LSP required)
     if (name === 'openadt_list_destinations') {
       const { ids } = deriveDestinations()

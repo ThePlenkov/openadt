@@ -23,7 +23,7 @@ tags: [adt-lsp-mcp, mcp, inspector, destination, guardrails, json-schema]
 | Tools listed but **no form fields** | `tools/list` returned raw **Zod** objects, not JSON Schema | Always `z.toJSONSchema()` via `@openadt/mcp-tools` `toMcpInputSchema` / `listMcpToolDescriptors` |
 | Agent assumed standard LSP for ls-7/ls-9 | Guessed `textDocument/*` vs `adtLs/*` without jar/e2e proof | Contract changes: verify method + params against live `adt-lsc` or SAP jars before flipping |
 | E2e hit old behavior after “fix” | Stale `tools/adt-lsp-mcp/dist/main.mjs` | Rebuild chain after TS changes; e2e prefers dist when present |
-| Real destination id in committed spec | Copied operator id into `adt-lsp-mcp-local.md` Inspector examples | Fixtures only in git: `ABC_200_USER_EN`; never paste live ids into specs/memory |
+| Real destination id in committed spec | Copied operator id into `adt-lsp-mcp-local.md` Inspector examples | Fixtures only in git: full id form `<SID>_<client>_<user>_<lang>` with fixture `<SID>`; never paste live ids into specs/memory |
 
 ## Destination UX decision (durable)
 

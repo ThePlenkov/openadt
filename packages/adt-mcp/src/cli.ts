@@ -189,10 +189,11 @@ function usage(): void {
   console.error('  check         Detect ADT LS extension version')
 }
 
-async function main(): Promise<number> {
-  const argv = process.argv.slice(2)
-  const command = argv[0]
-  const rest = argv.slice(1)
+function isHelpInvocation(command: string | undefined): boolean {
+  return command === undefined || command === '--help' || command === '-h'
+}
+
+function runCommand(command: string, rest: string[]): Promise<number> {
   switch (command) {
     case 'serve':
       return cmdServe(rest)
@@ -206,16 +207,22 @@ async function main(): Promise<number> {
       return cmdPrintConfig(rest)
     case 'check':
       return cmdCheck()
-    case undefined:
-    case '--help':
-    case '-h':
-      usage()
-      return command === undefined ? EXIT_ERROR : EXIT_OK
     default:
       console.error(`Unknown command: ${command}`)
       usage()
-      return EXIT_ERROR
+      return Promise.resolve(EXIT_ERROR)
   }
+}
+
+async function main(): Promise<number> {
+  const argv = process.argv.slice(2)
+  const command = argv[0]
+  const rest = argv.slice(1)
+  if (isHelpInvocation(command)) {
+    usage()
+    return command === undefined ? EXIT_ERROR : EXIT_OK
+  }
+  return runCommand(command!, rest)
 }
 
 main()
