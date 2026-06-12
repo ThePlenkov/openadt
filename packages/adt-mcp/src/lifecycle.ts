@@ -55,15 +55,14 @@ export async function startOwnBackend(
     `[openadt-mcp] adt-lsc ${install.version} · workspace ${cfg.workspace} · ${ids.length} destination(s)`
   )
 
-  // Set the first destination as default for abap_list_destinations.
-  const defaultDestination = cfg.destination ?? ids[0]
-
   const session = await connectAdtLanguageServer(install, cfg.workspace, {
     destinationsStorePath: storePath,
     createProjectIds: ids,
-    // Pre-logon the default destination so abap_list_destinations works.
-    // Do not logon all destinations (would pop many SSO prompts).
-    ensureLoggedOnIds: defaultDestination ? [defaultDestination] : [],
+    // Per-tool destination mode is unbound: every tool takes a `destination`
+    // argument, so we do NOT pin or pre-logon any destination at startup.
+    // Only an explicit `--destination` pins one (and pre-logs it on). Listing
+    // destinations needs no logon — see the `openadt_list_destinations` tool.
+    ensureLoggedOnIds: cfg.destination ? [cfg.destination] : [],
     logonTimeoutMs: cfg.logonTimeoutMs,
     log,
   })
@@ -80,10 +79,11 @@ export async function startOwnBackend(
     throw new Error(`SAP HTTP MCP did not become ready on port ${started.port}`)
   }
 
-  // Set the default destination so abap_list_destinations works.
-  if (defaultDestination) {
-    await setMcpDestination(session.connection, defaultDestination).catch((err: unknown) => {
-      console.error(`[openadt-mcp] setDestination(${defaultDestination}) failed: ${String(err)}`)
+  // Only an explicit `--destination` pins the active destination at startup;
+  // otherwise tools supply their own per-call.
+  if (cfg.destination) {
+    await setMcpDestination(session.connection, cfg.destination).catch((err: unknown) => {
+      console.error(`[openadt-mcp] setDestination(${cfg.destination}) failed: ${String(err)}`)
     })
   }
 
@@ -94,7 +94,7 @@ export async function startOwnBackend(
     pid: process.pid,
     adtLscPid: session.child.pid,
     startedAt: new Date().toISOString(),
-    destination: defaultDestination,
+    destination: cfg.destination,
     destinations: ids,
     workspace: cfg.workspace,
     mode: options.mode ?? 'standalone',

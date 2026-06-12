@@ -1,5 +1,5 @@
 import { homedir } from 'node:os'
-import { join } from 'node:path'
+import { join, resolve } from 'node:path'
 import {
   DEFAULT_IMPORT_FROM,
   DEFAULT_MCP_PORT,
@@ -238,7 +238,10 @@ function valuedArgvHandlers(): ServeArgvHandler[] {
     ),
     stringValue(
       (_arg, value, s) => {
-        s.workspace = value
+        // Resolve to an absolute path: adt-lsc runs with its own cwd (the
+        // extension dir), so a relative --workspace would otherwise land
+        // relative to the extension, not where the user launched openadt.
+        s.workspace = resolve(value)
         s.explicitWorkspace = true
       },
       ['--workspace']
