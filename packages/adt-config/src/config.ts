@@ -252,19 +252,32 @@ function valuedArgvHandlers(): ServeArgvHandler[] {
   ]
 }
 
-function finalizeServeArgv(state: ServeArgvState): void {
+const MIN_LOGON_TIMEOUT_MS = 5_000
+
+function validateServePorts(state: ServeArgvState): void {
   if (!isValidPort(state.port)) {
     throw new Error(`Invalid --port: ${state.port}`)
   }
   if (state.sapPort !== undefined && !isValidPort(state.sapPort)) {
     throw new Error(`Invalid --sap-port: ${state.sapPort}`)
   }
-  if (!Number.isFinite(state.logonTimeoutMs) || state.logonTimeoutMs < 5_000) {
-    throw new Error(`Invalid --logon-timeout (seconds must be >= 5)`)
-  }
+}
+
+function validateLogonTimeout(state: ServeArgvState): void {
+  if (Number.isFinite(state.logonTimeoutMs) && state.logonTimeoutMs >= MIN_LOGON_TIMEOUT_MS) return
+  throw new Error(`Invalid --logon-timeout (seconds must be >= 5)`)
+}
+
+function applyDebugEnvOverride(state: ServeArgvState): void {
   if (!state.verbose && process.env.MCP_DEBUG) {
     state.verbose = true
   }
+}
+
+function finalizeServeArgv(state: ServeArgvState): void {
+  validateServePorts(state)
+  validateLogonTimeout(state)
+  applyDebugEnvOverride(state)
 }
 
 function flag(apply: (state: ServeArgvState) => void, forms: readonly string[]): ServeArgvHandler {

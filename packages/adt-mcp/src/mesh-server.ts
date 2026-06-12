@@ -120,7 +120,10 @@ export class MeshMcpServer {
     }
     const name = this.registry.importName(exposed)
     const args = (call?.arguments ?? {}) as Record<string, unknown>
+    return this.dispatchTool(name, args)
+  }
 
+  private async dispatchTool(name: string, args: Record<string, unknown>): Promise<unknown> {
     if (this.lspActive && isLspToolName(name)) {
       return callLspTool(this.source.session!, name, args)
     }

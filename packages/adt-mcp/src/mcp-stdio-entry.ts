@@ -15,12 +15,16 @@ import { runServe } from './server.js'
 const PORT_MIN = 1024
 const PORT_MAX = 65535
 
+function isValidPort(value: number): boolean {
+  return Number.isInteger(value) && value >= PORT_MIN && value <= PORT_MAX
+}
+
 function parseExplicitPort(raw: string | undefined): number | undefined {
   if (!raw) {
     return undefined
   }
   const port = Number(raw)
-  if (!Number.isInteger(port) || port < PORT_MIN || port > PORT_MAX) {
+  if (!isValidPort(port)) {
     console.error(
       `[openadt-mcp] Invalid OPENADT_MCP_PORT=${raw} (expected ${PORT_MIN}-${PORT_MAX}); using default.`
     )

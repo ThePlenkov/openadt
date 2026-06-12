@@ -130,10 +130,11 @@ function usage(): void {
   console.error('  print-config  Emit HTTP MCP client JSON (url + headers)')
 }
 
-async function main(): Promise<number> {
-  const argv = process.argv.slice(2)
-  const command = argv[0]
-  const rest = argv.slice(1)
+function isHelpInvocation(command: string | undefined): boolean {
+  return command === undefined || command === '--help' || command === '-h'
+}
+
+function runCommand(command: string, rest: string[]): number {
   switch (command) {
     case 'serve':
       return cmdServe(rest)
@@ -145,16 +146,22 @@ async function main(): Promise<number> {
       return cmdList(rest)
     case 'print-config':
       return cmdPrintConfig(rest)
-    case undefined:
-    case '--help':
-    case '-h':
-      usage()
-      return command === undefined ? EXIT_ERROR : EXIT_OK
     default:
       console.error(`Unknown command: ${command}`)
       usage()
       return EXIT_ERROR
   }
+}
+
+async function main(): Promise<number> {
+  const argv = process.argv.slice(2)
+  const command = argv[0]
+  const rest = argv.slice(1)
+  if (isHelpInvocation(command)) {
+    usage()
+    return command === undefined ? EXIT_ERROR : EXIT_OK
+  }
+  return runCommand(command!, rest)
 }
 
 main()
