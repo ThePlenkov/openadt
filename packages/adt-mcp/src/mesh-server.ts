@@ -4,6 +4,7 @@
  * Merges two tool groups behind one MCP surface:
  *  - **SAP `abap_*`** — proxied to the SAP HTTP MCP via `SapHttpMcpClient`.
  *  - **OpenADT `adt_*`** — run in-process over the owned LSP session.
+ *  - **OpenADT `openadt_*`** — in-process utilities (no SAP/LSP required).
  *
  * Plus OpenADT-owned prompts (TS) and SAP tool-name shortening for agent
  * backends with name limits. The stdio and HTTP transports both call
@@ -16,6 +17,7 @@ import type { McpTool } from './sap-mcp/client.js'
 import { callLspTool, isLspToolName, listLspToolDescriptors } from './lsp-tools.js'
 import { augmentInstructions, getPrompt, listPrompts } from './prompts.js'
 import { ToolNameRegistry, maxMcpToolNameLenFromEnv } from './tool-name-limit.js'
+import { deriveDestinations } from './destinations.js'
 
 const PROTOCOL_VERSION = '2024-11-05'
 
@@ -101,15 +103,26 @@ export class MeshMcpServer {
       ...tool,
       name: this.registry.exportName(tool.name),
     }))
+    const openadt = [
+      {
+        name: 'openadt_list_destinations',
+        description:
+          'List all ADT destinations from ~/.adtls/destinations.json (no SAP logon required)',
+        inputSchema: {
+          type: 'object',
+          properties: {},
+        },
+      },
+    ]
     if (!this.lspActive) {
-      return sap
+      return [...sap, ...openadt]
     }
     const lsp = listLspToolDescriptors().map((d) => ({
       name: d.name,
       description: d.description,
       inputSchema: d.inputSchema,
     }))
-    return [...sap, ...lsp]
+    return [...sap, ...openadt, ...lsp]
   }
 
   private async callTool(params: unknown): Promise<unknown> {
@@ -120,6 +133,19 @@ export class MeshMcpServer {
     }
     const name = this.registry.importName(exposed)
     const args = (call?.arguments ?? {}) as Record<string, unknown>
+
+    // OpenADT in-process tools (no SAP/LSP required)
+    if (name === 'openadt_list_destinations') {
+      const { ids } = deriveDestinations()
+      return {
+        content: [
+          {
+            type: 'text',
+            text: JSON.stringify({ destinations: ids }, null, 2),
+          },
+        ],
+      }
+    }
 
     if (this.lspActive && isLspToolName(name)) {
       return callLspTool(this.source.session!, name, args)

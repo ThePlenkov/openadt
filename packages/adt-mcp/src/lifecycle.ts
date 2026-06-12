@@ -19,6 +19,7 @@ import {
   stopMcpServer,
   waitForMcpHttp,
   mcpUrl,
+  isPortInUseMessage,
 } from './sap-mcp/control.js'
 
 export type OwnBackend = {
@@ -54,19 +55,43 @@ export async function startOwnBackend(
     `[openadt-mcp] adt-lsc ${install.version} · workspace ${cfg.workspace} · ${ids.length} destination(s)`
   )
 
+  // Set the first destination as default for abap_list_destinations.
+  const defaultDestination = cfg.destination ?? ids[0]
+
   const session = await connectAdtLanguageServer(install, cfg.workspace, {
     destinationsStorePath: storePath,
     createProjectIds: ids,
-    // Do not force logon on every destination at startup (would pop many SSO
-    // prompts). Pre-logon only the explicitly pinned destination; otherwise SAP
-    // triggers logon on demand and our registered handlers answer.
-    ensureLoggedOnIds: cfg.destination ? [cfg.destination] : [],
+    // Pre-logon the default destination so abap_list_destinations works.
+    // Do not logon all destinations (would pop many SSO prompts).
+    ensureLoggedOnIds: defaultDestination ? [defaultDestination] : [],
     logonTimeoutMs: cfg.logonTimeoutMs,
     log,
   })
 
   const token = generateMcpToken()
-  const started = await startMcpServer(session.connection, { port: backendPort, token })
+  const MAX_ATTEMPTS = 32
+  const MAX_PORT = 65535
+  let lastError: Error | undefined
+  let started: { port: number; token: string }
+
+  for (let attempt = 0; attempt < MAX_ATTEMPTS; attempt++) {
+    const port = Math.min(backendPort + attempt, MAX_PORT)
+    try {
+      started = await startMcpServer(session.connection, { port, token })
+      break
+    } catch (err) {
+      lastError = err instanceof Error ? err : new Error(String(err))
+      if (!isPortInUseMessage(lastError.message)) {
+        throw lastError
+      }
+      if (attempt === MAX_ATTEMPTS - 1) {
+        throw new Error(
+          `Port ${backendPort} already in use; auto-increment failed after ${MAX_ATTEMPTS} attempts (up to port ${MAX_PORT})`
+        )
+      }
+      console.error(`[openadt-mcp] port ${port} in use, trying ${port + 1}...`)
+    }
+  }
 
   const ready = await waitForMcpHttp(started.port, started.token)
   if (!ready) {
@@ -74,9 +99,10 @@ export async function startOwnBackend(
     throw new Error(`SAP HTTP MCP did not become ready on port ${started.port}`)
   }
 
-  if (cfg.destination) {
-    await setMcpDestination(session.connection, cfg.destination).catch((err: unknown) => {
-      console.error(`[openadt-mcp] setDestination(${cfg.destination}) failed: ${String(err)}`)
+  // Set the default destination so abap_list_destinations works.
+  if (defaultDestination) {
+    await setMcpDestination(session.connection, defaultDestination).catch((err: unknown) => {
+      console.error(`[openadt-mcp] setDestination(${defaultDestination}) failed: ${String(err)}`)
     })
   }
 
