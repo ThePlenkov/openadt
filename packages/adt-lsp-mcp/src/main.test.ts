@@ -1,4 +1,4 @@
-import { describe, expect, test, mock, afterEach } from 'bun:test'
+import { describe, expect, test } from 'bun:test'
 // @ts-ignore - workspace package without types yet
 import { mcpTools } from '@openadt/adt-lsp-mcp-tools'
 import { ADT_LSP_WORKFLOW_PROMPT, guidancePromptDefs } from './guidance/guidance'

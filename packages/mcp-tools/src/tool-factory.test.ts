@@ -4,7 +4,6 @@ import { tool, type ToolTransport } from './tool-factory'
 
 describe('tool factory', () => {
   test('creates tool definition with correct structure', () => {
-    const mockTransport = {} as ToolTransport
     const testTool = tool({
       name: 'test-tool',
       description: 'A test tool',

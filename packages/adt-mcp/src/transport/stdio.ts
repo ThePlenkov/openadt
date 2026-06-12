@@ -48,6 +48,9 @@ export function serveStdio(server: MeshMcpServer): StdioHandle {
     process.stdin.on('end', resolve)
     process.stdin.on('close', resolve)
   })
+  process.stdin.on('error', (err) => {
+    console.error(`[openadt-mcp] stdin error: ${err.message}`)
+  })
   process.stdin.pipe(decoder)
   console.error('[openadt-mcp] mesh MCP server running on stdio')
   return { closed }

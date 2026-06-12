@@ -56,6 +56,9 @@ class SimpleMcpServer {
     this.decoder.on('data', (body: string) => {
       void this.onMessage(body)
     })
+    process.stdin.on('error', (err) => {
+      console.error(`[adt-lsp-mcp] stdin error: ${err.message}`)
+    })
     process.stdin.pipe(this.decoder)
   }
 
