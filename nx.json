@@ -69,6 +69,5 @@
       "outputs": ["{projectRoot}/src/**/*"]
     }
   },
-  "analytics": true,
-  "nxCloudId": "6a29d3fb3765f3e608af78f0"
+  "analytics": true
 }
