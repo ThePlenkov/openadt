@@ -58,11 +58,10 @@ export async function startOwnBackend(
   const session = await connectAdtLanguageServer(install, cfg.workspace, {
     destinationsStorePath: storePath,
     createProjectIds: ids,
-    // Per-tool destination mode is unbound: every tool takes a `destination`
-    // argument, so we do NOT pin or pre-logon any destination at startup.
-    // Only an explicit `--destination` pins one (and pre-logs it on). Listing
-    // destinations needs no logon — see the `openadt_list_destinations` tool.
-    ensureLoggedOnIds: cfg.destination ? [cfg.destination] : [],
+    // Logon to all destinations at startup in own mode to enable SAP tools
+    // without requiring per-tool logon (SSO window appears once at startup).
+    // In attach/shared mode, no LSP session is available for logon.
+    ensureLoggedOnIds: ids.length > 0 ? ids : [],
     logonTimeoutMs: cfg.logonTimeoutMs,
     log,
   })
