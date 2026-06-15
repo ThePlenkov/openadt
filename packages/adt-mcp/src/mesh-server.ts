@@ -18,6 +18,7 @@ import { callLspTool, isLspToolName, listLspToolDescriptors } from './lsp-tools.
 import { augmentInstructions, getPrompt, listPrompts } from './prompts.js'
 import { ToolNameRegistry, maxMcpToolNameLenFromEnv } from './tool-name-limit.js'
 import { deriveDestinations } from './destinations.js'
+import { ensureDestinationProjectAndLogon } from '@openadt/adt-lsp-client'
 
 const PROTOCOL_VERSION = '2024-11-05'
 
@@ -154,6 +155,18 @@ export class MeshMcpServer {
     }
 
     if (this.lspActive && isLspToolName(name)) {
+      // Lazy logon for LSP tools: ensure destination is logged on before calling
+      const destination = args.destination as string | undefined
+      if (destination && this.source.session) {
+        try {
+          await ensureDestinationProjectAndLogon(this.source.session.connection, destination, {
+            logonTimeoutMs: 300_000, // 5 minute timeout for lazy logon
+          })
+        } catch (err) {
+          // Log but don't fail - let the tool call handle the error
+          console.error(`[openadt-mcp] Lazy logon for ${destination} failed: ${String(err)}`)
+        }
+      }
       return callLspTool(this.source.session!, name, args)
     }
     if (this.source.client) {
