@@ -21,8 +21,8 @@ def main():
     # Check if jupyter is available
     jupyter_path = shutil.which("jupyter")
     if not jupyter_path:
-        print(f"Error: 'jupyter' command not found. Please install Jupyter:")
-        print(f"  pip install jupyter nbconvert")
+        print("Error: 'jupyter' command not found. Please install Jupyter:")
+        print("  pip install jupyter nbconvert")
         sys.exit(1)
     
     # Use nbconvert to execute the notebook
@@ -47,11 +47,11 @@ def main():
         print(f"  pip install jupyter nbconvert")
         sys.exit(1)
     except subprocess.TimeoutExpired:
-        print(f"Error: Notebook execution timed out after 15 minutes")
+        print("Error: Notebook execution timed out after 15 minutes")
         sys.exit(1)
     
     if result.returncode != 0:
-        print(f"Error executing notebook:")
+        print("Error executing notebook:")
         print(result.stderr)
         sys.exit(1)
     
