@@ -64,11 +64,11 @@ docker build -f .agents/skills/codacy/assets/Dockerfile -t codacy-java:latest .
 
 # Run PMD analysis (Java static analysis similar to ErrorProne)
 docker run --rm -v ${PWD}:/project -w /project codacy-java:latest bash -c \
-  "curl -L https://github.com/pmd/pmd/releases/download/pmd_releases%2F7.11.0/pmd-dist-7.11.0-bin.zip -o /tmp/pmd.zip && \
-  unzip -q /tmp/pmd.zip -d /tmp && \
-  /tmp/pmd-bin-7.11.0/bin/pmd check -d /project/apps/openadt-sap-adt/src/main/java \
-  -R /project/.codacy/tools-configs/ruleset.xml -f sarif -r /tmp/pmd-results.sarif --no-fail-on-violation && \
-  cat /tmp/pmd-results.sarif"
+  "curl -L https://github.com/pmd/pmd/releases/download/pmd_releases%2F7.11.0/pmd-dist-7.11.0-bin.zip -o /project/tmp/pmd.zip && \
+  unzip -q /project/tmp/pmd.zip -d /project/tmp && \
+  /project/tmp/pmd-bin-7.11.0/bin/pmd check -d /project/apps/openadt-sap-adt/src/main/java \
+  -R /project/.codacy/tools-configs/ruleset.xml -f sarif -r /project/tmp/pmd-results.sarif --no-fail-on-violation && \
+  cat /project/tmp/pmd-results.sarif"
 ```
 
 **Native Installation:**

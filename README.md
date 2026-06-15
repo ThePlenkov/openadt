@@ -168,4 +168,8 @@ One-time setup: install the [SAP ADT VS Code extension](https://marketplace.visu
 | Build from a clone                      | [docs/contributing.md](docs/contributing.md)                      |
 | See the full command / config reference | [specs/cli.md](specs/cli.md) · [specs/config.md](specs/config.md) |
 
+## 🔄 CI Automation
+
+**Review scores notebook auto-rebuild:** On pushes to `main`, when `.act/data/review_scores.csv` or `.act/.review_scores_analysis.ipynb` changes, the CI workflow [`.github/workflows/rebuild-review-scores-notebook.yml`](.github/workflows/rebuild-review-scores-notebook.yml) automatically rebuilds the notebook by running `scripts/rebuild-review-scores-notebook.py` and commits the result back to the repository. This ensures the analysis notebook stays synchronized with the underlying data.
+
 [Apache License 2.0](LICENSE). SAP trademarks belong to their respective owners; this project is not affiliated with SAP SE.
