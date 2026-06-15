@@ -1,5 +1,4 @@
 import type { RunContext } from './types'
-import type { E2eAgentConfig } from './evidence'
 import { readE2eAgentConfig, resolveRepoRoot } from './evidence'
 
 export const DEFAULT_E2E_AGENT = 'e2e-runner'

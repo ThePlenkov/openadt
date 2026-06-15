@@ -30,7 +30,8 @@ function findBannedSids(rel: string, line: string, lineNo: number, prefix: strin
 
 function findNarrativeDestinationIds(rel: string, line: string, lineNo: number): string[] {
   const errors: string[] = []
-  for (const _ of line.matchAll(ANY_DESTINATION_ID)) {
+  const re = new RegExp(ANY_DESTINATION_ID.source, 'g')
+  while (re.test(line)) {
     errors.push(
       `${rel}:${lineNo} narrative memory must not contain destination ids — describe "partial/full id" instead`
     )
