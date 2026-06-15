@@ -93,6 +93,76 @@ The `openadt` manifest no longer carries MCP-specific entries:
 
 Workflows use current stable major tags: `actions/checkout@v6`, `actions/setup-java@v5`, `actions/setup-dotnet@v5`, `oven-sh/setup-bun@v2`, `nrwl/nx-set-shas@v5`, `softprops/action-gh-release@v3`, `github/codeql-action/upload-sarif@v4`. Bump when upstream releases a new major.
 
+## Dependency audit
+
+`ci.yml` job `dep-audit` runs `bun audit` against the transitive dep
+tree and uploads the JSON result as SARIF to GitHub Code Scanning under
+category `dep-audit`. **Advisory** — does not fail the workflow; the
+high/critical findings are emitted as `::warning` annotations and the
+severity counts as a `::notice` so they show up in the run summary.
+
+| Aspect        | Value |
+| ------------- | ----- |
+| Tool          | `bun audit` (Bun-bundled, no install) |
+| Lockfile      | `bun.lock` (pinned via `--frozen-lockfile`) |
+| Threshold     | All severities reported. High+ as `::warning` annotations. No fail-fast today. |
+| Failure mode  | None today. The future blocking promotion (see below) will fail on critical/high. |
+| Scope         | All workspaces in the root `bun install` graph (the e2e skill, the TS packages, the dev tools) |
+| SARIF cat     | `dep-audit` |
+
+### Promoting to blocking
+
+Mirrors the SkillSpector pattern ([skillspector.md](skillspector.md)):
+
+1. Land the advisory gate (this spec + workflow).
+2. Triage the baseline advisories into "fix in this PR" or "waitlist" rows
+   in the table below.
+3. Flip the failure policy to `exit 1 = fail` on critical/high in a
+   second PR, with the waitlist acknowledged.
+
+Suppressions are **not** in scope: a `bun audit --ignore=...` is acceptable
+for a documented upstream-blocked CVE (e.g. awaiting `nx` to bump
+`form-data`), but the suppression list lives in the spec, not in CI knobs
+(see the waitlist below).
+
+### Workflow gap: `nx affected` skips skill scripts
+
+`ci.yml` runs `bunx nx affected -t lint typecheck` against the diff. Nx
+projects are registered in `apps/*/project.json`, `packages/*/project.json`,
+and the two skills that opted in (`.agents/skills/act/project.json`,
+`.agents/skills/harvest/project.json`). All other skill scripts
+(`.agents/skills/e2e/scripts/`, `.agents/skills/memory-bank/`,
+`.agents/skills/codescene/`, etc.) and `scripts/verify-*.ts` are
+**not** Nx projects, so changes to them yield `NX No tasks were run`
+on the CI side.
+
+Local mitigation: run the strict ESLint tier directly — it covers
+`scripts/` and `.agents/skills/` even when Nx doesn't:
+
+```bash
+bunx eslint scripts/ .agents/skills/ --max-warnings 0 --no-error-on-unmatched-pattern
+```
+
+Track closing this gap as a follow-up: either add `project.json` to
+each skill or add a top-level `lint:skills` Nx target that globs the
+union of all `scripts/` paths.
+
+### Review findings (waitlist)
+
+Vulnerabilities that survive `bun update --latest` because upstream has not
+released a fix yet. Each row is one transitive advisory. The PR that
+clears a row must either pin a parent to a fixed range, remove the parent
+entirely, or document a separately-accepted risk (e.g. "dev tool only,
+does not ship to consumers").
+
+| Advisory | Parent | Severity | Status | Note |
+| -------- | ------ | -------- | ------ | ---- |
+| `form-data` CRLF injection | `nx` → `axios` | high | Waiting on `nx` | `axios` bumped `form-data` to 4.0.6 in `axios@1.x`; `nx@22.7.x` still pulls the vulnerable range. |
+| `shell-quote` unescaped newlines | `@modelcontextprotocol/inspector` | critical | Waiting on inspector | Dev tool only — does not ship to consumers. Inspector is an MCP inspector used interactively; not in any server / CLI path. |
+| `tmp` path traversal | `nx` | high | Waiting on `nx` | Two advisories; both fixed upstream in `tmp@0.2.7`. |
+| `brace-expansion` DoS | multiple parents' `minimatch` | moderate | Non-gating | Reported in audit log; not in the high/critical threshold. |
+| `yaml` stack overflow | `nx` | moderate | Non-gating | Reported in audit log; not in the high/critical threshold. |
+
 ## SkillSpector pin
 
 `skillspector` is not vendored; the workflow downloads the upstream release tarball. Pin a specific upstream release tag (e.g. `vX.Y.Z`) and bump on new minor versions that add relevant detection patterns. Full contract: [skillspector.md](skillspector.md).

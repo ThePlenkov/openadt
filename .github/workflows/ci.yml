@@ -50,6 +50,59 @@ jobs:
           sarif_file: opengrep.sarif
           category: opengrep
 
+  dep-audit:
+    name: Dependency audit (bun audit, advisory)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          filter: tree:0
+          fetch-depth: 0
+
+      - uses: oven-sh/setup-bun@0c5077e51419868618aeaa5fe8019c62421857d6 # v2
+
+      - run: bun install --frozen-lockfile
+
+      # Spec: specs/packaging.md §Dependency audit. **Advisory** — does not
+      # fail the workflow; reports the count of every severity tier and
+      # surfaces each high/critical advisory as a Code Scanning SARIF entry
+      # under category `dep-audit`. The flip from advisory → blocking is a
+      # separate PR after the waitlist in the spec is cleared.
+      - name: Audit vulnerabilities
+        if: always()
+        run: |
+          set +e
+          bun audit --json 2>/dev/null > dep-audit.json
+          ec=$?
+          set -e
+          bun -e '
+            const data = await Bun.file("dep-audit.json").json();
+            const counts = { critical: 0, high: 0, moderate: 0, low: 0 };
+            for (const [name, advisories] of Object.entries(data)) {
+              for (const a of advisories) {
+                const sev = (a.severity ?? "low").toLowerCase();
+                counts[sev] = (counts[sev] ?? 0) + 1;
+                if (sev === "critical" || sev === "high") {
+                  const title = a.title ?? name;
+                  const url = a.url ?? "";
+                  console.log(`::warning file=package.json,title=${name} ${sev}::${title} (${url})`);
+                }
+              }
+            }
+            console.log(`::notice::dep-audit (advisory): ${counts.critical} critical, ${counts.high} high, ${counts.moderate} moderate, ${counts.low} low — see SARIF or specs/packaging.md §Dependency audit`);
+          '
+          if [ "${ec}" -gt 1 ]; then
+            echo "::error::bun audit tool failure (exit ${ec})"
+            exit "${ec}"
+          fi
+
+      - name: Upload SARIF to GitHub Code Scanning
+        if: always() && hashFiles('dep-audit.json') != ''
+        uses: github/codeql-action/upload-sarif@v4
+        with:
+          sarif_file: dep-audit.json
+          category: dep-audit
+
   main:
     runs-on: ubuntu-latest
     steps:
