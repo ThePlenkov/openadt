@@ -50,6 +50,8 @@ export class MeshMcpServer {
   private readonly registry = new ToolNameRegistry(maxMcpToolNameLenFromEnv())
   /** Whether the `adt_*` group is active (enabled + own session available). */
   private readonly lspActive: boolean
+  /** Cache of destinations that have already been logged on to avoid repeated logon latency. */
+  private readonly loggedOnDestinations = new Set<string>()
 
   constructor(deps: MeshServerDeps) {
     this.cfg = deps.cfg
@@ -173,10 +175,15 @@ export class MeshMcpServer {
     if (!this.source.session) {
       return
     }
+    // Skip logon if destination is already logged on (cache to avoid repeated logon latency)
+    if (this.loggedOnDestinations.has(destination)) {
+      return
+    }
     try {
       await ensureDestinationProjectAndLogon(this.source.session.connection, destination, {
         logonTimeoutMs: 300_000, // 5 minute timeout for lazy logon
       })
+      this.loggedOnDestinations.add(destination)
     } catch (err) {
       // Log but don't fail - let the tool call handle the error
       console.error(`[openadt-mcp] Lazy logon for ${destination} failed: ${String(err)}`)
