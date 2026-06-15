@@ -138,7 +138,7 @@ reproduce the same checks locally and fix in one round trip:
 
 | Signal in `pr-state.sh` / `gh pr checks`                                | Reproduce locally                                  |
 | ----------------------------------------------------------------------- | -------------------------------------------------- |
-| `Codacy Static Code Analysis` fail / action_required                    | `shellcheck .agents/skills/act/scripts/*.sh` + `bunx tsc --noEmit scripts/derive-cli-surface.ts` (ESLint/TS) |
+| `Codacy Static Code Analysis` fail / action_required                    | **Token-rational:** Read GitHub API annotations first (`gh api repos/<owner>/<repo>/check-runs/<id>/annotations`), then run local linter. See [Codacy skill](../codacy/SKILL.md#token-rational-codacy-workflow-priority). |
 | `Opengrep OSS` / `OpenGrep` fail                                        | `opengrep --config .semgrep.yaml <changed-paths>`   |
 | `SonarCloud Code Analysis` fail                                        | `sonar-scanner` (or read [REVIEW.md](../../../REVIEW.md) for Sonar rules) |
 | `CodeQL` fail                                                           | Re-run workflow job; SARIF details in artifacts     |

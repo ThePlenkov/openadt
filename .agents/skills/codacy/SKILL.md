@@ -11,6 +11,27 @@ Use when working with Codacy static code analysis, reproducing Codacy issues loc
 
 ## Key patterns
 
+### Token-rational Codacy workflow (PRIORITY)
+
+**Always read annotations first via GitHub API:**
+
+```bash
+# Get the latest Codacy check run ID for the PR
+gh pr checks <pr-number> --json name,headSha
+
+# Read the actual Codacy annotations
+gh api repos/<owner>/<repo>/check-runs/<check-run-id>/annotations
+```
+
+**Why:** GitHub API is instant and shows exactly what Codacy flagged. Do not assume "ErrorProne" means Java - read the actual annotations to identify the real tool/language.
+
+**Workflow:**
+1. **First:** Read Codacy annotations via GitHub API
+2. **Then:** Identify the actual tool/language from annotations
+3. **Finally:** Run local linter or fix code based on actual findings
+
+**Docker asset as backup:** Use Docker setup only when native linter reproduction fails, not as first step.
+
 ### Codacy "N issues (0 annotations)" pattern
 
 When Codacy reports `N new issues (0 max.)` with `annotations=0`:
