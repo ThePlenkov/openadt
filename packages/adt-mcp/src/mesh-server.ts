@@ -156,23 +156,31 @@ export class MeshMcpServer {
 
     if (this.lspActive && isLspToolName(name)) {
       // Lazy logon for LSP tools: ensure destination is logged on before calling
-      const destination = args.destination as string | undefined
-      if (destination && this.source.session) {
-        try {
-          await ensureDestinationProjectAndLogon(this.source.session.connection, destination, {
-            logonTimeoutMs: 300_000, // 5 minute timeout for lazy logon
-          })
-        } catch (err) {
-          // Log but don't fail - let the tool call handle the error
-          console.error(`[openadt-mcp] Lazy logon for ${destination} failed: ${String(err)}`)
-        }
-      }
+      await this.ensureDestinationLoggedOnIfNeeded(args.destination)
       return callLspTool(this.source.session!, name, args)
     }
     if (this.source.client) {
       return this.source.client.callTool(name, args)
     }
     throw new Error(`No backend for tool: ${name}`)
+  }
+
+  private async ensureDestinationLoggedOnIfNeeded(destination: unknown): Promise<void> {
+    // Runtime type validation: destination must be a string
+    if (typeof destination !== 'string') {
+      return
+    }
+    if (!this.source.session) {
+      return
+    }
+    try {
+      await ensureDestinationProjectAndLogon(this.source.session.connection, destination, {
+        logonTimeoutMs: 300_000, // 5 minute timeout for lazy logon
+      })
+    } catch (err) {
+      // Log but don't fail - let the tool call handle the error
+      console.error(`[openadt-mcp] Lazy logon for ${destination} failed: ${String(err)}`)
+    }
   }
 
   private promptsGet(params: unknown): unknown {
