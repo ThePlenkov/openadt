@@ -61,7 +61,7 @@ export async function startOwnBackend(
     // Logon to all destinations at startup in own mode to enable SAP tools
     // without requiring per-tool logon (SSO window appears once at startup).
     // In attach/shared mode, no LSP session is available for logon.
-    ensureLoggedOnIds: ids.length > 0 ? ids : [],
+    ensureLoggedOnIds: ids,
     logonTimeoutMs: cfg.logonTimeoutMs,
     log,
   })

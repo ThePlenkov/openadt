@@ -78,7 +78,7 @@ sequenceDiagram
   Client->>LSC: spawn --pipe=... -data workspace
   Client->>LSC: initialize / initialized
   Client->>LSC: adtLs/destinations/initializeService
-  Note over Client,LSC: createProject, ensureLoggedOn (when SAP ops needed)
+  Note over Client,LSC: createProject, ensureLoggedOn (all destinations in own mode; when --destination is set, only that destination)
   Client->>LSC: adtLs/mcp/startMCPServer
   LSC-->>Client: port, token
   Agent->>HTTP: POST /mcp + Authorization Bearer
@@ -194,7 +194,7 @@ Then `notifications/initialized`, `tools/list`, `tools/call`, etc.
 1. adt-lsc --pipe=... -data <workspace>
 2. LSP initialize → initialized
 3. adtLs/destinations/initializeService
-4. [createProject + ensureLoggedOn when SAP backend access is required]
+4. [createProject + ensureLoggedOn (all destinations in own mode; when --destination is set, only that destination)]
 5. adtLs/mcp/startMCPServer { port, token }
 6. POST http://localhost:<port>/mcp  (Authorization: Bearer <token>)
 7. MCP initialize → notifications/initialized → tools/list
@@ -281,7 +281,7 @@ the SAP ADT VS Code extension.
 | `--sap-port` N           | —                             | Attach to an external SAP MCP on this port              |
 | `--sap-token` T          | endpoint store                | Bearer token for `--sap-port`                           |
 | `--shared`               | off                           | Reuse a healthy shared daemon from the endpoint store   |
-| `--destination`          | (all derived)                 | Pre-logon + `setDestination` for one destination        |
+| `--destination`          | (all derived)                 | Pre-logon + `setDestination` for one destination (overrides default all-destination logon in own mode)        |
 | `--logon-timeout`        | `300`                         | Seconds for `ensureLoggedOn`                            |
 | `--show-token`           | off                           | Print the Bearer token on `--http`                      |
 | `--verbose` / `--log-file` | off                         | Debug logging                                           |
@@ -306,7 +306,7 @@ there is no `--import` flag — point `--workspace` at the data directory and de
 1. **Start stdin reader immediately** — buffer incoming frames while SAP starts (client may send `initialize` before HTTP is ready).
 2. **Locate extension** — fail with clear error if `sapse.adt-vscode` missing.
 3. **Spawn `adt-lsc`** — child process with bundled JRE; register logon handlers.
-4. **LSP + destinations** — `initialize`, `adtLs/destinations/initializeService`, `createProject`, `ensureLoggedOn` (SSO window if needed).
+4. **LSP + destinations** — `initialize`, `adtLs/destinations/initializeService`, `createProject`, `ensureLoggedOn` (SSO window if needed; in own mode, logs on to all derived destinations at startup).
 5. **Start HTTP MCP** — `adtLs/mcp/startMCPServer` with generated Bearer token.
 6. **Wait until HTTP accepts requests** — poll `/mcp` until listener responds (OpenADT: `OPTIONS` + Bearer, or any HTTP status ≠ connection refused). Do **not** poll with repeated MCP `initialize` POSTs (leaks sessions / stalls stdio).
 7. **Attach stdio bridge** — forward buffered + live stdin messages to HTTP with token; write HTTP responses to stdout unchanged (JSON or SSE `data:` lines).
