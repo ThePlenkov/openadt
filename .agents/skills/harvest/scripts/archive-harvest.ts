@@ -27,6 +27,7 @@ import {
   readDebtRecords,
   readLedgerOverlays,
   type DebtRecord,
+  type LedgerOverlay,
 } from './review-debt-lib.ts'
 
 const ARCHIVE_DIR_NAME = 'archive'

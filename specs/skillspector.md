@@ -106,3 +106,13 @@ When the gate is promoted to blocking, suppressions are enforced by:
 - SkillSpector is Apache-2.0; it is **not** vendored in the repo. The
   workflow downloads the release binary on each run, mirroring how OpenGrep
   is pinned in `ci.yml`.
+
+## Related contracts
+
+The SkillSpector rule set overlaps with the [verify-agent-memory](../scripts/verify-agent-memory.ts)
+linter and the e2e dependency contract:
+
+| Contract | Where | Why it lives there |
+| -------- | ----- | ------------------ |
+| Memory redaction rules (no real SIDs, no `--destination` values, no `/e2e <code> <sid>`) | [agent-memory-landscape-redaction.md](../.agents/memory/mental-models/agent-memory-landscape-redaction.md) + [`scripts/verify-agent-memory.ts`](../scripts/verify-agent-memory.ts) | Detected at PR time by `bun scripts/verify-fixtures-only.ts`. Per-line: one diagnostic per line, never one-per-match. |
+| e2e runtime dependency pin policy | [`.agents/skills/e2e/SPEC.md` § Runtime dependencies](../.agents/skills/e2e/SPEC.md#runtime-dependencies-e2e-agent) | SkillSpector SC1/SC4 fires on caret ranges. Bumping any pinned dep requires a spec amendment in this table. |
