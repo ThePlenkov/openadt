@@ -39,11 +39,15 @@ def main():
             ],
             capture_output=True,
             text=True,
-            check=False
+            check=False,
+            timeout=900  # 15 minutes timeout for notebook execution
         )
     except FileNotFoundError:
         print(f"Error: 'jupyter' command not found. Please install Jupyter:")
         print(f"  pip install jupyter nbconvert")
+        sys.exit(1)
+    except subprocess.TimeoutExpired:
+        print(f"Error: Notebook execution timed out after 15 minutes")
         sys.exit(1)
     
     if result.returncode != 0:
