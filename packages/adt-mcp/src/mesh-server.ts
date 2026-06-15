@@ -18,6 +18,7 @@ import { callLspTool, isLspToolName, listLspToolDescriptors } from './lsp-tools.
 import { augmentInstructions, getPrompt, listPrompts } from './prompts.js'
 import { ToolNameRegistry, maxMcpToolNameLenFromEnv } from './tool-name-limit.js'
 import { deriveDestinations } from './destinations.js'
+import { ensureDestinationProjectAndLogon } from '@openadt/adt-lsp-client'
 
 const PROTOCOL_VERSION = '2024-11-05'
 
@@ -49,6 +50,8 @@ export class MeshMcpServer {
   private readonly registry = new ToolNameRegistry(maxMcpToolNameLenFromEnv())
   /** Whether the `adt_*` group is active (enabled + own session available). */
   private readonly lspActive: boolean
+  /** Cache of destinations that have already been logged on to avoid repeated logon latency. */
+  private readonly loggedOnDestinations = new Set<string>()
 
   constructor(deps: MeshServerDeps) {
     this.cfg = deps.cfg
@@ -154,12 +157,37 @@ export class MeshMcpServer {
     }
 
     if (this.lspActive && isLspToolName(name)) {
+      // Lazy logon for LSP tools: ensure destination is logged on before calling
+      await this.ensureDestinationLoggedOnIfNeeded(args.destination)
       return callLspTool(this.source.session!, name, args)
     }
     if (this.source.client) {
       return this.source.client.callTool(name, args)
     }
     throw new Error(`No backend for tool: ${name}`)
+  }
+
+  private async ensureDestinationLoggedOnIfNeeded(destination: unknown): Promise<void> {
+    // Runtime type validation: destination must be a string
+    if (typeof destination !== 'string') {
+      return
+    }
+    if (!this.source.session) {
+      return
+    }
+    // Skip logon if destination is already logged on (cache to avoid repeated logon latency)
+    if (this.loggedOnDestinations.has(destination)) {
+      return
+    }
+    try {
+      await ensureDestinationProjectAndLogon(this.source.session.connection, destination, {
+        logonTimeoutMs: 300_000, // 5 minute timeout for lazy logon
+      })
+      this.loggedOnDestinations.add(destination)
+    } catch (err) {
+      // Log but don't fail - let the tool call handle the error
+      console.error(`[openadt-mcp] Lazy logon for ${destination} failed: ${String(err)}`)
+    }
   }
 
   private promptsGet(params: unknown): unknown {
