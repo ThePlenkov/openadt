@@ -23,6 +23,7 @@ import type { ScenarioResult } from './types'
 
 const frameworkDir = dirname(fileURLToPath(import.meta.url))
 
+// eslint-disable-next-line max-lines-per-function -- describe block groups related evidence scenarios
 describe('evidence', () => {
   test('resolveRepoRoot finds consuming repo root (skips nested skill package)', () => {
     const root = resolveRepoRoot(frameworkDir)

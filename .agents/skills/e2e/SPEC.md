@@ -112,6 +112,22 @@ Stdout on local run ends with `E2E_EVIDENCE_FILE=<path>`.
 
 `dispatch` writes `.e2e/dispatch/<run-id>.json` with `command.local` — exact `e2e-agent run` invocation for an external agent. No ACP API is wired in the framework.
 
+## Runtime dependencies (e2e-agent)
+
+The Bun-published package is fully self-contained except for its declared
+runtime + dev deps in `.agents/skills/e2e/package.json`:
+
+| Dep | Role | Pin policy |
+| --- | ---- | ---------- |
+| `js-yaml` | YAML parser for project config + scenario frontmatter | Exact-pinned (CVE-2025-64718, CVE-2026-53550 advisory — bumping is a spec change) |
+| `@types/js-yaml` | TypeScript types | Exact-pinned |
+| `@types/node` | Node API types | Exact-pinned (avoid floating into a major that breaks `import.meta.dir`) |
+| `typescript` | TypeScript compiler | Exact-pinned (the published `dist/` is built with the pinned version) |
+
+The SkillSpector gate (see `specs/skillspector.md`) flags any move to
+caret ranges (`^X.Y.Z`); bump a dep, open a spec amendment in
+`specs/skillspector.md` §"Baseline findings" in the same PR.
+
 ## Agent contract
 
 On `/e2e <code> [params]`:

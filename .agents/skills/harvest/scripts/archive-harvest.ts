@@ -22,7 +22,13 @@ import {
   writeFileSync,
 } from 'node:fs'
 import { dirname, join } from 'node:path'
-import { listHarvestPaths, readDebtRecords, readLedgerOverlays } from './review-debt-lib.ts'
+import {
+  listHarvestPaths,
+  readDebtRecords,
+  readLedgerOverlays,
+  type DebtRecord,
+  type LedgerOverlay,
+} from './review-debt-lib.ts'
 
 const ARCHIVE_DIR_NAME = 'archive'
 
@@ -39,16 +45,16 @@ function isClosedStatus(status: string): boolean {
   return status === 'done' || status === 'wontfix' || status === 'duplicate'
 }
 
-function effectiveStatus(row: LedgerRow, overlays: Map<string, LedgerOverlay>): string {
+function effectiveStatus(row: DebtRecord, overlays: Map<string, LedgerOverlay>): string {
   return overlays.get(row.thread_id)?.status ?? row.status
 }
 
-function countOpenStatuses(all: LedgerRow[], overlays: Map<string, LedgerOverlay>): number {
+function countOpenStatuses(all: DebtRecord[], overlays: Map<string, LedgerOverlay>): number {
   return all.filter((r) => effectiveStatus(r, overlays) === 'open').length
 }
 
 function computeLiveThreadIds(): LiveThreadIds {
-  const all = readLedger()
+  const all = readDebtRecords()
   const overlays = readLedgerOverlays()
   const live = new Set<string>()
   for (const row of all) {

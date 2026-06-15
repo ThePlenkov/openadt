@@ -121,6 +121,7 @@ function checkMixed(harvests: string): { stillThere: boolean; archivedAway: bool
   }
 }
 
+// eslint-disable-next-line max-lines-per-function -- describe block groups related archive scenarios
 describe('archive-harvest', () => {
   test('archives a file when all rows are triaged in ledger', () => {
     const env = setupArchiveEnv('all-done')
