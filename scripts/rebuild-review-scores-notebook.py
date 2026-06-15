@@ -4,8 +4,9 @@ Rebuild the review scores analysis notebook from the CSV data.
 This script executes the notebook and saves the output.
 """
 
-import subprocess
+import subprocess  # nosec B404
 import sys
+import shutil
 from pathlib import Path
 
 def main():
@@ -17,11 +18,18 @@ def main():
     
     print(f"Rebuilding notebook: {notebook_path}")
     
+    # Check if jupyter is available
+    jupyter_path = shutil.which("jupyter")
+    if not jupyter_path:
+        print(f"Error: 'jupyter' command not found. Please install Jupyter:")
+        print(f"  pip install jupyter nbconvert")
+        sys.exit(1)
+    
     # Use nbconvert to execute the notebook
     try:
-        result = subprocess.run(
+        result = subprocess.run(  # nosec B603, B607
             [
-                "jupyter",
+                jupyter_path,
                 "nbconvert",
                 "--to",
                 "notebook",
@@ -30,7 +38,8 @@ def main():
                 str(notebook_path)
             ],
             capture_output=True,
-            text=True
+            text=True,
+            check=False
         )
     except FileNotFoundError:
         print(f"Error: 'jupyter' command not found. Please install Jupyter:")
