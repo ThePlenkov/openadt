@@ -13,9 +13,9 @@ independently (`scoop install openadt-mcp` / `brew install openadt-mcp`).
 Either product can drive the same MCP surface; install both if you also use
 `openadt fetch` / `openadt proxy`.
 
-Full contract: [`specs/mcp.md`](../specs/mcp.md). Troubleshooting:
-[`docs/openadt-mcp.md`](../docs/openadt-mcp.md). User-facing install & usage:
-[`docs/usage.md`](../docs/usage.md#mcp).
+Full contract: [`specs/mcp.md`](../../specs/mcp.md). Troubleshooting:
+[`docs/openadt-mcp.md`](../../docs/openadt-mcp.md). User-facing install & usage:
+[`docs/usage.md`](../../docs/usage.md#mcp).
 
 ## What you get
 
@@ -64,7 +64,7 @@ Cursor (project or `~/.cursor/mcp.json`):
 
 Claude Desktop (`claude_desktop_config.json`), Devin (`.devin/config.json`),
 and Windsurf all use the same `mcpServers` schema with the same `command` /
-`args`. See [`docs/openadt-mcp.md`](../docs/openadt-mcp.md#configuring-your-agent)
+`args`. See [`docs/openadt-mcp.md`](../../docs/openadt-mcp.md#configuring-your-agent)
 for per-client snippets and the `OPENADT_MCP_MAX_TOOL_NAME` workaround for
 Claude on AWS Bedrock (64-char tool-name cap).
 
@@ -110,16 +110,16 @@ openadt-mcp check
 | `check`          | Detect `sapse.adt-vscode` version and the destination store            |
 
 Full flag table, exit codes, and SAP source modes (`own` / `attach` / `shared`)
-live in [`docs/openadt-mcp.md`](../docs/openadt-mcp.md#cli-reference) and
-[`specs/mcp.md`](../specs/mcp.md#command-reference).
+live in [`docs/openadt-mcp.md`](../../docs/openadt-mcp.md#cli-reference) and
+[`specs/mcp.md`](../../specs/mcp.md#command-reference).
 
 ## MCP tools
 
 The `abap_*` group is owned by SAP; see the
 [SAP ADT MCP tools reference](https://help.sap.com/docs/abap-cloud/abap-development-tools-for-visual-studio-code/mcp-tools)
 for the authoritative list. The 26 OpenADT-owned `adt_*` tools are documented
-in [`docs/openadt-mcp.md`](../docs/openadt-mcp.md#mcp-tools) and the
-spec contract in [`specs/adt-agent-typescript.md`](../specs/adt-agent-typescript.md).
+in [`docs/openadt-mcp.md`](../../docs/openadt-mcp.md#mcp-tools) and the
+spec contract in [`specs/adt-agent-typescript.md`](../../specs/adt-agent-typescript.md).
 
 Common tools at a glance:
 
@@ -160,8 +160,8 @@ that binary and its dependencies.
 
 ## Related
 
-- [`specs/mcp.md`](../specs/mcp.md) — full contract (commands, exit codes, transport, lifecycle)
-- [`specs/adt-agent-typescript.md`](../specs/adt-agent-typescript.md) — `adt_*` tool contract
-- [`specs/packaging.md`](../specs/packaging.md#openadt-mcp-archives) — release artifact matrix
-- [`docs/openadt-mcp.md`](../docs/openadt-mcp.md) — installation, CLI reference, MCP tools, troubleshooting
-- [`docs/usage.md`](../docs/usage.md) — full OpenADT user manual (fetch / proxy / MCP)
+- [`specs/mcp.md`](../../specs/mcp.md) — full contract (commands, exit codes, transport, lifecycle)
+- [`specs/adt-agent-typescript.md`](../../specs/adt-agent-typescript.md) — `adt_*` tool contract
+- [`specs/packaging.md`](../../specs/packaging.md#openadt-mcp-archives) — release artifact matrix
+- [`docs/openadt-mcp.md`](../../docs/openadt-mcp.md) — installation, CLI reference, MCP tools, troubleshooting
+- [`docs/usage.md`](../../docs/usage.md) — full OpenADT user manual (fetch / proxy / MCP)

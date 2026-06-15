@@ -388,9 +388,9 @@ the standard ADT format (e.g. `/sap/bc/adt/oo/classes/zcl_hello`).
 | `adt_diagnostic`           | Syntax + check errors for an ADT object           | `textDocument/diagnostic` (open-doc lifecycle) |
 | `adt_find_references`      | Find all usages of a symbol                       | `textDocument/references` (open-doc lifecycle) |
 | `adt_toggle_version`       | Toggle between active and inactive version        | `adtLs/fileSystem/toggleVersion`              |
-| `adt_check_transport_lock` | Check the transport associated with an object lock | `adtLs/transport/checkTransportForObjectLock` |
-| `adt_create_transport`     | Create a workbench/customizing transport          | `adtLs/transport/createTransportForObjectLock`|
-| `adt_assign_transport`     | Assign a transport to an ADT object               | `adtLs/transport/assignTransportToObject`     |
+| `adt_check_transport_lock` | Check the transport associated with an object lock | `adtLs/cts/transport/checkTransportForObjectLock` |
+| `adt_create_transport`     | Create a workbench/customizing transport          | `adtLs/cts/transport/createTransportForObjectLock`|
+| `adt_assign_transport`     | Assign a transport to an ADT object               | `adtLs/cts/transport/assignTransportToObject`     |
 | `adt_quick_search`         | RIS quick search in the repository                | `adtLs/repository/quickSearch`                |
 
 #### Medium priority
@@ -401,8 +401,8 @@ the standard ADT format (e.g. `/sap/bc/adt/oo/classes/zcl_hello`).
 | `adt_run_application`         | Run a class or program in console mode     | `adtLs/applicationRun/runApplication`   |
 | `adt_get_hover`               | Markdown documentation for a code element | `textDocument/hover` (open-doc lifecycle)|
 | `adt_document_symbols`        | Hierarchical document outline              | `textDocument/documentSymbol` (open-doc)|
-| `adt_search_transports_simple`| Simple transport search                    | `adtLs/transport/searchTransportsSimple`|
-| `adt_search_transports`       | Advanced transport search with all filters | `adtLs/transport/searchTransports`      |
+| `adt_search_transports_simple`| Simple transport search                    | `adtLs/cts/transport/searchTransportsSimple`|
+| `adt_search_transports`       | Advanced transport search with all filters | `adtLs/cts/transport/searchTransports`      |
 | `adt_get_coverage`            | Get code coverage data for a run           | `adtLs/coverage/getCoverage`            |
 | `adt_load_statement_results`  | Load statement-level coverage             | `adtLs/coverage/loadStatementResults`   |
 
