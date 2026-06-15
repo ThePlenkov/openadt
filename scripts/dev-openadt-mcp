@@ -1,0 +1,11 @@
+#!/usr/bin/env bash
+# Dev launcher for openadt-mcp: run from local build (not Scoop/Homebrew).
+# Use explicitly: ./scripts/dev-openadt-mcp — bare `openadt-mcp` must resolve to Scoop/Homebrew on PATH.
+set -euo pipefail
+ROOT="$(cd "$(dirname "$0")/.." && pwd)"
+cd "$ROOT"
+if ! command -v bun >/dev/null 2>&1; then
+  echo "bun is required for ./scripts/dev-openadt-mcp. Install bun: https://bun.sh" >&2
+  exit 1
+fi
+exec bun run packages/adt-mcp/src/cli.ts -- "$@"
