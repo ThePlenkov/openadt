@@ -13,7 +13,7 @@ in those skills.
 | Aspect        | Value                                                                                       |
 | ------------- | ------------------------------------------------------------------------------------------- |
 | Scan target   | `.agents/skills/` (and any first-party skill at the repo root that follows the `SKILL.md` + assets layout) |
-| Tool          | `skillspector` CLI, pinned to a release tag (see [CI action pins](packaging.md#ci-action-pins)) |
+| Tool          | `skillspector` CLI, pinned to a release tag (see [SkillSpector pin](packaging.md#skillspector-pin)) |
 | Analysis mode | `--no-llm` (static only; no API keys, deterministic, fast)                                 |
 | Output        | SARIF, uploaded to GitHub Code Scanning under category `skillspector`                       |
 | Failure mode  | **Advisory** — exit code 1 (findings) does not fail the workflow. Exit code ≥ 2 (tool error) does. Same convention as the OpenGrep job in [ci.yml](../.github/workflows/ci.yml). |
