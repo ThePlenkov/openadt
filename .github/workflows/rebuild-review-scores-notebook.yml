@@ -1,0 +1,41 @@
+name: Rebuild Review Scores Notebook
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - '.act/data/review_scores.csv'
+      - '.act/.review_scores_analysis.ipynb'
+      - 'scripts/rebuild-review-scores-notebook.py'
+
+permissions:
+  contents: write
+
+jobs:
+  rebuild-notebook:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          persist-credentials: true
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Install dependencies
+        run: |
+          pip install --only-binary :all: jupyter==1.0.0 nbconvert==7.16.4 pandas==2.0.3 matplotlib==3.7.1 seaborn==0.12.2 numpy==1.24.3
+
+      - name: Rebuild notebook
+        run: python scripts/rebuild-review-scores-notebook.py
+
+      - name: Commit updated notebook
+        run: |
+          git config --global user.name 'github-actions[bot]'
+          git config --global user.email 'github-actions[bot]@users.noreply.github.com'
+          git add .act/.review_scores_analysis.ipynb
+          git diff --staged --quiet || git commit -m "Auto-update review scores analysis notebook"
+          git push
