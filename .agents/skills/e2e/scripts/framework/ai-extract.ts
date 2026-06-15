@@ -22,7 +22,7 @@ export type ExtractedParams = Record<string, string>
  * @param ctx - Current run context with existing parameters
  * @returns Extracted parameters to merge into context
  */
-export function extractParamsFromPrompt(prompt: string, ctx: RunContext): ExtractedParams {
+export function extractParamsFromPrompt(_prompt: string, _ctx: RunContext): ExtractedParams {
   // Placeholder: return empty object
   // Implementations should replace this with actual AI interpretation
   return {}

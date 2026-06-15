@@ -60,6 +60,7 @@ Module and package map: [apps/ARCHITECTURE.md](apps/ARCHITECTURE.md).
 | [adt-lsp-mcp-local.md](specs/adt-lsp-mcp-local.md)   | Local/global dev MCP for `@openadt/adt-lsp-mcp`  |
 | [mcp-shared-backend.md](specs/mcp-shared-backend.md) | MCP shared backend (auto-ensure + attach)        |
 | [packaging.md](specs/packaging.md)                   | Releases, Scoop, Homebrew                        |
+| [skillspector.md](specs/skillspector.md)             | SkillSpector CI gate on `.agents/skills/`        |
 
 Full index and verify commands: [specs/README.md](specs/README.md).
 

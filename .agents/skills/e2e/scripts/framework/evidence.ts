@@ -119,6 +119,25 @@ function formatChecksTable(checks: AssertCheck[]): string[] {
   ]
 }
 
+function formatStepBlock(i: number, step: NonNullable<ScenarioResult['steps']>[number]): string[] {
+  const lines: string[] = [
+    `### 🔧 Step ${i + 1}: \`${step.tool}\``,
+    '',
+    `- **Duration:** ⏱️ ${step.durationMs ?? '?'}ms`,
+    `- **isError:** ${formatIsError(step.isError)}`,
+    `- **Args:** \`${JSON.stringify(step.args ?? {})}\``,
+    '',
+  ]
+  if (step.checks?.length) {
+    lines.push('#### ✅ Assertion checks', '', ...formatChecksTable(step.checks), '')
+  }
+  if (step.responseBody) {
+    lines.push('#### 📦 Response payload', '', '```text', step.responseBody, '```', '')
+  }
+  lines.push(`**Step verdict:** ${verdictLabel(step.ok)} — ${step.detail}`, '')
+  return lines
+}
+
 function formatScenarioBlock(
   scenario: Scenario,
   result: ScenarioResult | undefined,
@@ -145,20 +164,7 @@ function formatScenarioBlock(
   ]
 
   for (const [i, step] of (result?.steps ?? []).entries()) {
-    lines.push(`### 🔧 Step ${i + 1}: \`${step.tool}\``, '')
-    lines.push(
-      `- **Duration:** ⏱️ ${step.durationMs ?? '?'}ms`,
-      `- **isError:** ${formatIsError(step.isError)}`,
-      `- **Args:** \`${JSON.stringify(step.args ?? {})}\``,
-      ''
-    )
-    if (step.checks?.length) {
-      lines.push('#### ✅ Assertion checks', '', ...formatChecksTable(step.checks), '')
-    }
-    if (step.responseBody) {
-      lines.push('#### 📦 Response payload', '', '```text', step.responseBody, '```', '')
-    }
-    lines.push(`**Step verdict:** ${verdictLabel(step.ok)} — ${step.detail}`, '')
+    lines.push(...formatStepBlock(i, step))
   }
 
   return lines
@@ -227,7 +233,7 @@ export function autocleanOldEvidence(root: string, scenarioCode: string): void {
   for (const file of files) {
     try {
       unlinkSync(join(root, file))
-    } catch (err) {
+    } catch {
       // Ignore deletion errors (file might be locked by another process)
     }
   }
@@ -271,7 +277,7 @@ export function readE2eAgentConfig(repoRoot: string, argv: string[] = []): E2eAg
           Object.assign(config, frontmatter['e2e-agent'])
         }
       }
-    } catch (err) {
+    } catch {
       // Ignore frontmatter parse errors
     }
   }

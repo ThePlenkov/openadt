@@ -91,7 +91,11 @@ The `openadt` manifest no longer carries MCP-specific entries:
 
 ## CI action pins
 
-Workflows use current stable major tags: `actions/checkout@v6`, `actions/setup-java@v5`, `actions/setup-dotnet@v5`, `oven-sh/setup-bun@v2`, `nrwl/nx-set-shas@v5`, `softprops/action-gh-release@v3`. Bump when upstream releases a new major.
+Workflows use current stable major tags: `actions/checkout@v6`, `actions/setup-java@v5`, `actions/setup-dotnet@v5`, `oven-sh/setup-bun@v2`, `nrwl/nx-set-shas@v5`, `softprops/action-gh-release@v3`, `github/codeql-action/upload-sarif@v4`. Bump when upstream releases a new major.
+
+## SkillSpector pin
+
+`skillspector` is not vendored; the workflow downloads the upstream release tarball. Pin a specific upstream release tag (e.g. `vX.Y.Z`) and bump on new minor versions that add relevant detection patterns. Full contract: [skillspector.md](skillspector.md).
 
 ## Release workflow
 

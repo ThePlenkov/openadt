@@ -29,13 +29,11 @@ function findBannedSids(rel: string, line: string, lineNo: number, prefix: strin
 }
 
 function findNarrativeDestinationIds(rel: string, line: string, lineNo: number): string[] {
-  const errors: string[] = []
-  for (const _ of line.matchAll(ANY_DESTINATION_ID)) {
-    errors.push(
-      `${rel}:${lineNo} narrative memory must not contain destination ids — describe "partial/full id" instead`
-    )
-  }
-  return errors
+  if (!ANY_DESTINATION_ID.test(line)) return []
+  ANY_DESTINATION_ID.lastIndex = 0
+  return [
+    `${rel}:${lineNo} narrative memory must not contain destination ids — describe "partial/full id" instead`,
+  ]
 }
 
 function findCliDestinationValues(rel: string, line: string, lineNo: number): string[] {

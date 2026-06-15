@@ -35,7 +35,7 @@ export type Scenario = {
 
 export type RunContext = {
   prompt?: string
-  [key: string]: any
+  [key: string]: unknown
 }
 
 export type AssertCheck = {
