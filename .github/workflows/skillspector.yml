@@ -1,0 +1,67 @@
+# SkillSpector — security scan of `.agents/skills/`. Advisory; findings → SARIF.
+# Spec: specs/skillspector.md
+name: SkillSpector
+
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+
+permissions:
+  actions: read
+  contents: read
+
+jobs:
+  skillspector:
+    name: SkillSpector (.agents/skills/)
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      security-events: write
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          persist-credentials: false
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      # Pin both the upstream commit SHA and the version label it resolves to
+      # (v2.1.4 per upstream pyproject at that SHA). Bump together in
+      # specs/skillspector.md when a new release is published.
+      - name: Install SkillSpector
+        env:
+          SKILLSPECTOR_COMMIT: cff7ecc4f2881d9e23ea4bb801a6353e1dbe39e6
+          SKILLSPECTOR_VERSION: 2.1.4
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install \
+            "git+https://github.com/nvidia/skillspector@${SKILLSPECTOR_COMMIT}"
+          skillspector --version
+
+      - name: Scan .agents/skills/
+        run: |
+          set +e
+          skillspector scan .agents/skills/ \
+            --no-llm \
+            --format sarif \
+            --output skillspector.sarif
+          ec=$?
+          set -e
+          if [ ! -f skillspector.sarif ]; then
+            echo "::error::SkillSpector did not produce skillspector.sarif (exit ${ec})"
+            exit 1
+          fi
+          if [ "${ec}" -gt 1 ]; then
+            exit "${ec}"
+          fi
+          # exit 1 = findings only; upload SARIF and do not fail the workflow
+
+      - name: Upload SARIF to GitHub Code Scanning
+        if: always() && hashFiles('skillspector.sarif') != ''
+        uses: github/codeql-action/upload-sarif@v4
+        with:
+          sarif_file: skillspector.sarif
+          category: skillspector

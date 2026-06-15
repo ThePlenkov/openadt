@@ -18,6 +18,7 @@ Behavior contracts for OpenADT. **SDD enforcement:** [DESIGN.md](../DESIGN.md). 
 | [mcp-ai-testing.md](mcp-ai-testing.md)         | Live MCP AI scenario tests (`adt_*`, user-supplied destination) |
 | [mcp-shared-backend.md](mcp-shared-backend.md) | MCP shared backend (auto-ensure + attach)                       |
 | [packaging.md](packaging.md)                   | Releases, Scoop, Homebrew                                       |
+| [skillspector.md](skillspector.md)             | SkillSpector CI gate on `.agents/skills/`                       |
 
 ## Workflow
 
