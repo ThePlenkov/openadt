@@ -18,19 +18,24 @@ def main():
     print(f"Rebuilding notebook: {notebook_path}")
     
     # Use nbconvert to execute the notebook
-    result = subprocess.run(
-        [
-            "jupyter",
-            "nbconvert",
-            "--to",
-            "notebook",
-            "--execute",
-            "--inplace",
-            str(notebook_path)
-        ],
-        capture_output=True,
-        text=True
-    )
+    try:
+        result = subprocess.run(
+            [
+                "jupyter",
+                "nbconvert",
+                "--to",
+                "notebook",
+                "--execute",
+                "--inplace",
+                str(notebook_path)
+            ],
+            capture_output=True,
+            text=True
+        )
+    except FileNotFoundError:
+        print(f"Error: 'jupyter' command not found. Please install Jupyter:")
+        print(f"  pip install jupyter nbconvert")
+        sys.exit(1)
     
     if result.returncode != 0:
         print(f"Error executing notebook:")
