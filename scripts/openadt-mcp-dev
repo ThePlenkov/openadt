@@ -1,0 +1,7 @@
+#!/usr/bin/env bash
+# Global openadt-mcp-dev command for local development
+# Add this script to your PATH
+set -e
+SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
+REPO_ROOT="$(cd "$SCRIPT_DIR/.." && pwd)"
+exec bun run "$REPO_ROOT/packages/adt-mcp/src/cli.ts" "$@"
